@@ -1,0 +1,672 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ---------------------------------------------------------
+// CORE USERS & AUTH
+// ---------------------------------------------------------
+
+model User {
+  id           String    @id @default(cuid())
+  name         String?
+  email        String    @unique
+  password     String
+  role         String    @default("USER") // ADMIN, USER, AGENCY, CLIENT
+  isVerified   Boolean   @default(false)
+  verifyToken  String?
+  resetToken   String?
+  resetExpires DateTime?
+  image        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Multi-user ownership & Relations
+  workspaces        Workspace[]        @relation("WorkspaceOwner")
+  workspacesAdmin   WorkspaceUser[]
+  workspaceMessages WorkspaceMessage[] @relation("WorkspaceMessages")
+  customRoles       WorkspaceUserRole[]
+  customers         Customer[]
+  deals           Deal[]
+  leads           Lead[]
+  emailAccounts   EmailAccount[]
+  socialAccounts  SocialAccount[]
+  campaigns       Campaign[]
+  automations     Automation[]
+  notifications   Notification[]
+  activityLogs    ActivityLog[]
+  scrapeJobs      ScrapeJob[]
+  assignedTasks   Task[]          @relation("AssignedTasks")
+  employeeProfile Employee?
+  categories      Category[]
+  bookings        Booking[]       @relation("UserBookings")
+  rooms           Room[]          @relation("UserRooms")
+  createdMeetings Meeting[]       @relation("CreatedMeetings")
+}
+
+// ---------------------------------------------------------
+// WORKSPACES & HR (Modules 3 & 8)
+// ---------------------------------------------------------
+
+model Workspace {
+  id          String             @id @default(cuid())
+  name        String
+  description String?            
+  ownerId     String
+  owner       User               @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  users       WorkspaceUser[]
+  employees   Employee[]
+  projects    Project[]
+  pipelines   Pipeline[]
+  socialPosts SocialPost[]
+  channels    Channel[]
+  invites     WorkspaceInvite[]
+  roles       WorkspaceRole[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model WorkspaceUser {
+  id          String    @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        String    @default("MEMBER") // ADMIN, MEMBER, VIEWER
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@unique([workspaceId, userId])
+}
+
+model WorkspaceRole {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  color       String   @default("#6366f1")
+  users       WorkspaceUserRole[]
+  
+  allowedChannels Channel[]
+
+  createdAt   DateTime @default(now())
+}
+
+model WorkspaceUserRole {
+  userId      String
+  roleId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        WorkspaceRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  @@id([userId, roleId])
+}
+
+model Channel {
+  id          String    @id @default(cuid())
+  name        String
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages    WorkspaceMessage[]
+  
+  isPrivate   Boolean   @default(false)
+  allowedRoles WorkspaceRole[]
+
+  createdAt   DateTime  @default(now())
+}
+
+model WorkspaceMessage {
+  id          String    @id @default(cuid())
+  channelId   String
+  channel     Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation("WorkspaceMessages", fields: [userId], references: [id])
+  content     String
+  createdAt   DateTime  @default(now())
+}
+
+model WorkspaceInvite {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime?
+  maxUses     Int?
+  uses        Int       @default(0)
+  createdAt   DateTime  @default(now())
+}
+
+// ---------------------------------------------------------
+// MEDIA HUB — Meetings & LiveKit Rooms
+// ---------------------------------------------------------
+
+model Meeting {
+  id         String   @id @default(cuid())
+  meetingId  String   @unique // Short ID like 8Hsk29sd
+  hostId     String
+  host       User     @relation("CreatedMeetings", fields: [hostId], references: [id])
+  title      String
+  status     String   @default("ACTIVE") // ACTIVE, ENDED
+  createdAt  DateTime @default(now())
+}
+
+model Employee {
+  id            String       @id @default(cuid())
+  userId        String       @unique
+  user          User         @relation(fields: [userId], references: [id])
+  workspaceId   String?
+  workspace     Workspace?   @relation(fields: [workspaceId], references: [id])
+  department    String?
+  position      String?
+  salary        Float?
+  commission    Float?       @default(0)
+  hireDate      DateTime?
+  status        String       @default("ACTIVE")
+  attendances   Attendance[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Attendance {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  date       DateTime
+  checkIn    DateTime
+  checkOut   DateTime?
+  status     String   @default("PRESENT") // PRESENT, ABSENT, LEAVE
+  createdAt  DateTime @default(now())
+}
+
+// ---------------------------------------------------------
+// CRM: LEADS, CUSTOMERS, CLIENT PORTAL (Modules 5 & 6)
+// ---------------------------------------------------------
+
+model Customer {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  name            String
+  email           String        @unique
+  phone           String?
+  company         String?
+  licenseType     String?
+  areaOfOperation String?
+  dealFocus       String?
+  budgetRange     String?
+  status          String        @default("Active")
+  aiSummary       String?
+  
+  // Client Portal Access
+  portalAccess    Boolean       @default(false)
+  portalPassword  String?
+
+  tags            Tag[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  interactions    Interaction[]
+  tasks           Task[]        @relation("CustomerTasks")
+  bookings        Booking[]
+  invoices        Invoice[]
+  deals           Deal[]
+  projects        Project[]
+  subscriptions   Subscription[]
+}
+
+model Lead {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  name            String
+  email           String         @unique
+  phone           String?
+  company         String?
+  licenseType     String?
+  areaOfOperation String?
+  dealFocus       String?
+  budgetRange     String?
+  website         String?
+  industry        String?
+  location        String?
+  address         String?
+  rating          String?
+  linkedin        String?
+  source          String?
+  status          String         @default("New")
+  emailVerified   Boolean        @default(false)
+  isDisposable    Boolean        @default(false)
+  aiScore         Int            @default(0)
+  aiInsights      String?
+  
+  categoryId      String?
+  category        Category?      @relation(fields: [categoryId], references: [id])
+  
+  tags            Tag[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  interactions    Interaction[]
+  bookings        Booking[]
+  campaigns       CampaignLead[]
+  deals           Deal[]
+  tasks           Task[]         @relation("LeadTasks")
+  
+  scrapeJobId     String?
+  scrapeJob       ScrapeJob?     @relation(fields: [scrapeJobId], references: [id])
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  leads     Lead[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+}
+
+model Tag {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  customers Customer[]
+  leads     Lead[]
+}
+
+// ---------------------------------------------------------
+// ADVANCED PIPELINE & DEALS (Module 5)
+// ---------------------------------------------------------
+
+model Pipeline {
+  id          String      @id @default(cuid())
+  name        String
+  workspaceId String
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
+  stages      Stage[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Stage {
+  id         String   @id @default(cuid())
+  name       String
+  order      Int
+  pipelineId String
+  pipeline   Pipeline @relation(fields: [pipelineId], references: [id])
+  deals      Deal[]
+}
+
+model Deal {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  name          String
+  value         Float     @default(0)
+  
+  // Advanced Pipeline Integration
+  stageId       String?
+  stageModel    Stage?    @relation(fields: [stageId], references: [id])
+  stage         String    @default("New Lead") // Legacy support
+  
+  probability   Int       @default(50) // 0-100%
+  expectedClose DateTime?
+
+  leadId        String?
+  lead          Lead?     @relation(fields: [leadId], references: [id])
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id])
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// ---------------------------------------------------------
+// ADVANCED TASK & PROJECT MANAGEMENT (Module 3)
+// ---------------------------------------------------------
+
+model Project {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  status      String     @default("PLANNING") // PLANNING, ACTIVE, COMPLETED
+  
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  
+  customerId  String?
+  customer    Customer?  @relation(fields: [customerId], references: [id])
+  
+  tasks       Task[]     @relation("ProjectTasks")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Task {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  aiActionItems String?
+  
+  // Advanced PM properties
+  dueDate       DateTime?
+  status        String    @default("Todo") // Todo, In Progress, Review, Done
+  priority      String    @default("Medium") // Low, Medium, High, Urgent
+  timeTracked   Int       @default(0) // In seconds
+  
+  // Relations
+  projectId     String?
+  project       Project?  @relation("ProjectTasks", fields: [projectId], references: [id])
+  
+  customerId    String?
+  customer      Customer? @relation("CustomerTasks", fields: [customerId], references: [id])
+  
+  leadId        String?
+  lead          Lead?     @relation("LeadTasks", fields: [leadId], references: [id])
+  
+  assigneeId    String?
+  assignee      User?     @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  
+  // Subtasks
+  parentTaskId  String?
+  parentTask    Task?     @relation("Subtasks", fields: [parentTaskId], references: [id])
+  subtasks      Task[]    @relation("Subtasks")
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// ---------------------------------------------------------
+// EMAIL, CAMPAIGNS & SOCIAL MEDIA (Modules 1, 2, 4)
+// ---------------------------------------------------------
+
+model EmailAccount {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+  email        String     @unique
+  host         String
+  port         Int
+  imapHost     String?
+  imapPort     Int?
+  username     String
+  password     String
+  encryption   String
+  dailyLimit   Int        @default(50)
+  sentToday    Int        @default(0)
+  warmupStatus Boolean    @default(false)
+  isActive     Boolean    @default(true)
+  campaigns    Campaign[]
+}
+
+model SocialAccount {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+  platform     String     // FACEBOOK, LINKEDIN, TWITTER
+  accessToken  String     // Encrypted
+  refreshToken String?    // Encrypted
+  tokenExpires DateTime?
+  isActive     Boolean    @default(true)
+  posts        SocialPost[]
+  createdAt    DateTime   @default(now())
+}
+
+model SocialPost {
+  id              String         @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace      @relation(fields: [workspaceId], references: [id])
+  socialAccountId String
+  socialAccount   SocialAccount  @relation(fields: [socialAccountId], references: [id])
+  content         String
+  mediaUrls       String?        // JSON array of URLs
+  status          String         @default("DRAFT") // DRAFT, SCHEDULED, PUBLISHED, FAILED
+  scheduledFor    DateTime?
+  publishedAt     DateTime?
+  likes           Int            @default(0)
+  comments        Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Campaign {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id])
+  name           String
+  subject        String
+  body           String
+  type           String         @default("EMAIL") // EMAIL, SMS
+  status         String         @default("Draft") // Draft, Active, Completed
+  
+  emailAccountId String?
+  emailAccount   EmailAccount?  @relation(fields: [emailAccountId], references: [id])
+  
+  leads          CampaignLead[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model CampaignLead {
+  id         String    @id @default(cuid())
+  campaignId String
+  leadId     String
+  campaign   Campaign  @relation(fields: [campaignId], references: [id])
+  lead       Lead      @relation(fields: [leadId], references: [id])
+  status     String    @default("Pending")
+  sentAt     DateTime?
+  openedAt   DateTime?
+  repliedAt  DateTime?
+}
+
+// ---------------------------------------------------------
+// FINANCE & BILLING (Module 7)
+// ---------------------------------------------------------
+
+model Invoice {
+  id          String    @id @default(cuid())
+  invoiceRef  String    @unique
+  amount      Float
+  status      String    @default("Draft") // Draft, Sent, Paid, Overdue
+  dueDate     DateTime
+  paidAt      DateTime?
+  stripeId    String?   // External reference
+  
+  customerId  String
+  customer    Customer  @relation(fields: [customerId], references: [id])
+  
+  payments    Payment[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Payment {
+  id            String    @id @default(cuid())
+  invoiceId     String
+  invoice       Invoice   @relation(fields: [invoiceId], references: [id])
+  amount        Float
+  method        String    // STRIPE, BANK_TRANSFER, CASH
+  transactionId String?
+  status        String    @default("COMPLETED")
+  createdAt     DateTime  @default(now())
+}
+
+model Subscription {
+  id          String    @id @default(cuid())
+  customerId  String
+  customer    Customer  @relation(fields: [customerId], references: [id])
+  planName    String
+  amount      Float
+  interval    String    @default("MONTHLY") // MONTHLY, YEARLY
+  status      String    @default("ACTIVE") // ACTIVE, CANCELED, PAST_DUE
+  nextBilling DateTime
+  stripeSubId String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ---------------------------------------------------------
+// COMMUNICATION, LOGS & AUTOMATION (Modules 9)
+// ---------------------------------------------------------
+
+model Interaction {
+  id         String    @id @default(cuid())
+  type       String
+  content    String
+  sentiment  String?
+  date       DateTime  @default(now())
+  customerId String?
+  leadId     String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  lead       Lead?     @relation(fields: [leadId], references: [id])
+}
+
+model Booking {
+  id         String    @id @default(cuid())
+  title      String
+  startTime  DateTime
+  endTime    DateTime
+  userId     String?
+  user       User?     @relation("UserBookings", fields: [userId], references: [id])
+  customerId String?
+  leadId     String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  lead       Lead?     @relation(fields: [leadId], references: [id])
+}
+
+model Automation {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  name        String
+  description String?
+  triggerType String
+  isActive    Boolean         @default(true)
+  steps       WorkflowStep[]
+  logs        AutomationLog[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model WorkflowStep {
+  id           String     @id @default(cuid())
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id])
+  type         String
+  order        Int
+  config       String
+}
+
+model AutomationLog {
+  id            String     @id @default(cuid())
+  automationId  String
+  automation    Automation @relation(fields: [automationId], references: [id])
+  status        String // SUCCESS, FAILURE
+  message       String?
+  executionTime Int // ms
+  createdAt     DateTime   @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+}
+
+model ScrapeJob {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id])
+  status     String      @default("Pending") // Pending, Running, Completed, Failed, Stopped
+  progress   Int         @default(0)
+  totalLeads Int         @default(0)
+  keyword    String?
+  location   String?
+  message    String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  logs       ScrapeLog[]
+  leads      Lead[]
+}
+
+model ScrapeLog {
+  id        String    @id @default(cuid())
+  jobId     String
+  job       ScrapeJob @relation(fields: [jobId], references: [id])
+  message   String
+  level     String    @default("INFO") // INFO, ERROR
+  createdAt DateTime  @default(now())
+}
+
+// Keep legacy Team models intact for now to prevent breaking existing routes
+model Team {
+  id       String    @id @default(cuid())
+  name     String
+  members  Member[]
+  messages Message[]
+  rooms    Room[]
+}
+
+model Room {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   @default("VIDEO") // AUDIO, VIDEO
+  status    String   @default("EMPTY") // EMPTY, ACTIVE
+  userId    String?
+  user      User?    @relation("UserRooms", fields: [userId], references: [id])
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Member {
+  id     String @id @default(cuid())
+  name   String
+  role   String // ADMIN, MEMBER
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  content    String
+  createdAt  DateTime @default(now())
+  teamId     String
+  team       Team     @relation(fields: [teamId], references: [id])
+  senderName String
+}
+
+model OnboardingSession {
+  id         String              @id @default(cuid())
+  leadId     String?
+  customerId String?
+  status     String              @default("IN_PROGRESS") // COMPLETED, IN_PROGRESS
+  messages   OnboardingMessage[]
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+}
+
+model OnboardingMessage {
+  id        String            @id @default(cuid())
+  sessionId String
+  session   OnboardingSession @relation(fields: [sessionId], references: [id])
+  content   String
+  sender    String // USER, AI, CLIENT
+  createdAt DateTime          @default(now())
+}
