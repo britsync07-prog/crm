@@ -21,7 +21,9 @@ const dev = process.env.NODE_ENV !== "production";
         return;
     }
 
-    const args = ["--dev"];                          // --dev uses devkey/secret automatically
+    // --dev uses devkey/secret automatically. 
+    // Force IPv4 binding (127.0.0.1) because some VPS environments crash if they try to bind to IPv6 ([::1])
+    const args = ["--dev", "--bind", "127.0.0.1"];
     const config = path.join(livekitDir, "config.yaml");
     if (fs.existsSync(config)) args.push("--config", config);
 
