@@ -7,6 +7,7 @@ import {
     RoomAudioRenderer,
 } from "@livekit/components-react";
 import { useEffect, useState, use } from "react";
+import { RoomEvent } from "livekit-client";
 import { Loader2, Video, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -20,6 +21,8 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     const [disconnected, setDisconnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [title, setTitle] = useState("Meeting");
+    const [disconnectReason, setDisconnectReason] = useState<string | null>(null);
+
     // Clean up the URL (remove trailing spaces common when copying from Cloud Shell)
     let livekitUrl = (process.env.NEXT_PUBLIC_LIVEKIT_URL || "ws://localhost:7880").trim();
 
@@ -122,9 +125,14 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                     <Video className="w-8 h-8 text-red-500" />
                 </div>
                 <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-1">You left the meeting</h2>
-                <p className="text-zinc-500 text-sm mb-6 max-w-sm">
-                    If this was unexpected, your LiveKit WebSocket connection may have failed. Ensure your <code className="bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-xs">NEXT_PUBLIC_LIVEKIT_URL</code> environment variable is correctly configured and port 7880 is open on your VPS firewall.
+                <p className="text-zinc-500 text-sm mb-4 max-w-md">
+                    If this was unexpected, your LiveKit WebSocket connection may have failed.
                 </p>
+                {disconnectReason && (
+                    <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-lg text-xs font-mono mb-6 max-w-md text-left overflow-auto">
+                        {disconnectReason}
+                    </div>
+                )}
                 <div className="flex gap-3">
                     <button onClick={() => window.location.reload()} className="px-5 py-2.5 bg-zinc-200 dark:bg-zinc-800 text-black dark:text-white font-bold rounded-xl text-sm transition-colors hover:opacity-90">
                         Rejoin
@@ -155,7 +163,9 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                         serverUrl={livekitUrl}
                         data-lk-theme="default"
                         style={{ height: "100%" }}
+                        connectOptions={{ autoSubscribe: true }}
                         onDisconnected={() => setDisconnected(true)}
+                        onError={(err) => setDisconnectReason(err?.message || "Unknown error occurred")}
                     >
                         <VideoConference />
                         <RoomAudioRenderer />
