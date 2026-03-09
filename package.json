@@ -9,7 +9,9 @@
     "dev": "node server.js",
     "build": "next build",
     "start": "NODE_ENV=production node server.js",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "prisma generate",
+    "setup:livekit": "mkdir -p livekit && cd livekit && wget -qO- https://github.com/livekit/livekit/releases/download/v1.9.12/livekit_1.9.12_linux_amd64.tar.gz | tar -xz livekit-server"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
