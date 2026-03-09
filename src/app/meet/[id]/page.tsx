@@ -17,6 +17,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     const [token, setToken] = useState<string | null>(null);
     const [name, setName] = useState("");
     const [hasJoined, setHasJoined] = useState(false);
+    const [disconnected, setDisconnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [title, setTitle] = useState("Meeting");
 
@@ -110,6 +111,28 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
         );
     }
 
+    if (disconnected) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-50 dark:bg-black p-4 text-center">
+                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center mb-4">
+                    <Video className="w-8 h-8 text-red-500" />
+                </div>
+                <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-1">You left the meeting</h2>
+                <p className="text-zinc-500 text-sm mb-6 max-w-sm">
+                    If this was unexpected, your LiveKit WebSocket connection may have failed. Ensure your <code className="bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-xs">NEXT_PUBLIC_LIVEKIT_URL</code> environment variable is correctly configured and port 7880 is open on your VPS firewall.
+                </p>
+                <div className="flex gap-3">
+                    <button onClick={() => window.location.reload()} className="px-5 py-2.5 bg-zinc-200 dark:bg-zinc-800 text-black dark:text-white font-bold rounded-xl text-sm transition-colors hover:opacity-90">
+                        Rejoin
+                    </button>
+                    <button onClick={() => router.push("/")} className="px-5 py-2.5 bg-indigo-600 text-white font-bold rounded-xl text-sm transition-colors hover:bg-indigo-700">
+                        Return Home
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="h-screen w-full bg-zinc-950 text-white flex flex-col">
             <div className="px-6 py-4 flex items-center justify-between border-b border-white/10 shrink-0">
@@ -128,7 +151,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                         serverUrl={livekitUrl}
                         data-lk-theme="default"
                         style={{ height: "100%" }}
-                        onDisconnected={() => router.push("/")}
+                        onDisconnected={() => setDisconnected(true)}
                     >
                         <VideoConference />
                         <RoomAudioRenderer />
