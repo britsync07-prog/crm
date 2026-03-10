@@ -22,8 +22,8 @@ const dev = process.env.NODE_ENV !== "production";
     }
 
     // --dev uses devkey/secret automatically. 
-    // Force IPv4 binding (127.0.0.1) because some VPS environments crash if they try to bind to IPv6 ([::1])
-    const args = ["--dev", "--bind", "127.0.0.1"];
+    // Bind to 0.0.0.0 so external clients can hit the WebSocket on the VPS
+    const args = ["--dev", "--bind", "0.0.0.0"];
     const config = path.join(livekitDir, "config.yaml");
     if (fs.existsSync(config)) args.push("--config", config);
 

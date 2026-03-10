@@ -23,12 +23,8 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     const [title, setTitle] = useState("Meeting");
     const [disconnectReason, setDisconnectReason] = useState<string | null>(null);
 
-    // Clean up the URL (remove trailing spaces common when copying from Cloud Shell)
+    // Clean up the URL
     let livekitUrl = (process.env.NEXT_PUBLIC_LIVEKIT_URL || "ws://localhost:7880").trim();
-
-    // Cloud shell proxy requires wss:// instead of https:// for WebSockets
-    if (livekitUrl.startsWith("http://")) livekitUrl = livekitUrl.replace("http://", "ws://");
-    if (livekitUrl.startsWith("https://")) livekitUrl = livekitUrl.replace("https://", "wss://");
 
     const fetchToken = async (participantName?: string) => {
         try {
