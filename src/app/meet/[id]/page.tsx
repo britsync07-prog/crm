@@ -23,8 +23,24 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     const [title, setTitle] = useState("Meeting");
     const [disconnectReason, setDisconnectReason] = useState<string | null>(null);
 
-    // Clean up the URL
-    let livekitUrl = (process.env.NEXT_PUBLIC_LIVEKIT_URL || "ws://localhost:7880").trim();
+    const getLivekitUrl = () => {
+        const configuredUrl = (process.env.NEXT_PUBLIC_LIVEKIT_URL || "").trim();
+
+        if (typeof window === "undefined") {
+            return configuredUrl;
+        }
+
+        const isHttpsPage = window.location.protocol === "https:";
+        if (!configuredUrl) {
+            return isHttpsPage ? "wss://leadhunter-meeting.work.gd" : "ws://localhost:7880";
+        }
+
+        if (isHttpsPage && configuredUrl.startsWith("ws://")) {
+            return configuredUrl.replace(/^ws:\/\//, "wss://");
+        }
+
+        return configuredUrl;
+    };
 
     const fetchToken = async (participantName?: string) => {
         try {
@@ -156,7 +172,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                         video={true}
                         audio={true}
                         token={token}
-                        serverUrl={livekitUrl}
+                        serverUrl={getLivekitUrl()}
                         data-lk-theme="default"
                         style={{ height: "100%" }}
                         connectOptions={{ autoSubscribe: true }}

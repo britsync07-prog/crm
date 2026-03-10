@@ -4,6 +4,8 @@
   --background: #ffffff;
   --foreground: #09090b;
   --indigo-soft: rgba(79, 70, 229, 0.1);
+  --font-geist-sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-geist-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 @theme inline {
