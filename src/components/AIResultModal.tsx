@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useEffect } from "react";
+import { X, Sparkles, CheckCircle2 } from "lucide-react";
 
 interface AIResultModalProps {
   isOpen: boolean;
@@ -19,10 +18,7 @@ export default function AIResultModal({
   result,
   type = "general"
 }: AIResultModalProps) {
-  const [mounted, setMounted] = useState(false);
-
   useEffect(() => {
-    setMounted(true);
     if (isOpen) {
       document.body.style.overflow = "hidden";
     } else {
@@ -31,19 +27,19 @@ export default function AIResultModal({
     return () => { document.body.style.overflow = "unset"; };
   }, [isOpen]);
 
-  if (!mounted || !isOpen) return null;
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-white dark:bg-zinc-950 w-full max-w-lg rounded-[32px] border border-zinc-200 dark:border-white/10 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-        <div className="p-8 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between bg-indigo-50/30 dark:bg-indigo-950/20">
+        <div className="p-8 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between bg-blue-50/30 dark:bg-blue-950/20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+            <div className="w-10 h-10 rounded-2xl bg-[#012169] flex items-center justify-center text-white shadow-lg shadow-blue-900/20">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-xl font-black tracking-tight text-zinc-900 dark:text-white uppercase italic">{title}</h2>
-              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">AI Intelligence Report</p>
+              <p className="text-[10px] font-black text-[#012169] uppercase tracking-widest">AI Intelligence Report</p>
             </div>
           </div>
           <button 
@@ -78,7 +74,7 @@ export default function AIResultModal({
                       fill="transparent"
                       strokeDasharray={251.2}
                       strokeDashoffset={251.2 - (251.2 * (result.score || 0)) / 100}
-                      className="text-indigo-600 transition-all duration-1000 ease-out"
+                      className="text-[#012169] transition-all duration-1000 ease-out"
                     />
                   </svg>
                   <span className="absolute text-2xl font-black italic">{result.score}%</span>
@@ -96,7 +92,7 @@ export default function AIResultModal({
 
           {type === "summary" && (
             <div className="space-y-4">
-              <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Executive Summary</h3>
+              <h3 className="text-sm font-black uppercase tracking-widest text-[#012169]">Executive Summary</h3>
               <p className="text-lg font-medium text-zinc-800 dark:text-zinc-200 leading-relaxed italic">
                 "{result}"
               </p>
@@ -105,11 +101,11 @@ export default function AIResultModal({
 
           {type === "tasks" && (
             <div className="space-y-4">
-              <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Action Plan</h3>
+              <h3 className="text-sm font-black uppercase tracking-widest text-[#012169]">Action Plan</h3>
               <div className="space-y-3">
                 {String(result).split('\n').map((item, i) => (
-                  <div key={i} className="flex gap-3 p-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/10 group hover:border-indigo-500/30 transition-all">
-                    <CheckCircle2 className="w-5 h-5 text-indigo-500 shrink-0" />
+                  <div key={i} className="flex gap-3 p-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/10 group hover:border-blue-700/30 transition-all">
+                    <CheckCircle2 className="w-5 h-5 text-[#012169] shrink-0" />
                     <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">{item.replace('- ', '')}</span>
                   </div>
                 ))}

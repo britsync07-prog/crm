@@ -37,7 +37,7 @@ export default function CreateCategoryModal({ isOpen, onClose }: { isOpen: boole
         <div className="p-8 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center">
-              <Layers className="w-5 h-5 text-indigo-600" />
+              <Layers className="w-5 h-5 text-[#012169]" />
             </div>
             <div>
               <h2 className="text-xl font-black tracking-tight text-zinc-900 dark:text-white uppercase italic">New Category</h2>
@@ -56,7 +56,7 @@ export default function CreateCategoryModal({ isOpen, onClose }: { isOpen: boole
               type="text"
               required
               autoFocus
-              className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-zinc-900 dark:text-white"
+              className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold text-zinc-900 dark:text-white"
               placeholder="e.g. Real Estate Agents, Tech Founders"
               value={name}
               onChange={(e) => setName(e.target.value)}

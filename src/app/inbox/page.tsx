@@ -37,7 +37,7 @@ export default async function UnifiedInboxPage() {
     threads = [
       {
         id: "system-1",
-        from: "MiniCRM System",
+ from: "BritCRM System",
         subject: "No Emails Found or Account Not Configured",
         snippet: "To view your real inbox here, navigate to Settings > Email and connect an account with IMAP credentials.",
         date: new Date().toLocaleDateString(),

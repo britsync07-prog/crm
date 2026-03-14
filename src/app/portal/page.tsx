@@ -45,13 +45,13 @@ export default async function ClientPortalPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg">
+              <div className="w-8 h-8 rounded-lg bg-[#012169] flex items-center justify-center text-white shadow-lg">
                 <Shield className="w-4 h-4" />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500 italic">Secure Client Portal</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#012169] italic">Secure Client Portal</span>
             </div>
             <h1 className="text-4xl md:text-5xl font-black tracking-tight text-zinc-900 dark:text-white uppercase">
-              Mission <span className="text-indigo-500 italic">Control</span>
+              Mission <span className="text-[#012169] italic">Control</span>
             </h1>
             <p className="text-zinc-500 font-medium">Strategic overview of your ongoing projects and financial ledger.</p>
           </div>
@@ -76,7 +76,7 @@ export default async function ClientPortalPage() {
             <div className="grid gap-6">
               {projects.map((project) => (
                 <div key={project.id} className="bg-white dark:bg-zinc-950 p-8 rounded-[40px] border border-zinc-200 dark:border-white/10 shadow-sm space-y-8 relative group overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2"></div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#012169]/5 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2"></div>
                   
                   <div className="flex flex-col md:flex-row justify-between gap-6 relative z-10">
                     <div>
@@ -102,7 +102,7 @@ export default async function ClientPortalPage() {
                       <span>Next Milestone: 12 Oct</span>
                     </div>
                     <div className="h-2 w-full bg-zinc-100 dark:bg-white/5 rounded-full overflow-hidden">
-                      <div className="h-full bg-indigo-600 w-4/5 shadow-[0_0_10px_rgba(79,70,229,0.5)] transition-all duration-1000"></div>
+                      <div className="h-full bg-[#012169] w-4/5 shadow-[0_0_10px_rgba(79,70,229,0.5)] transition-all duration-1000"></div>
                     </div>
                   </div>
 
@@ -141,7 +141,7 @@ export default async function ClientPortalPage() {
                 {invoices.slice(0, 3).map(inv => (
                   <div key={inv.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer group">
                     <div>
-                      <p className="text-[10px] font-black text-indigo-400 uppercase tracking-tighter">#{inv.invoiceRef}</p>
+                      <p className="text-[10px] font-black text-blue-300 uppercase tracking-tighter">#{inv.invoiceRef}</p>
                       <p className="text-sm font-bold">${inv.amount.toLocaleString()}</p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -154,7 +154,7 @@ export default async function ClientPortalPage() {
                 ))}
               </div>
               
-              <button className="w-full py-4 rounded-2xl bg-white text-black text-xs font-black uppercase tracking-[0.2em] hover:bg-indigo-500 hover:text-white transition-all">
+              <button className="w-full py-4 rounded-2xl bg-white text-black text-xs font-black uppercase tracking-[0.2em] hover:bg-[#012169] hover:text-white transition-all">
                 Full Statement
               </button>
             </div>
@@ -167,7 +167,7 @@ export default async function ClientPortalPage() {
                   { name: "Q4 Strategy.pptx", size: "12.8 MB", type: "PPTX" },
                   { name: "Asset Pack v2.zip", size: "142 MB", type: "ZIP" }
                 ].map(file => (
-                  <div key={file.name} className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50 dark:bg-white/5 group hover:border-indigo-500/30 transition-all cursor-pointer">
+                  <div key={file.name} className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50 dark:bg-white/5 group hover:border-blue-700/30 transition-all cursor-pointer">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-100 dark:border-white/10">
                         <FileText className="w-4 h-4 text-zinc-400" />
@@ -177,7 +177,7 @@ export default async function ClientPortalPage() {
                         <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">{file.size}</p>
                       </div>
                     </div>
-                    <ArrowUpRight className="w-3 h-3 text-zinc-300 group-hover:text-indigo-500 transition-colors" />
+                    <ArrowUpRight className="w-3 h-3 text-zinc-300 group-hover:text-[#012169] transition-colors" />
                   </div>
                 ))}
               </div>

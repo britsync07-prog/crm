@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { generateColdEmail } from "@/lib/ai-agents";
 import { sendRealEmail } from "@/lib/mailer";
 import { getSession } from "@/lib/auth";
+import { LEAD_STAGES, transitionLeadStage } from "@/lib/crm-lifecycle";
 
 export async function addEmailAccount(
   _prevState: { error: string | null; success: boolean },
@@ -131,6 +132,12 @@ export async function simulateEmailSending(campaignId: string) {
           status: "Sent",
           sentAt: new Date(),
         },
+      });
+
+      await transitionLeadStage({
+        leadId: cLead.lead.id,
+        nextStage: LEAD_STAGES.CONTACTED,
+        reason: `Campaign outreach sent (${cLead.campaign.name})`,
       });
     } catch (error) {
       console.error(`Failed to send email to ${cLead.lead.email}:`, error);

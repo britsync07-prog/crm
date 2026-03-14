@@ -11,6 +11,7 @@ export async function sendRealEmail(config: {
   to: string;
   subject: string;
   body: string;
+  senderName?: string;
   variables?: Record<string, string>;
 }) {
   const account = await prisma.emailAccount.findUnique({
@@ -38,7 +39,7 @@ export async function sendRealEmail(config: {
   }
 
   const messageData = {
-    from: `"${account.username}" <${account.email}>`,
+    from: `"${config.senderName || account.username}" <${account.email}>`,
     to: config.to,
     subject: config.subject,
     html: finalBody,

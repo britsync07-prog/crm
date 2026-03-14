@@ -55,10 +55,10 @@ export default async function AutomationsPage() {
 
           <div className="grid gap-4">
             {automations.map((auto) => (
-              <div key={auto.id} className="bg-white dark:bg-zinc-950 p-6 rounded-[32px] border border-zinc-200 dark:border-white/10 shadow-sm group hover:border-indigo-500/30 transition-all">
+              <div key={auto.id} className="bg-white dark:bg-zinc-950 p-6 rounded-[32px] border border-zinc-200 dark:border-white/10 shadow-sm group hover:border-blue-700/30 transition-all">
                 <div className="flex flex-col md:flex-row gap-6">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0">
-                    <Workflow className="w-6 h-6 text-indigo-600" />
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-[#012169]/10 flex items-center justify-center shrink-0">
+                    <Workflow className="w-6 h-6 text-[#012169]" />
                   </div>
                   
                   <div className="flex-1 space-y-2">
@@ -76,7 +76,7 @@ export default async function AutomationsPage() {
                         {auto.triggerType}
                       </div>
                       <ArrowRight className="w-3 h-3 text-zinc-300" />
-                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-[9px] font-black uppercase tracking-widest text-indigo-600">
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-50 dark:bg-[#012169]/10 border border-blue-100 dark:border-blue-900/30 text-[9px] font-black uppercase tracking-widest text-[#012169]">
                         {auto.steps.length} Steps
                       </div>
                     </div>
@@ -105,7 +105,7 @@ export default async function AutomationsPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-black uppercase italic tracking-tight">Execution Pulse</h2>
-            <Activity className="w-5 h-5 text-indigo-500 animate-pulse" />
+            <Activity className="w-5 h-5 text-[#012169] animate-pulse" />
           </div>
 
           <div className="space-y-4">
@@ -125,7 +125,7 @@ export default async function AutomationsPage() {
                   <span className="text-[9px] font-bold text-zinc-400 uppercase">{new Date(log.createdAt).toLocaleTimeString()}</span>
                 </div>
                 <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400 leading-relaxed italic">
-                  Executed in <span className="font-black text-indigo-500">{log.executionTime}ms</span>. Neural path cleared.
+                  Executed in <span className="font-black text-[#012169]">{log.executionTime}ms</span>. Neural path cleared.
                 </p>
               </div>
             ))}

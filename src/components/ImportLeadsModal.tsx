@@ -72,7 +72,7 @@ export default function ImportLeadsModal({ isOpen, onClose }: { isOpen: boolean;
             <div>
               <label className="text-[10px] font-black uppercase text-zinc-400 tracking-[0.2em] mb-2 block">Target Category</label>
               <select
-                className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-zinc-900 dark:text-white text-xs"
+                className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold text-zinc-900 dark:text-white text-xs"
                 value={selectedCategoryId}
                 onChange={(e) => setSelectedCategoryId(e.target.value)}
                 disabled={isUploading}
@@ -82,15 +82,15 @@ export default function ImportLeadsModal({ isOpen, onClose }: { isOpen: boolean;
               </select>
             </div>
 
-            <div className="p-8 border-2 border-dashed border-zinc-200 dark:border-white/10 rounded-3xl text-center space-y-4 hover:border-indigo-500/50 transition-all cursor-pointer relative">
+            <div className="p-8 border-2 border-dashed border-zinc-200 dark:border-white/10 rounded-3xl text-center space-y-4 hover:border-[#012169]/50 transition-all cursor-pointer relative">
               <input 
                 type="file" 
                 accept=".csv" 
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
-              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/30 rounded-2xl flex items-center justify-center mx-auto">
-                <FileText className="w-6 h-6 text-indigo-600" />
+              <div className="w-12 h-12 bg-blue-50 dark:bg-blue-950/30 rounded-2xl flex items-center justify-center mx-auto">
+                <FileText className="w-6 h-6 text-[#012169]" />
               </div>
               <div>
                 <p className="text-sm font-bold text-zinc-900 dark:text-white">{file ? file.name : "Select CSV File"}</p>
@@ -121,7 +121,7 @@ export default function ImportLeadsModal({ isOpen, onClose }: { isOpen: boolean;
           <button 
             type="submit"
             disabled={!file || isUploading}
-            className="w-full py-4 rounded-2xl bg-indigo-600 text-white text-xs font-black uppercase tracking-[0.2em] hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-xl shadow-indigo-500/20 flex items-center justify-center gap-2"
+            className="w-full py-4 rounded-2xl bg-[#012169] text-white text-xs font-black uppercase tracking-[0.2em] hover:bg-[#c8102e] disabled:opacity-50 transition-all shadow-xl shadow-blue-900/20 flex items-center justify-center gap-2"
           >
             {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             {isUploading ? "Processing..." : "Start Import"}

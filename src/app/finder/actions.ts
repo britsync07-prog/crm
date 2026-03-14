@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { CategoryService } from "@/lib/services/category.service";
 import { parse } from 'csv-parse/sync';
 import axios from 'axios';
+import { LEAD_STAGES, transitionLeadStage } from "@/lib/crm-lifecycle";
 
 export async function getCountriesAction() {
   try {
@@ -206,30 +207,49 @@ export async function importScrapedLeadsAction(jobId: string) {
       }
 
       try {
-        await prisma.lead.upsert({
-          where: { email: email.toLowerCase().trim() },
-          update: {
-            categoryId: categoryId,
-            industry: job.keyword,
-            location: address || job.location,
-          },
-          create: {
-            userId: session.id,
-            name: name,
-            email: email.toLowerCase().trim(),
-            phone: phone,
-            company: name !== "Unknown" ? name : null,
-            website: website,
-            industry: job.keyword,
-            location: address || job.location,
-            status: "New",
-            categoryId: categoryId,
-            source: "Lead Finder",
-            rating: rating,
-          },
+        const normalizedEmail = email.toLowerCase().trim();
+        const existing = await prisma.lead.findUnique({ where: { email: normalizedEmail } });
+        if (existing && existing.userId !== session.id) {
+          skipped++;
+          continue;
+        }
+
+        const lead = existing
+          ? await prisma.lead.update({
+              where: { id: existing.id },
+              data: {
+                categoryId: categoryId,
+                industry: job.keyword,
+                location: address || job.location,
+                website: existing.website || website,
+                rating: existing.rating || rating,
+                source: existing.source || "Lead Finder",
+              },
+            })
+          : await prisma.lead.create({
+              data: {
+                userId: session.id,
+                name: name,
+                email: normalizedEmail,
+                phone: phone,
+                company: name !== "Unknown" ? name : null,
+                website: website,
+                industry: job.keyword,
+                location: address || job.location,
+                status: LEAD_STAGES.NEW,
+                categoryId: categoryId,
+                source: "Lead Finder",
+                rating: rating,
+              },
+            });
+
+        await transitionLeadStage({
+          leadId: lead.id,
+          nextStage: LEAD_STAGES.NEW,
+          reason: "Imported from lead finder",
         });
         imported++;
-      } catch (e) {
+      } catch {
         skipped++;
       }
     }
@@ -259,6 +279,40 @@ export async function deleteLeadsAction(leadIds: string[]) {
   } catch (error: any) {
     console.error("Error deleting leads:", error);
     throw new Error("Failed to delete leads");
+  }
+}
+
+export async function bulkUpdateLeadStatusAction(leadIds: string[], nextStatus: string) {
+  try {
+    const session = await getSession();
+    if (!session) throw new Error("Unauthorized");
+    if (!Array.isArray(leadIds) || leadIds.length === 0) throw new Error("No leads selected");
+    if (!Object.values(LEAD_STAGES).includes(nextStatus as (typeof LEAD_STAGES)[keyof typeof LEAD_STAGES])) {
+      throw new Error("Invalid lead status");
+    }
+
+    const leads = await prisma.lead.findMany({
+      where: {
+        id: { in: leadIds },
+        userId: session.id,
+      },
+      select: { id: true },
+    });
+
+    for (const lead of leads) {
+      await transitionLeadStage({
+        leadId: lead.id,
+        nextStage: nextStatus as (typeof LEAD_STAGES)[keyof typeof LEAD_STAGES],
+        reason: "Bulk status update by user",
+        force: true,
+      });
+    }
+
+    revalidatePath("/leads");
+    return { success: true, updated: leads.length };
+  } catch (error: any) {
+    console.error("Error bulk updating lead status:", error);
+    throw new Error(error?.message || "Failed to update lead status");
   }
 }
 

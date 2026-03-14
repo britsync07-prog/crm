@@ -77,14 +77,14 @@ export async function importLeadsFromCSV(formData: FormData) {
 
     for (const rec of records) {
       const record = rec as any;
-      let name = (nameKey ? record[nameKey] : "").toString().trim();
+      const name = (nameKey ? record[nameKey] : "").toString().trim();
       let email = (emailKey ? record[emailKey] : "").toString().trim();
-      let company = (companyKey ? record[companyKey] : "").toString().trim();
-      let industry = (industryKey ? record[industryKey] : "").toString().trim();
-      let website = (websiteKey ? record[websiteKey] : "").toString().trim();
-      let phone = (phoneKey ? record[phoneKey] : "").toString().trim();
-      let address = (addressKey ? record[addressKey] : "").toString().trim();
-      let rating = (ratingKey ? record[ratingKey] : "").toString().trim();
+      const company = (companyKey ? record[companyKey] : "").toString().trim();
+      const industry = (industryKey ? record[industryKey] : "").toString().trim();
+      const website = (websiteKey ? record[websiteKey] : "").toString().trim();
+      const phone = (phoneKey ? record[phoneKey] : "").toString().trim();
+      const address = (addressKey ? record[addressKey] : "").toString().trim();
+      const rating = (ratingKey ? record[ratingKey] : "").toString().trim();
 
       // FALLBACK: If email wasn't found by header, scan all columns for an '@'
       if (!email || !email.includes("@")) {

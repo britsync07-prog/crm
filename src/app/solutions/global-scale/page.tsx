@@ -23,6 +23,8 @@ import {
   HardDrive
 } from "lucide-react";
 
+const SMTP_ROTATION_WIDTHS = [82, 67, 94, 51, 73, 88, 46, 79];
+
 const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => (
   <Link href={href} className="text-zinc-400 hover:text-white transition-colors duration-300 font-medium tracking-tight">
     {children}
@@ -31,10 +33,10 @@ const NavLink = ({ href, children }: { href: string; children: React.ReactNode }
 
 export default function GlobalScalePage() {
   return (
-    <div className="flex flex-col min-h-screen bg-[#030303] text-zinc-100 overflow-x-hidden selection:bg-indigo-500 selection:text-white font-sans antialiased">
+    <div className="flex flex-col min-h-screen bg-[#030303] text-zinc-100 overflow-x-hidden selection:bg-[#012169] selection:text-white font-sans antialiased">
       {/* Immersive Background */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/10 blur-[160px] rounded-full"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-[#012169]/10 blur-[160px] rounded-full"></div>
         <div className="absolute bottom-[10%] right-[-5%] w-[40%] h-[40%] bg-violet-600/10 blur-[140px] rounded-full"></div>
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>
       </div>
@@ -43,10 +45,10 @@ export default function GlobalScalePage() {
       <header className="fixed top-0 w-full z-50 px-6 py-6 flex justify-center">
         <div className="max-w-6xl w-full h-16 bg-white/5 border border-white/10 backdrop-blur-xl rounded-full px-8 flex items-center justify-between shadow-2xl">
           <Link href="/landing" className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 rotate-3">
+            <div className="w-9 h-9 bg-[#012169] rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20 rotate-3">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-black tracking-tighter uppercase italic text-white hidden sm:block">MiniCRM</span>
+ <span className="text-xl font-black tracking-tighter italic text-white hidden sm:block">BritCRM</span>
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
             <NavLink href="/features/ai-discovery">Discovery</NavLink>
@@ -57,7 +59,7 @@ export default function GlobalScalePage() {
           </nav>
           <div className="flex items-center gap-6">
             <Link href="/login" className="text-[11px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Login</Link>
-            <Link href="/signup" className="bg-white text-black px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em] hover:bg-indigo-500 hover:text-white transition-all duration-500 shadow-xl">
+            <Link href="/signup" className="bg-white text-black px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em] hover:bg-[#012169] hover:text-white transition-all duration-500 shadow-xl">
               Join Now
             </Link>
           </div>
@@ -67,12 +69,12 @@ export default function GlobalScalePage() {
       <main className="flex-1 relative z-10 pt-48 pb-32">
         {/* Hero Section */}
         <section className="container mx-auto px-6 text-center space-y-12 max-w-6xl">
-          <span className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.4em] italic">Architected for Hyper-Growth</span>
+          <span className="text-blue-300 text-[10px] font-black uppercase tracking-[0.4em] italic">Architected for Hyper-Growth</span>
           <h1 className="text-6xl md:text-9xl font-black tracking-tighter leading-[0.85] text-white">
-            Global <br /> <span className="text-indigo-500 italic">Reach.</span>
+            Global <br /> <span className="text-[#012169] italic">Reach.</span>
           </h1>
           <p className="text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed font-medium">
-            Deploy thousands of agents across dozens of countries with zero infrastructure overhead. MiniCRM scales as fast as your ambition.
+ Deploy thousands of agents across dozens of countries with zero infrastructure overhead. BritCRM scales as fast as your ambition.
           </p>
         </section>
 
@@ -94,8 +96,8 @@ export default function GlobalScalePage() {
                   { title: "Isolated Tenants", desc: "Hardware-level separation of your workspace and data.", icon: Layers },
                   { title: "Auto-Elasticity", desc: "Scale from 10 to 10,000 agents instantly.", icon: Zap }
                 ].map((item, i) => (
-                  <div key={i} className="space-y-4 p-6 rounded-3xl bg-white/5 border border-white/5 hover:border-indigo-500 transition-all">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-600/20 flex items-center justify-center text-indigo-400">
+                  <div key={i} className="space-y-4 p-6 rounded-3xl bg-white/5 border border-white/5 hover:border-[#012169] transition-all">
+                    <div className="w-10 h-10 rounded-xl bg-[#012169]/20 flex items-center justify-center text-blue-300">
                       <item.icon className="w-5 h-5" />
                     </div>
                     <h4 className="font-bold text-white uppercase italic text-sm">{item.title}</h4>
@@ -106,10 +108,10 @@ export default function GlobalScalePage() {
             </div>
             <div className="relative">
               <div className="aspect-square rounded-[80px] bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-transparent"></div>
-                <Globe className="w-64 h-64 text-indigo-500/20 animate-[spin_20s_linear_infinite] group-hover:text-indigo-500/40 transition-colors" />
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent"></div>
+                <Globe className="w-64 h-64 text-[#012169]/20 animate-[spin_20s_linear_infinite] group-hover:text-[#012169]/40 transition-colors" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                   <div className="w-32 h-32 bg-indigo-600/20 blur-[60px] rounded-full animate-pulse"></div>
+                   <div className="w-32 h-32 bg-[#012169]/20 blur-[60px] rounded-full animate-pulse"></div>
                 </div>
               </div>
             </div>
@@ -126,7 +128,7 @@ export default function GlobalScalePage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pt-12">
                {["EMEA Hub", "APAC Node", "LATAM Grid", "NA Backbone"].map(region => (
                  <div key={region} className="p-8 rounded-[40px] bg-white/5 border border-white/10 space-y-4 text-center">
-                    <MapPin className="w-6 h-6 text-indigo-500 mx-auto" />
+                    <MapPin className="w-6 h-6 text-[#012169] mx-auto" />
                     <p className="text-[10px] font-black uppercase text-white tracking-[0.2em]">{region}</p>
                  </div>
                ))}
@@ -138,7 +140,7 @@ export default function GlobalScalePage() {
         <section className="container mx-auto px-6 py-40 border-t border-white/5">
           <div className="grid lg:grid-cols-2 gap-20 items-center">
             <div className="space-y-10 text-left">
-              <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">Deliverability <br /> <span className="text-indigo-500 not-italic">Infrastructure.</span></h2>
+              <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">Deliverability <br /> <span className="text-[#012169] not-italic">Infrastructure.</span></h2>
               <p className="text-lg text-zinc-400 leading-relaxed font-medium">
                 We maintain a pool of 100,000+ residential and mobile proxies to ensure your AI agents can research and engage leads without being blocked by perimeter security.
               </p>
@@ -148,15 +150,15 @@ export default function GlobalScalePage() {
               </div>
             </div>
             <div className="p-12 bg-zinc-900 border border-white/5 rounded-[60px] space-y-8 shadow-2xl relative overflow-hidden">
-               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-3xl"></div>
+               <div className="absolute top-0 right-0 w-32 h-32 bg-[#012169]/5 blur-3xl"></div>
                <div className="flex justify-between items-center mb-4">
                   <span className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] italic">SMTP ROTATION PULSE</span>
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                </div>
                <div className="grid grid-cols-4 gap-4">
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                  {SMTP_ROTATION_WIDTHS.map((width, i) => (
                     <div key={i} className="h-1 bg-white/10 rounded-full overflow-hidden">
-                       <div className="h-full bg-indigo-500" style={{ width: `${Math.random() * 100}%` }}></div>
+                       <div className="h-full bg-[#012169]" style={{ width: `${width}%` }}></div>
                     </div>
                   ))}
                </div>
@@ -175,7 +177,7 @@ export default function GlobalScalePage() {
                  { title: "RBAC Governance", desc: "Fine-grained permissions for global admins and local territory managers." }
                ].map((item, i) => (
                  <div key={i} className="p-12 rounded-[48px] bg-white/5 border border-white/10 space-y-6 hover:bg-white/[0.08] transition-all text-left group">
-                    <Box className="w-10 h-10 text-indigo-500 group-hover:scale-110 transition-transform duration-500" />
+                    <Box className="w-10 h-10 text-[#012169] group-hover:scale-110 transition-transform duration-500" />
                     <h4 className="text-2xl font-black text-white italic uppercase tracking-tight">{item.title}</h4>
                     <p className="text-zinc-500 text-sm font-medium leading-relaxed">{item.desc}</p>
                  </div>
@@ -206,7 +208,7 @@ export default function GlobalScalePage() {
             <div className="flex-1 w-full grid grid-cols-2 gap-6 opacity-20 hover:opacity-100 transition-opacity duration-1000">
                {Array.from({ length: 4 }).map((_, i) => (
                  <div key={i} className="h-40 rounded-[40px] bg-white/5 border border-white/10 flex flex-col items-center justify-center space-y-4">
-                    <HardDrive className="w-6 h-6 text-indigo-500" />
+                    <HardDrive className="w-6 h-6 text-[#012169]" />
                     <span className="font-black italic text-[10px] text-zinc-500 uppercase tracking-widest">NODE_SEC_{i}</span>
                  </div>
                ))}
@@ -218,13 +220,13 @@ export default function GlobalScalePage() {
         <section className="container mx-auto px-6 py-40 border-t border-white/5 bg-white/[0.01]">
           <div className="grid lg:grid-cols-2 gap-32 items-center">
             <div className="relative">
-               <div className="aspect-video rounded-[60px] bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center shadow-2xl relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-indigo-600/20 blur-[100px] animate-pulse"></div>
-                  <Cpu className="w-24 h-24 text-indigo-500 relative z-10 group-hover:scale-110 transition-transform duration-1000" />
+               <div className="aspect-video rounded-[60px] bg-[#012169]/10 border border-blue-500/20 flex items-center justify-center shadow-2xl relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-[#012169]/20 blur-[100px] animate-pulse"></div>
+                  <Cpu className="w-24 h-24 text-[#012169] relative z-10 group-hover:scale-110 transition-transform duration-1000" />
                </div>
             </div>
             <div className="space-y-10 text-left">
-              <h2 className="text-5xl font-black text-white italic tracking-tighter uppercase leading-tight">Agent <br /> <span className="text-indigo-500 not-italic">Orchestration.</span></h2>
+              <h2 className="text-5xl font-black text-white italic tracking-tighter uppercase leading-tight">Agent <br /> <span className="text-[#012169] not-italic">Orchestration.</span></h2>
               <p className="text-xl text-zinc-400 font-medium leading-relaxed">
                 Deploy "pods" of agents that coordinate. Agent A researches news, Agent B writes the context-aware hook, and Agent C monitors for high-intent replies.
               </p>
@@ -235,7 +237,7 @@ export default function GlobalScalePage() {
                    "Autonomous task hand-off protocol"
                  ].map(item => (
                    <li key={item} className="flex items-center gap-4 text-zinc-300 font-bold">
-                      <CheckCircle2 className="w-5 h-5 text-indigo-500" />
+                      <CheckCircle2 className="w-5 h-5 text-[#012169]" />
                       <span className="uppercase text-xs tracking-widest">{item}</span>
                    </li>
                  ))}
@@ -280,12 +282,12 @@ export default function GlobalScalePage() {
       <footer className="bg-[#030303] border-t border-white/5 py-20">
         <div className="container mx-auto px-6 text-center space-y-10">
           <div className="flex items-center justify-center gap-3">
-            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-[#012169] rounded-xl flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-black tracking-tighter uppercase italic text-white">MiniCRM</span>
+ <span className="text-xl font-black tracking-tighter italic text-white">BritCRM</span>
           </div>
-          <p className="text-zinc-500 text-xs font-black uppercase tracking-[0.4em]">© 2026 MiniCRM. Hyper-growth, engineered.</p>
+ <p className="text-zinc-500 text-xs font-black tracking-[0.4em]">© 2026 BritCRM by BritSync. Hyper-growth, engineered.</p>
         </div>
       </footer>
     </div>

@@ -12,14 +12,14 @@ export default function SignupPage() {
   const [state, formAction] = useActionState(signupAction as any, initialState);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center p-6">
-      <div className="max-w-md w-full space-y-8 bg-white dark:bg-zinc-950 p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(1,33,105,0.14),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(200,16,46,0.14),transparent_42%),#f7f9ff] dark:bg-slate-950 flex items-center justify-center p-6">
+      <div className="max-w-md w-full space-y-8 bg-white/95 dark:bg-slate-950 p-8 rounded-2xl border border-blue-100 dark:border-blue-900/30 shadow-xl">
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 bg-zinc-900 dark:bg-zinc-50 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white dark:text-black font-bold text-xl">M</span>
+          <div className="w-12 h-12 bg-gradient-to-br from-[#012169] to-[#c8102e] rounded-xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-white font-bold text-xl">B</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Create your account</h1>
-          <p className="text-zinc-500 text-sm">Start your 14-day free trial today</p>
+ <h1 className="text-2xl font-bold tracking-tight">Create your BritCRM account</h1>
+          <p className="text-zinc-500 text-sm">Start your BritSync workspace trial</p>
         </div>
 
         <form action={formAction} className="space-y-6">
@@ -39,7 +39,7 @@ export default function SignupPage() {
                   type="text"
                   required
                   placeholder="John Doe"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all text-sm"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-blue-100 dark:border-blue-900/30 bg-blue-50/40 dark:bg-blue-950/20 focus:outline-none focus:ring-2 focus:ring-[#012169] transition-all text-sm"
                 />
               </div>
             </div>
@@ -52,7 +52,7 @@ export default function SignupPage() {
                   type="email"
                   required
                   placeholder="name@company.com"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all text-sm"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-blue-100 dark:border-blue-900/30 bg-blue-50/40 dark:bg-blue-950/20 focus:outline-none focus:ring-2 focus:ring-[#012169] transition-all text-sm"
                 />
               </div>
             </div>
@@ -66,7 +66,7 @@ export default function SignupPage() {
                     type="password"
                     required
                     placeholder="••••••••"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-blue-100 dark:border-blue-900/30 bg-blue-50/40 dark:bg-blue-950/20 focus:outline-none focus:ring-2 focus:ring-[#012169] transition-all text-sm"
                   />
                 </div>
               </div>
@@ -79,7 +79,7 @@ export default function SignupPage() {
                     type="password"
                     required
                     placeholder="••••••••"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-blue-100 dark:border-blue-900/30 bg-blue-50/40 dark:bg-blue-950/20 focus:outline-none focus:ring-2 focus:ring-[#012169] transition-all text-sm"
                   />
                 </div>
               </div>
@@ -87,12 +87,12 @@ export default function SignupPage() {
           </div>
 
           <div className="text-[10px] text-zinc-500 leading-relaxed">
-            By signing up, you agree to our <Link href="/terms" className="text-blue-600 underline">Terms of Service</Link> and <Link href="/privacy" className="text-blue-600 underline">Privacy Policy</Link>.
+            By signing up, you agree to our <Link href="/terms" className="text-[#012169] underline">Terms of Service</Link> and <Link href="/privacy" className="text-[#012169] underline">Privacy Policy</Link>.
           </div>
 
           <button
             type="submit"
-            className="w-full bg-zinc-900 dark:bg-zinc-50 text-white dark:text-black py-3 rounded-lg font-bold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors shadow-lg flex items-center justify-center text-sm gap-2"
+            className="w-full bg-[#012169] text-white py-3 rounded-lg font-bold hover:bg-[#c8102e] transition-colors shadow-lg flex items-center justify-center text-sm gap-2"
           >
             <UserPlus className="w-4 h-4" />
             Create My Account
@@ -101,7 +101,7 @@ export default function SignupPage() {
 
         <p className="text-center text-sm text-zinc-500">
           Already have an account?{" "}
-          <Link href="/login" className="text-blue-600 font-bold hover:underline">Log in</Link>
+          <Link href="/login" className="text-[#012169] font-bold hover:underline">Log in</Link>
         </p>
       </div>
     </div>

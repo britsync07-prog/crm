@@ -50,14 +50,14 @@ export default function NewWorkspacePage() {
 
                 <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden">
                     {/* Header */}
-                    <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 bg-gradient-to-br from-indigo-600 to-indigo-700 text-white">
+                    <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 bg-gradient-to-br from-blue-600 to-blue-700 text-white">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center">
                                 <Zap className="w-6 h-6 text-white" />
                             </div>
                             <div>
                                 <h1 className="text-xl font-black uppercase italic tracking-tight">New Workspace</h1>
-                                <p className="text-indigo-200 text-xs font-medium">Create a collaborative hub for your team</p>
+                                <p className="text-blue-200 text-xs font-medium">Create a collaborative hub for your team</p>
                             </div>
                         </div>
                     </div>
@@ -75,7 +75,7 @@ export default function NewWorkspacePage() {
                                 value={name}
                                 onChange={e => setName(e.target.value)}
                                 maxLength={60}
-                                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white placeholder-zinc-400 transition"
+                                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white placeholder-zinc-400 transition"
                             />
                         </div>
 
@@ -88,7 +88,7 @@ export default function NewWorkspacePage() {
                                 value={description}
                                 onChange={e => setDescription(e.target.value)}
                                 rows={3}
-                                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white placeholder-zinc-400 resize-none transition"
+                                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white placeholder-zinc-400 resize-none transition"
                             />
                         </div>
 
@@ -108,7 +108,7 @@ export default function NewWorkspacePage() {
                             <button
                                 type="submit"
                                 disabled={loading || !name.trim()}
-                                className="flex-1 py-3 text-sm font-black uppercase tracking-widest bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl transition-colors flex items-center justify-center gap-2"
+                                className="flex-1 py-3 text-sm font-black uppercase tracking-widest bg-[#012169] hover:bg-[#c8102e] disabled:opacity-50 text-white rounded-xl transition-colors flex items-center justify-center gap-2"
                             >
                                 {loading ? (
                                     <>

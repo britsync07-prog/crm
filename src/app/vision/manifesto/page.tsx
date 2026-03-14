@@ -27,10 +27,10 @@ const NavLink = ({ href, children }: { href: string; children: React.ReactNode }
 
 export default function ManifestoPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-[#030303] text-zinc-100 overflow-x-hidden selection:bg-indigo-500 selection:text-white font-sans antialiased">
+    <div className="flex flex-col min-h-screen bg-[#030303] text-zinc-100 overflow-x-hidden selection:bg-[#012169] selection:text-white font-sans antialiased">
       {/* Immersive Background */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/10 blur-[160px] rounded-full"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-[#012169]/10 blur-[160px] rounded-full"></div>
         <div className="absolute bottom-[10%] right-[-5%] w-[40%] h-[40%] bg-violet-600/10 blur-[140px] rounded-full"></div>
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>
       </div>
@@ -39,10 +39,10 @@ export default function ManifestoPage() {
       <header className="fixed top-0 w-full z-50 px-6 py-6 flex justify-center">
         <div className="max-w-6xl w-full h-16 bg-white/5 border border-white/10 backdrop-blur-xl rounded-full px-8 flex items-center justify-between shadow-2xl">
           <Link href="/landing" className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 rotate-3">
+            <div className="w-9 h-9 bg-[#012169] rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20 rotate-3">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-black tracking-tighter uppercase italic text-white hidden sm:block">MiniCRM</span>
+ <span className="text-xl font-black tracking-tighter italic text-white hidden sm:block">BritCRM</span>
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
             <NavLink href="/features/ai-discovery">Discovery</NavLink>
@@ -53,7 +53,7 @@ export default function ManifestoPage() {
           </nav>
           <div className="flex items-center gap-6">
             <Link href="/login" className="text-[11px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Login</Link>
-            <Link href="/signup" className="bg-white text-black px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em] hover:bg-indigo-500 hover:text-white transition-all duration-500 shadow-xl">
+            <Link href="/signup" className="bg-white text-black px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em] hover:bg-[#012169] hover:text-white transition-all duration-500 shadow-xl">
               Join Now
             </Link>
           </div>
@@ -63,9 +63,9 @@ export default function ManifestoPage() {
       <main className="flex-1 relative z-10 pt-48 pb-32">
         {/* Hero Section */}
         <section className="container mx-auto px-6 text-center space-y-12 max-w-6xl">
-          <span className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.4em] italic">The Future of Human-AI Synergy</span>
+          <span className="text-blue-300 text-[10px] font-black uppercase tracking-[0.4em] italic">The Future of Human-AI Synergy</span>
           <h1 className="text-6xl md:text-[120px] font-black tracking-tighter leading-[0.85] text-white">
-            Software <br /> <span className="text-indigo-500 italic">is dead.</span>
+            Software <br /> <span className="text-[#012169] italic">is dead.</span>
           </h1>
           <p className="text-xl md:text-3xl text-zinc-400 max-w-3xl mx-auto leading-relaxed font-medium">
             We believe the era of manual data entry and clicking buttons is over. The future of business is agentic.
@@ -77,7 +77,7 @@ export default function ManifestoPage() {
           <div className="grid md:grid-cols-2 gap-20">
             <div className="space-y-8">
               <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter leading-tight">The End of <br /> Administrative Debt.</h2>
-              <p className="text-zinc-400 font-medium leading-relaxed italic border-l-2 border-indigo-500 pl-8">
+              <p className="text-zinc-400 font-medium leading-relaxed italic border-l-2 border-blue-500 pl-8">
                 CRM was meant to empower sales, not enslave them to a database. We believe every minute a human spends typing data is a failure of architecture.
               </p>
             </div>
@@ -98,7 +98,7 @@ export default function ManifestoPage() {
         {/* 2. The Mandate */}
         <section className="container mx-auto px-6 py-40 border-t border-white/5 bg-white/[0.01]">
           <div className="max-w-4xl mx-auto space-y-12 text-center">
-            <div className="flex items-center justify-center gap-4 text-indigo-500 mb-8">
+            <div className="flex items-center justify-center gap-4 text-[#012169] mb-8">
                <Zap className="w-10 h-10" />
                <h2 className="text-5xl font-black italic tracking-tighter uppercase text-white leading-none">The Mandate.</h2>
             </div>
@@ -123,11 +123,11 @@ export default function ManifestoPage() {
                    <li>• High Friction Workflows</li>
                 </ul>
              </div>
-             <div className="p-16 rounded-[60px] border border-indigo-500/30 bg-indigo-600/10 space-y-10 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 blur-[100px]"></div>
+             <div className="p-16 rounded-[60px] border border-blue-700/30 bg-[#012169]/10 space-y-10 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-[#012169]/10 blur-[100px]"></div>
                 <div className="flex justify-between items-center relative z-10">
-                   <h4 className="font-black text-indigo-400 uppercase tracking-widest text-xs italic">The MiniCRM Way (The Future)</h4>
-                   <Sparkles className="w-6 h-6 text-indigo-500" />
+ <h4 className="font-black text-blue-300 tracking-widest text-xs italic">The BritCRM Way (The Future)</h4>
+                   <Sparkles className="w-6 h-6 text-[#012169]" />
                 </div>
                 <ul className="space-y-6 text-lg font-bold text-zinc-300 relative z-10">
                    <li>• Zero-Manual Entry</li>
@@ -143,7 +143,7 @@ export default function ManifestoPage() {
         <section className="container mx-auto px-6 py-40 border-t border-white/5 bg-white/[0.01]">
           <div className="grid lg:grid-cols-2 gap-32 items-center">
             <div className="space-y-10 text-left">
-              <h2 className="text-5xl font-black text-white italic tracking-tighter uppercase leading-tight text-indigo-500">The Human <br /> Director.</h2>
+              <h2 className="text-5xl font-black text-white italic tracking-tighter uppercase leading-tight text-[#012169]">The Human <br /> Director.</h2>
               <p className="text-xl text-zinc-400 font-medium leading-relaxed">
                 In the autonomous age, the human role changes from "Worker" to "Director." You define the high-level strategy; the Neural Engine handles the complex execution.
               </p>
@@ -153,8 +153,8 @@ export default function ManifestoPage() {
               </div>
             </div>
             <div className="relative">
-               <div className="aspect-video rounded-[60px] bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center shadow-2xl">
-                  <Brain className="w-32 h-32 text-indigo-500/20 animate-pulse" />
+               <div className="aspect-video rounded-[60px] bg-[#012169]/10 border border-blue-500/20 flex items-center justify-center shadow-2xl">
+                  <Brain className="w-32 h-32 text-[#012169]/20 animate-pulse" />
                </div>
             </div>
           </div>
@@ -165,7 +165,7 @@ export default function ManifestoPage() {
           <div className="max-w-4xl mx-auto text-center space-y-12">
             <h2 className="text-5xl font-black text-white italic tracking-tighter uppercase">The New Workforce.</h2>
             <p className="text-2xl text-zinc-500 font-medium leading-relaxed italic">
-              We don't see AI as a threat to sales professionals. We see it as the armor that makes them invincible. A single account executive, powered by MiniCRM, can perform the work of an entire 10-person agency.
+ We don't see AI as a threat to sales professionals. We see it as the armor that makes them invincible. A single account executive, powered by BritCRM, can perform the work of an entire 10-person agency.
             </p>
           </div>
         </section>
@@ -173,14 +173,14 @@ export default function ManifestoPage() {
         {/* 6. Algorithmic Integrity */}
         <section className="container mx-auto px-6 py-40 border-t border-white/5 bg-white/[0.01]">
           <div className="bg-zinc-900 rounded-[60px] p-16 md:p-32 border border-white/5 relative overflow-hidden text-center space-y-12">
-            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-600/5 blur-[150px] rounded-full"></div>
-            <h2 className="text-4xl md:text-7xl font-black text-white italic tracking-tighter uppercase relative z-10 leading-none">Algorithmic <br /> <span className="text-indigo-500 not-italic">Integrity.</span></h2>
+            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[#012169]/5 blur-[150px] rounded-full"></div>
+            <h2 className="text-4xl md:text-7xl font-black text-white italic tracking-tighter uppercase relative z-10 leading-none">Algorithmic <br /> <span className="text-[#012169] not-italic">Integrity.</span></h2>
             <p className="text-xl text-zinc-400 max-w-2xl mx-auto relative z-10 font-medium leading-relaxed">
               We are committed to building AI that respects the boundaries of the professional world. No spam, no dark patterns, no hallucinated promises. Only precision data and authentic human-AI synergy.
             </p>
             <div className="flex justify-center gap-16 relative z-10 opacity-20">
                <Heart className="w-12 h-12 text-red-500" />
-               <Shield className="w-12 h-12 text-indigo-500" />
+               <Shield className="w-12 h-12 text-[#012169]" />
                <Globe className="w-12 h-12 text-emerald-500" />
             </div>
           </div>
@@ -211,7 +211,7 @@ export default function ManifestoPage() {
 
         {/* 8. Call to Vanguard */}
         <section className="container mx-auto px-6 py-40 border-t border-white/5">
-          <div className="bg-indigo-600 rounded-[60px] p-16 md:p-32 text-center space-y-16 shadow-2xl relative overflow-hidden group">
+          <div className="bg-[#012169] rounded-[60px] p-16 md:p-32 text-center space-y-16 shadow-2xl relative overflow-hidden group">
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
             <h2 className="text-5xl md:text-[100px] font-black text-white italic tracking-tighter leading-none relative z-10 group-hover:scale-105 transition-transform duration-1000">Join the <br /> Vanguard.</h2>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-8 relative z-10 pt-12">
@@ -226,12 +226,12 @@ export default function ManifestoPage() {
       <footer className="bg-[#030303] border-t border-white/5 py-20">
         <div className="container mx-auto px-6 text-center space-y-10">
           <div className="flex items-center justify-center gap-3">
-            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-[#012169] rounded-xl flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-black tracking-tighter uppercase italic text-white">MiniCRM</span>
+ <span className="text-xl font-black tracking-tighter italic text-white">BritCRM</span>
           </div>
-          <p className="text-zinc-500 text-xs font-black uppercase tracking-[0.4em]">© 2026 MiniCRM. Dedicated to the builders.</p>
+ <p className="text-zinc-500 text-xs font-black tracking-[0.4em]">© 2026 BritCRM by BritSync. Dedicated to the builders.</p>
         </div>
       </footer>
     </div>

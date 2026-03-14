@@ -38,7 +38,7 @@ export default async function OnboardingPage() {
         {/* Left: New Clients to Onboard */}
         <div className="lg:col-span-1 space-y-6">
           <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-zinc-900/50">
-            <h2 className="text-xs font-black uppercase tracking-widest text-indigo-500 mb-6 flex items-center gap-2">
+            <h2 className="text-xs font-black uppercase tracking-widest text-[#012169] mb-6 flex items-center gap-2">
               <Timer className="w-4 h-4" /> Ready for Onboarding
             </h2>
             <div className="space-y-4">
@@ -52,7 +52,7 @@ export default async function OnboardingPage() {
                     "use server";
                     await startOnboardingSession(lead.id);
                   }}>
-                    <button type="submit" className="bg-indigo-600 text-white p-2 rounded-xl hover:bg-indigo-700 transition-colors">
+                    <button type="submit" className="bg-[#012169] text-white p-2 rounded-xl hover:bg-[#c8102e] transition-colors">
                       <MessageCircle className="w-4 h-4" />
                     </button>
                   </form>
@@ -62,7 +62,7 @@ export default async function OnboardingPage() {
             </div>
           </div>
 
-          <div className="p-6 rounded-[32px] bg-gradient-to-br from-indigo-600 to-purple-700 text-white shadow-xl relative overflow-hidden">
+          <div className="p-6 rounded-[32px] bg-gradient-to-br from-blue-600 to-purple-700 text-white shadow-xl relative overflow-hidden">
             <Sparkles className="absolute -right-4 -top-4 w-24 h-24 opacity-10" />
             <h3 className="text-sm font-black uppercase tracking-widest mb-2 italic">Gemini Co-pilot</h3>
             <p className="text-xs font-medium opacity-90 leading-relaxed">
@@ -78,7 +78,7 @@ export default async function OnboardingPage() {
               <div key={session.id} className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-lg dark:border-white/5 dark:bg-zinc-900/50 relative group">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-indigo-500 flex items-center justify-center text-white font-black">
+                    <div className="w-10 h-10 rounded-2xl bg-[#012169] flex items-center justify-center text-white font-black">
                       CB
                     </div>
                     <div>
@@ -89,7 +89,7 @@ export default async function OnboardingPage() {
                       </span>
                     </div>
                   </div>
-                  <Link href={`/onboarding/${session.id}`} className="text-[10px] font-black uppercase tracking-widest text-indigo-500 hover:underline">
+                  <Link href={`/onboarding/${session.id}`} className="text-[10px] font-black uppercase tracking-widest text-[#012169] hover:underline">
                     Expand
                   </Link>
                 </div>
@@ -97,7 +97,7 @@ export default async function OnboardingPage() {
                 <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-white/5 h-32 overflow-hidden relative">
                   <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter mb-2">Latest Message</p>
                   <p className="text-xs font-medium text-zinc-600 dark:text-zinc-300 line-clamp-3 italic">
-                    "{session.messages[0]?.content || "Waiting for interaction..."}"
+                    &quot;{session.messages[0]?.content || "Waiting for interaction..."}&quot;
                   </p>
                   <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-zinc-50 dark:from-zinc-950 to-transparent"></div>
                 </div>
@@ -105,7 +105,7 @@ export default async function OnboardingPage() {
                 <div className="mt-6 flex items-center justify-between">
                   <div className="flex -space-x-2">
                     <div className="w-6 h-6 rounded-full bg-zinc-200 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[8px] font-black">AI</div>
-                    <div className="w-6 h-6 rounded-full bg-indigo-600 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[8px] font-black text-white">SA</div>
+                    <div className="w-6 h-6 rounded-full bg-[#012169] border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[8px] font-black text-white">SA</div>
                   </div>
                   <button className="rounded-xl bg-zinc-900 dark:bg-zinc-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white dark:text-zinc-950 hover:scale-105 transition-all">
                     Take Over

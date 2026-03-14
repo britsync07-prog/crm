@@ -72,7 +72,7 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
     let lock;
     try {
       lock = await client.getMailboxLock(actualMailboxPath);
-    } catch (e) {
+    } catch {
       console.warn(`Mailbox ${actualMailboxPath} not found, falling back to INBOX`);
       lock = await client.getMailboxLock('INBOX');
     }
@@ -82,7 +82,7 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
       const totalMessages = (client.mailbox as any).exists;
       if (totalMessages === 0) return [];
 
-      let fetchedMessages = [];
+      const fetchedMessages = [];
 
       // If it's the STARRED folder, we need to search for flagged messages across INBOX (or actual folder)
       if (logicalMailboxPath === 'STARRED') {
@@ -90,7 +90,7 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
         if (searchResult && searchResult.length > 0) {
           // Get the last 50 starred messages
           const uids = searchResult.slice(-50);
-          for await (let message of client.fetch(uids, { source: true, envelope: true }, { uid: true })) {
+          for await (const message of client.fetch(uids, { source: true, envelope: true }, { uid: true })) {
             fetchedMessages.push(message);
           }
         }
@@ -98,12 +98,12 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
         // Standard folder fetch - get last 50 messages
         const fetchLimit = 50;
         const seq = totalMessages > fetchLimit ? `${totalMessages - (fetchLimit - 1)}:*` : '1:*';
-        for await (let message of client.fetch(seq, { source: true, envelope: true })) {
+        for await (const message of client.fetch(seq, { source: true, envelope: true })) {
           fetchedMessages.push(message);
         }
       }
 
-      for (let message of fetchedMessages) {
+      for (const message of fetchedMessages) {
         if (!message.source) continue;
         const parsed = await simpleParser(message.source);
         emails.push({
@@ -127,7 +127,7 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
   } finally {
     try {
       await client.logout();
-    } catch (e) {
+    } catch {
       // Ignore logout errors
     }
   }
@@ -155,7 +155,7 @@ export async function fetchEmailBody(account: any, mailboxPath: string, uid: str
     let lock;
     try {
       lock = await client.getMailboxLock(actualMailboxPath);
-    } catch (e) {
+    } catch {
       console.warn(`Mailbox ${actualMailboxPath} not found`);
       await client.logout();
       return null;
@@ -183,7 +183,7 @@ export async function fetchEmailBody(account: any, mailboxPath: string, uid: str
   } finally {
     try {
       await client.logout();
-    } catch (e) { }
+    } catch { }
   }
   return null;
 }
@@ -205,7 +205,7 @@ export async function performEmailAction(account: any, mailboxPath: string, uid:
   try {
     await client.connect();
     const actualMailboxPath = await resolveMailboxPath(client, mailboxPath);
-    let lock = await client.getMailboxLock(actualMailboxPath);
+    const lock = await client.getMailboxLock(actualMailboxPath);
     try {
       if (action === 'read') {
         await client.messageFlagsAdd(uid, ['\\Seen']);
@@ -231,7 +231,7 @@ export async function performEmailAction(account: any, mailboxPath: string, uid:
   } finally {
     try {
       await client.logout();
-    } catch (e) { }
+    } catch { }
   }
 }
 
@@ -260,6 +260,60 @@ export async function appendEmailToSentFolder(account: any, rawMessage: Buffer |
   } finally {
     try {
       await client.logout();
-    } catch (e) { }
+    } catch { }
   }
+}
+
+export async function fetchRecentInboxReplyCandidates(
+  account: any,
+  since: Date
+): Promise<Array<{ fromEmail: string; subject: string; date: Date }>> {
+  if (!account.imapHost || !account.imapPort) return [];
+
+  const client = new ImapFlow({
+    host: account.imapHost,
+    port: account.imapPort,
+    secure: account.encryption === 'SSL' || account.imapPort === 993,
+    auth: {
+      user: account.username,
+      pass: account.password
+    },
+    logger: false
+  });
+
+  const candidates: Array<{ fromEmail: string; subject: string; date: Date }> = [];
+
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock('INBOX');
+    try {
+      if (!client.mailbox) return [];
+      const totalMessages = (client.mailbox as any).exists;
+      if (totalMessages === 0) return [];
+
+      const fetchLimit = 80;
+      const seq = totalMessages > fetchLimit ? `${totalMessages - (fetchLimit - 1)}:*` : '1:*';
+      for await (const message of client.fetch(seq, { source: true, envelope: true, flags: true })) {
+        if (!message.source) continue;
+        const parsed = await simpleParser(message.source);
+        const fromEmail = parsed.from?.value?.[0]?.address?.toLowerCase() || '';
+        const subject = parsed.subject || '';
+        const date = parsed.date ? new Date(parsed.date) : null;
+        if (!fromEmail || !date || Number.isNaN(date.getTime())) continue;
+        if (date < since) continue;
+        if (!/^\s*re\s*:/i.test(subject) && !parsed.inReplyTo && (!parsed.references || parsed.references.length === 0)) continue;
+        candidates.push({ fromEmail, subject, date });
+      }
+    } finally {
+      lock.release();
+    }
+  } catch (error) {
+    console.error("IMAP Reply Sync Error:", error);
+  } finally {
+    try {
+      await client.logout();
+    } catch { }
+  }
+
+  return candidates;
 }

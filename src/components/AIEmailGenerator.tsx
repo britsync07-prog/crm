@@ -88,7 +88,7 @@ export default function AIEmailGenerator() {
       <div className="flex flex-col rounded-[40px] border border-zinc-200 dark:border-white/5 bg-white dark:bg-zinc-950 shadow-2xl overflow-hidden relative group">
         <div className="p-8 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 animate-pulse">
+            <div className="w-10 h-10 rounded-2xl bg-[#012169] flex items-center justify-center text-white shadow-lg shadow-blue-900/20 animate-pulse">
               <Bot className="w-5 h-5" />
             </div>
             <div>
@@ -110,13 +110,13 @@ export default function AIEmailGenerator() {
         <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide">
           {messages.map((m, i) => (
             <div key={i} className={`flex gap-4 ${m.role === 'user' ? 'flex-row-reverse' : ''} animate-in fade-in slide-in-from-bottom-2 duration-500`}>
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${m.role === 'model' ? 'bg-indigo-600 text-white' : 'bg-zinc-100 dark:bg-white/10 text-zinc-500'}`}>
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${m.role === 'model' ? 'bg-[#012169] text-white' : 'bg-zinc-100 dark:bg-white/10 text-zinc-500'}`}>
                 {m.role === 'model' ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
               </div>
               <div className={`max-w-[80%] p-5 rounded-3xl text-sm font-medium leading-relaxed shadow-sm ${
                 m.role === 'model' 
                 ? 'bg-zinc-50 dark:bg-white/5 text-zinc-800 dark:text-zinc-200 rounded-tl-none italic' 
-                : 'bg-indigo-600 text-white rounded-tr-none'
+                : 'bg-[#012169] text-white rounded-tr-none'
               }`}>
                 {m.content}
               </div>
@@ -124,8 +124,8 @@ export default function AIEmailGenerator() {
           ))}
           {chatLoading && (
             <div className="flex gap-4 animate-pulse">
-              <div className="w-8 h-8 rounded-xl bg-indigo-600/20 flex items-center justify-center">
-                <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+              <div className="w-8 h-8 rounded-xl bg-[#012169]/20 flex items-center justify-center">
+                <Loader2 className="w-4 h-4 animate-spin text-[#012169]" />
               </div>
               <div className="h-10 w-32 bg-zinc-50 dark:bg-white/5 rounded-3xl"></div>
             </div>
@@ -140,11 +140,11 @@ export default function AIEmailGenerator() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Refine the strategy..."
-              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl py-4 pl-6 pr-14 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none shadow-xl transition-all"
+              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl py-4 pl-6 pr-14 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none shadow-xl transition-all"
             />
             <button 
               onClick={handleSend}
-              className="absolute right-2 top-2 p-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-lg"
+              className="absolute right-2 top-2 p-2.5 rounded-xl bg-[#012169] text-white hover:bg-[#c8102e] transition-all shadow-lg"
             >
               <Send className="w-4 h-4" />
             </button>
@@ -153,13 +153,13 @@ export default function AIEmailGenerator() {
              <div className="flex bg-white dark:bg-black/20 p-1 rounded-xl border border-zinc-200 dark:border-white/5">
                 <button 
                   onClick={() => setTemplateMode("text")}
-                  className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'text' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-700'}`}
+                  className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'text' ? 'bg-[#012169] text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-700'}`}
                 >
                   Text
                 </button>
                 <button 
                   onClick={() => setTemplateMode("html")}
-                  className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'html' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-700'}`}
+                  className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'html' ? 'bg-[#012169] text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-700'}`}
                 >
                   HTML
                 </button>
@@ -192,23 +192,23 @@ export default function AIEmailGenerator() {
           <div className="flex-1 flex flex-col animate-in fade-in zoom-in-95 duration-700">
             <div className="p-8 border-b border-zinc-200 dark:border-white/5 flex items-center justify-between bg-white dark:bg-zinc-900">
                <div>
-                  <h3 className="text-lg font-black uppercase italic text-indigo-500">Design Artifact</h3>
+                  <h3 className="text-lg font-black uppercase italic text-[#012169]">Design Artifact</h3>
                   <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Version 1.0.0 Alpha</p>
                </div>
                <div className="flex items-center gap-3">
                   {mode === "html" && (
                     <div className="flex bg-zinc-100 dark:bg-black/20 p-1 rounded-xl border border-zinc-200 dark:border-white/5 mr-4">
-                      <button onClick={() => setView("preview")} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase flex items-center gap-1.5 transition-all ${view === 'preview' ? 'bg-white dark:bg-white/10 text-indigo-500 shadow-sm' : 'text-zinc-500'}`}>
+                      <button onClick={() => setView("preview")} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase flex items-center gap-1.5 transition-all ${view === 'preview' ? 'bg-white dark:bg-white/10 text-[#012169] shadow-sm' : 'text-zinc-500'}`}>
                         <Eye className="w-3 h-3" /> Preview
                       </button>
-                      <button onClick={() => setView("code")} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase flex items-center gap-1.5 transition-all ${view === 'code' ? 'bg-white dark:bg-white/10 text-indigo-500 shadow-sm' : 'text-zinc-500'}`}>
+                      <button onClick={() => setView("code")} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase flex items-center gap-1.5 transition-all ${view === 'code' ? 'bg-white dark:bg-white/10 text-[#012169] shadow-sm' : 'text-zinc-500'}`}>
                         <Code className="w-3 h-3" /> Code
                       </button>
                     </div>
                   )}
                   <button 
                     onClick={handleCopy}
-                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-indigo-600 text-white px-6 py-2.5 rounded-full shadow-lg shadow-indigo-500/30 hover:scale-105 transition-all active:scale-95"
+                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-[#012169] text-white px-6 py-2.5 rounded-full shadow-lg shadow-blue-500/30 hover:scale-105 transition-all active:scale-95"
                   >
                     {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                     {copied ? "Copied" : "Extract Asset"}
@@ -242,7 +242,7 @@ export default function AIEmailGenerator() {
                           title="Email Preview"
                         />
                       ) : (
-                        <pre className="text-[11px] text-indigo-400 bg-zinc-900 p-10 font-mono leading-relaxed h-[600px] overflow-y-auto scrollbar-hide">
+                        <pre className="text-[11px] text-blue-300 bg-zinc-900 p-10 font-mono leading-relaxed h-[600px] overflow-y-auto scrollbar-hide">
                           {template.html}
                         </pre>
                       )}

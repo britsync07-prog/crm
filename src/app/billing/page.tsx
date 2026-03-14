@@ -58,7 +58,7 @@ export default async function BillingPage() {
         {[
           { label: "Total Revenue", value: `$${totalRevenue.toLocaleString()}`, icon: TrendingUp, color: "text-green-500", trend: "+12.5%", positive: true },
           { label: "Pending AR", value: `$${pendingRevenue.toLocaleString()}`, icon: Clock, color: "text-amber-500", trend: "-2.1%", positive: false },
-          { label: "Active Subs", value: subscriptions.length.toString(), icon: CreditCard, color: "text-indigo-500", trend: "+4", positive: true },
+          { label: "Active Subs", value: subscriptions.length.toString(), icon: CreditCard, color: "text-[#012169]", trend: "+4", positive: true },
           { label: "LTV Average", value: "$4,250", icon: DollarSign, color: "text-blue-500", trend: "+18%", positive: true }
         ].map((stat, i) => (
           <div key={i} className="bg-white dark:bg-zinc-950 p-8 rounded-[32px] border border-zinc-200 dark:border-white/10 shadow-sm space-y-4">
@@ -84,7 +84,7 @@ export default async function BillingPage() {
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-black uppercase italic tracking-tight">Recent Invoices</h2>
-            <Link href="/billing/invoices" className="text-[10px] font-black uppercase text-indigo-500 tracking-[0.2em]">View Ledger →</Link>
+            <Link href="/billing/invoices" className="text-[10px] font-black uppercase text-[#012169] tracking-[0.2em]">View Ledger →</Link>
           </div>
           
           <div className="overflow-hidden rounded-[32px] border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-950 shadow-sm">
@@ -146,7 +146,7 @@ export default async function BillingPage() {
                 </div>
                 <div className="space-y-4 relative z-10">
                   <div>
-                    <p className="text-[10px] font-black uppercase text-indigo-500 tracking-[0.2em]">{sub.planName}</p>
+                    <p className="text-[10px] font-black uppercase text-[#012169] tracking-[0.2em]">{sub.planName}</p>
                     <h4 className="text-lg font-black text-zinc-900 dark:text-white mt-1">{sub.customer.name}</h4>
                   </div>
                   <div className="flex items-end gap-1">

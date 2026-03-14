@@ -50,7 +50,7 @@ export default function WorkspacesList({ workspaces: initial, currentUserId }: P
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-zinc-100 dark:border-white/5 pb-8">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 uppercase italic flex items-center gap-3">
-                        <Layers className="w-8 h-8 text-indigo-500" /> Command <span className="text-indigo-500 not-italic">Bridge</span>
+                        <Layers className="w-8 h-8 text-[#012169]" /> Command <span className="text-[#012169] not-italic">Bridge</span>
                     </h1>
                     <p className="text-zinc-500 font-medium mt-1">Multi-tenant architectural oversight and resource orchestration.</p>
                 </div>
@@ -71,10 +71,10 @@ export default function WorkspacesList({ workspaces: initial, currentUserId }: P
                     const isOwner = ws.ownerId === currentUserId;
 
                     return (
-                        <div key={ws.id} className="bg-white dark:bg-zinc-950 rounded-[48px] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden group hover:border-indigo-500/30 transition-all flex flex-col">
+                        <div key={ws.id} className="bg-white dark:bg-zinc-950 rounded-[48px] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden group hover:border-blue-700/30 transition-all flex flex-col">
                             <div className="p-8 space-y-6 flex-1">
                                 <div className="flex justify-between items-start">
-                                    <div className="w-14 h-14 rounded-[20px] bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                                    <div className="w-14 h-14 rounded-[20px] bg-[#012169] flex items-center justify-center text-white shadow-lg shadow-blue-900/20">
                                         <Layout className="w-7 h-7" />
                                     </div>
                                     <div className="flex gap-2">
@@ -107,7 +107,7 @@ export default function WorkspacesList({ workspaces: initial, currentUserId }: P
                                     </div>
                                     <div className="h-1.5 w-full bg-zinc-100 dark:bg-white/5 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)] transition-all duration-1000"
+                                            className="h-full bg-[#012169] shadow-[0_0_10px_rgba(79,70,229,0.5)] transition-all duration-1000"
                                             style={{ width: `${velocity}%` }}
                                         ></div>
                                     </div>
@@ -117,7 +117,7 @@ export default function WorkspacesList({ workspaces: initial, currentUserId }: P
                                     <div className="p-4 rounded-3xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5">
                                         <p className="text-[9px] font-black uppercase text-zinc-400 mb-1">Personnel</p>
                                         <div className="flex items-center gap-2">
-                                            <Users className="w-3 h-3 text-indigo-500" />
+                                            <Users className="w-3 h-3 text-[#012169]" />
                                             <span className="text-sm font-black">{ws.userCount}</span>
                                         </div>
                                     </div>
@@ -132,7 +132,7 @@ export default function WorkspacesList({ workspaces: initial, currentUserId }: P
                             </div>
 
                             <div className="p-6 bg-zinc-50/50 dark:bg-white/[0.02] border-t border-zinc-100 dark:border-white/5">
-                                <Link href={`/workspaces/${ws.id}`} className="w-full py-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all">
+                                <Link href={`/workspaces/${ws.id}`} className="w-full py-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 group-hover:bg-[#012169] group-hover:text-white group-hover:border-blue-600 transition-all">
                                     Access Terminal <ArrowUpRight className="w-3 h-3" />
                                 </Link>
                             </div>

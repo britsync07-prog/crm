@@ -50,6 +50,10 @@ const dev = process.env.NODE_ENV !== "production";
 
 const hostname = "localhost";
 const port = process.env.PORT || 3001;
+const reminderIntervalMs = Math.max(30, Number(process.env.REMINDER_WORKER_SECONDS || 60)) * 1000;
+const autoReminderEnabled = process.env.AUTO_REMINDER_WORKER !== "false";
+const outreachReplyIntervalMs = Math.max(60, Number(process.env.OUTREACH_REPLY_WORKER_SECONDS || 180)) * 1000;
+const autoOutreachReplyEnabled = process.env.AUTO_OUTREACH_REPLY_WORKER !== "false";
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -176,5 +180,53 @@ app.prepare().then(() => {
         .listen(port, () => {
             console.log(`> Ready on http://${hostname}:${port}`);
             console.log(`> Socket.IO server running`);
+
+            if (autoReminderEnabled) {
+                const reminderUrl = `http://127.0.0.1:${port}/api/internal/reminders`;
+                const reminderFallbackUrl = `http://127.0.0.1:${port}/api/calendar/reminders/trigger`;
+                console.log(`> Reminder worker enabled (${Math.floor(reminderIntervalMs / 1000)}s interval)`);
+
+                const runReminderTick = async () => {
+                    try {
+                        let res = await fetch(reminderUrl);
+                        if (res.status === 404) {
+                            res = await fetch(reminderFallbackUrl);
+                        }
+                        if (!res.ok) {
+                            console.warn(`[ReminderWorker] Trigger failed: ${res.status}`);
+                        }
+                    } catch (err) {
+                        console.warn("[ReminderWorker] Trigger error:", err?.message || err);
+                    }
+                };
+
+                setTimeout(runReminderTick, 5000);
+                const timer = setInterval(runReminderTick, reminderIntervalMs);
+                if (typeof timer.unref === "function") timer.unref();
+            }
+
+            if (autoOutreachReplyEnabled) {
+                const outreachReplyUrl = `http://127.0.0.1:${port}/api/internal/outreach-replies`;
+                const outreachReplyFallbackUrl = `http://127.0.0.1:${port}/api/outreach/replies/trigger`;
+                console.log(`> Outreach reply worker enabled (${Math.floor(outreachReplyIntervalMs / 1000)}s interval)`);
+
+                const runOutreachReplyTick = async () => {
+                    try {
+                        let res = await fetch(outreachReplyUrl);
+                        if (res.status === 404) {
+                            res = await fetch(outreachReplyFallbackUrl);
+                        }
+                        if (!res.ok) {
+                            console.warn(`[OutreachReplyWorker] Trigger failed: ${res.status}`);
+                        }
+                    } catch (err) {
+                        console.warn("[OutreachReplyWorker] Trigger error:", err?.message || err);
+                    }
+                };
+
+                setTimeout(runOutreachReplyTick, 8000);
+                const timer = setInterval(runOutreachReplyTick, outreachReplyIntervalMs);
+                if (typeof timer.unref === "function") timer.unref();
+            }
         });
 });

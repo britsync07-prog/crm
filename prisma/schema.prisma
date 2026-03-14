@@ -48,6 +48,9 @@ model User {
   bookings        Booking[]       @relation("UserBookings")
   rooms           Room[]          @relation("UserRooms")
   createdMeetings Meeting[]       @relation("CreatedMeetings")
+  forms           Form[]          @relation("UserForms")
+  calendarSettings CalendarSettings?
+  calendarEvents   CalendarEvent[]
 }
 
 // ---------------------------------------------------------
@@ -148,7 +151,13 @@ model Meeting {
   hostId     String
   host       User     @relation("CreatedMeetings", fields: [hostId], references: [id])
   title      String
-  status     String   @default("ACTIVE") // ACTIVE, ENDED
+  status     String   @default("ACTIVE") // ACTIVE, ENDED, CANCELED
+  startTime  DateTime @default(now())
+  endTime    DateTime @default(now())
+  formId     String?
+  formSubmissionId String?
+  submitterEmail String?
+  metadata   String?
   createdAt  DateTime @default(now())
 }
 
@@ -669,4 +678,89 @@ model OnboardingMessage {
   content   String
   sender    String // USER, AI, CLIENT
   createdAt DateTime          @default(now())
+}
+
+// ---------------------------------------------------------
+// CUSTOM FORMS (Module 10)
+// ---------------------------------------------------------
+
+model Form {
+  id          String           @id @default(cuid())
+  title       String
+  description String?
+  ownerId     String
+  owner       User             @relation("UserForms", fields: [ownerId], references: [id])
+  meetingSchedulingEnabled Boolean @default(false)
+  meetingDurationMin Int      @default(60)
+  
+  fields      FormField[]
+  submissions FormSubmission[]
+  
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model FormField {
+  id        String   @id @default(cuid())
+  formId    String
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  
+  label     String
+  type      String   // TEXT, TEXTAREA, DROPDOWN, CHECKBOX, RADIO
+  required  Boolean  @default(false)
+  options   String?  // JSON string for selection options
+  order     Int      @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FormSubmission {
+  id        String   @id @default(cuid())
+  formId    String
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  
+  data      String   // JSON string of all field values
+  
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------
+// CALENDAR & REMINDERS (Module 11)
+// ---------------------------------------------------------
+
+model CalendarSettings {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  availableStart   String   @default("09:00")
+  availableEnd     String   @default("17:00")
+  timeZone         String   @default("UTC")
+  
+  // Which email account to use for sending reminders
+  reminderAccountId String?
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model CalendarEvent {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title        String
+  description  String?
+  start        DateTime
+  end          DateTime
+  isLocked     Boolean  @default(false)
+  source       String?
+  meetingId    String?
+  externalMeta String?
+  
+  reminderSent Boolean  @default(false)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

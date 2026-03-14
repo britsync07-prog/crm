@@ -1,0 +1,681 @@
+
+/home/saimon/job/crm/CRMsaas/src/app/actions.ts
+  155:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/ai-actions.ts
+  4:99  warning  'runGeneralAIChat' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/saimon/job/crm/CRMsaas/src/app/api/calendar/events/[id]/route.ts
+  30:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  52:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/calendar/events/route.ts
+  26:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  54:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/calendar/reminders/trigger/route.ts
+   6:27  warning  'req' is defined but never used           @typescript-eslint/no-unused-vars
+  10:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/calendar/settings/route.ts
+   5:27  warning  'req' is defined but never used           @typescript-eslint/no-unused-vars
+  20:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  51:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/channels/[id]/messages/route.ts
+  43:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/email-accounts/route.ts
+   5:27  warning  'req' is defined but never used           @typescript-eslint/no-unused-vars
+  19:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/emails/[uid]/route.ts
+  45:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  93:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/emails/route.ts
+   4:29  warning  'performEmailAction' is defined but never used  @typescript-eslint/no-unused-vars
+  32:21  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  70:21  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/forms/route.ts
+  42:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/leads/download/[jobId]/[fileName]/route.ts
+  39:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/leads/scrape/route.ts
+  132:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  145:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/leads/scrape/status/route.ts
+  30:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/leads/scrape/stop/route.ts
+  36:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/workspaces/[id]/channels/[channelId]/route.ts
+  39:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/workspaces/[id]/channels/route.ts
+  47:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/workspaces/[id]/invite/route.ts
+  44:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/workspaces/[id]/members/[userId]/custom-roles/route.ts
+   49:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  108:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/workspaces/[id]/members/[userId]/nickname/route.ts
+  74:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/workspaces/[id]/members/[userId]/role/route.ts
+  57:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/workspaces/[id]/roles/[roleId]/route.ts
+  40:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/api/workspaces/[id]/roles/route.ts
+  21:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  68:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/auth-actions.ts
+   8:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  30:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/automations/page.tsx
+  5:3  warning  'Play' is defined but never used   @typescript-eslint/no-unused-vars
+  9:3  warning  'Clock' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/saimon/job/crm/CRMsaas/src/app/calendar/page.tsx
+    3:31   warning  'useMemo' is defined but never used                  @typescript-eslint/no-unused-vars
+    3:40   warning  'useRef' is defined but never used                   @typescript-eslint/no-unused-vars
+    9:3    warning  'Clock' is defined but never used                    @typescript-eslint/no-unused-vars
+   11:3    warning  'Mail' is defined but never used                     @typescript-eslint/no-unused-vars
+   13:3    warning  'Target' is defined but never used                   @typescript-eslint/no-unused-vars
+   14:3    warning  'Sparkles' is defined but never used                 @typescript-eslint/no-unused-vars
+   15:3    warning  'Search' is defined but never used                   @typescript-eslint/no-unused-vars
+   16:3    warning  'CheckCircle2' is defined but never used             @typescript-eslint/no-unused-vars
+   17:3    warning  'AlertCircle' is defined but never used              @typescript-eslint/no-unused-vars
+   19:3    warning  'Trash2' is defined but never used                   @typescript-eslint/no-unused-vars
+   20:3    warning  'MoreVertical' is defined but never used             @typescript-eslint/no-unused-vars
+   21:3    warning  'ChevronDown' is defined but never used              @typescript-eslint/no-unused-vars
+   23:133  warning  'addDays' is defined but never used                  @typescript-eslint/no-unused-vars
+   23:142  warning  'startOfDay' is defined but never used               @typescript-eslint/no-unused-vars
+   23:154  warning  'addHours' is defined but never used                 @typescript-eslint/no-unused-vars
+   23:164  warning  'differenceInHours' is defined but never used        @typescript-eslint/no-unused-vars
+   41:10   warning  'isLoading' is assigned a value but never used       @typescript-eslint/no-unused-vars
+   42:10   warning  'isModalOpen' is assigned a value but never used     @typescript-eslint/no-unused-vars
+   42:23   warning  'setIsModalOpen' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   43:10   warning  'isSettingsOpen' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   63:34   error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  119:14   warning  'e' is defined but never used                        @typescript-eslint/no-unused-vars
+  186:27   warning  'i' is defined but never used                        @typescript-eslint/no-unused-vars
+
+/home/saimon/job/crm/CRMsaas/src/app/calls/page.tsx
+  60:15  warning  'data' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/saimon/job/crm/CRMsaas/src/app/campaign-actions.ts
+  56:15  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/campaigns/page.tsx
+    6:3    warning  'BarChart3' is defined but never used                            @typescript-eslint/no-unused-vars
+   12:3    warning  'CheckCircle2' is defined but never used                         @typescript-eslint/no-unused-vars
+   13:3    warning  'AlertCircle' is defined but never used                          @typescript-eslint/no-unused-vars
+   95:99   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+   95:114  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  151:17   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  151:54   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  151:65   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  151:193  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+/home/saimon/job/crm/CRMsaas/src/app/customers/[id]/page.tsx
+  156:84   error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  156:106  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  176:90   error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+/home/saimon/job/crm/CRMsaas/src/app/customers/page.tsx
+  4:67  warning  'ShieldCheck' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/saimon/job/crm/CRMsaas/src/app/f/[id]/page.tsx
+  28:61  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  40:16  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+  67:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+  74:54  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/features/ai-discovery/page.tsx
+    3:3    warning  'Search' is defined but never used                               @typescript-eslint/no-unused-vars
+    6:3    warning  'PlayCircle' is defined but never used                           @typescript-eslint/no-unused-vars
+    7:3    warning  'Globe' is defined but never used                                @typescript-eslint/no-unused-vars
+    8:3    warning  'Database' is defined but never used                             @typescript-eslint/no-unused-vars
+    9:3    warning  'Cpu' is defined but never used                                  @typescript-eslint/no-unused-vars
+   13:3    warning  'Share2' is defined but never used                               @typescript-eslint/no-unused-vars
+   14:3    warning  'Lock' is defined but never used                                 @typescript-eslint/no-unused-vars
+   15:3    warning  'MousePointer2' is defined but never used                        @typescript-eslint/no-unused-vars
+   16:3    warning  'Layers' is defined but never used                               @typescript-eslint/no-unused-vars
+   17:3    warning  'Network' is defined but never used                              @typescript-eslint/no-unused-vars
+   77:93   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  198:106  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  198:121  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  237:39   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  237:77   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  237:94   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  243:23   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  266:111  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  266:129  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  316:114  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/home/saimon/job/crm/CRMsaas/src/app/features/cognitive-writing/page.tsx
+    3:3    warning  'MessageCircle' is defined but never used                        @typescript-eslint/no-unused-vars
+    6:3    warning  'Bot' is defined but never used                                  @typescript-eslint/no-unused-vars
+    7:3    warning  'Cpu' is defined but never used                                  @typescript-eslint/no-unused-vars
+    8:3    warning  'Zap' is defined but never used                                  @typescript-eslint/no-unused-vars
+   10:3    warning  'Brain' is defined but never used                                @typescript-eslint/no-unused-vars
+   11:3    warning  'History' is defined but never used                              @typescript-eslint/no-unused-vars
+   12:3    warning  'ShieldCheck' is defined but never used                          @typescript-eslint/no-unused-vars
+   13:3    warning  'Globe' is defined but never used                                @typescript-eslint/no-unused-vars
+   14:3    warning  'Languages' is defined but never used                            @typescript-eslint/no-unused-vars
+   15:3    warning  'MousePointer2' is defined but never used                        @typescript-eslint/no-unused-vars
+   16:3    warning  'Share2' is defined but never used                               @typescript-eslint/no-unused-vars
+   18:3    warning  'FileText' is defined but never used                             @typescript-eslint/no-unused-vars
+   70:30   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  118:102  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  118:185  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  160:94   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/home/saimon/job/crm/CRMsaas/src/app/finder/actions.ts
+   17:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   28:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   39:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   51:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   79:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  102:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  117:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  132:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  189:46  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  232:16  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+  239:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  259:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  276:18  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  283:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/forms/[id]/submissions/page.tsx
+    5:3   warning  'FileText' is defined but never used      @typescript-eslint/no-unused-vars
+    9:3   warning  'Mail' is defined but never used          @typescript-eslint/no-unused-vars
+   23:24  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   41:16  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+  128:43  warning  'idx' is defined but never used           @typescript-eslint/no-unused-vars
+
+/home/saimon/job/crm/CRMsaas/src/app/forms/new/page.tsx
+   3:20  warning  'useEffect' is defined but never used       @typescript-eslint/no-unused-vars
+  11:3   warning  'Settings2' is defined but never used       @typescript-eslint/no-unused-vars
+  22:3   warning  'ArrowRight' is defined but never used      @typescript-eslint/no-unused-vars
+  23:3   warning  'GripHorizontal' is defined but never used  @typescript-eslint/no-unused-vars
+  98:14  warning  'e' is defined but never used               @typescript-eslint/no-unused-vars
+
+/home/saimon/job/crm/CRMsaas/src/app/forms/page.tsx
+   7:10  warning  'cn' is defined but never used  @typescript-eslint/no-unused-vars
+  56:14  warning  'e' is defined but never used   @typescript-eslint/no-unused-vars
+
+/home/saimon/job/crm/CRMsaas/src/app/inbox/page.tsx
+  24:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/invite/[id]/page.tsx
+   5:10   warning  'Users' is defined but never used                                @typescript-eslint/no-unused-vars
+  11:69   error    Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  64:102  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/home/saimon/job/crm/CRMsaas/src/app/landing/page.tsx
+    6:3    warning  'BarChart3' is defined but never used                            @typescript-eslint/no-unused-vars
+    7:3    warning  'Users' is defined but never used                                @typescript-eslint/no-unused-vars
+   16:3    warning  'Lock' is defined but never used                                 @typescript-eslint/no-unused-vars
+   18:3    warning  'PhoneCall' is defined but never used                            @typescript-eslint/no-unused-vars
+   20:3    warning  'Layers' is defined but never used                               @typescript-eslint/no-unused-vars
+   21:3    warning  'MousePointer2' is defined but never used                        @typescript-eslint/no-unused-vars
+   34:56   error    Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  233:21   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  233:23   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  233:48   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  233:179  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  246:147  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  246:155  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  246:160  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  398:82   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  466:17   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  466:77   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  466:222  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  503:79   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  506:35   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  506:56   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  506:163  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  544:76   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  544:98   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  565:98   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  592:89   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  592:99   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+/home/saimon/job/crm/CRMsaas/src/app/leads/LeadPageHeader.tsx
+   4:24  warning  'Download' is defined but never used      @typescript-eslint/no-unused-vars
+   4:66  warning  'Sparkles' is defined but never used      @typescript-eslint/no-unused-vars
+  12:88  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  37:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+
+/home/saimon/job/crm/CRMsaas/src/app/leads/LeadsPageClient.tsx
+   9:3   warning  'AlertCircle' is defined but never used   @typescript-eslint/no-unused-vars
+  10:3   warning  'MoreVertical' is defined but never used  @typescript-eslint/no-unused-vars
+  11:3   warning  'ChevronDown' is defined but never used   @typescript-eslint/no-unused-vars
+  15:3   warning  'Sparkles' is defined but never used      @typescript-eslint/no-unused-vars
+  30:17  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  31:15  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  62:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+
+/home/saimon/job/crm/CRMsaas/src/app/leads/[id]/page.tsx
+  165:84   error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  165:106  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  189:90   error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+/home/saimon/job/crm/CRMsaas/src/app/login/page.tsx
+  11:61  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/meet/[id]/page.tsx
+   10:10  warning  'RoomEvent' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+  104:8   warning  React Hook useEffect has a missing dependency: 'fetchToken'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/exhaustive-deps
+  108:9   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/saimon/job/crm/CRMsaas/src/app/meet/[id]/page.tsx:108:9
+  106 |     // Auto-fetch on load (will succeed instantly if they are logged in)
+  107 |     useEffect(() => {
+> 108 |         fetchToken();
+      |         ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  109 |     }, [meetingId]);
+  110 |
+  111 |     const handleJoinClick = (e: React.FormEvent) => {  react-hooks/set-state-in-effect
+  109:8   warning  React Hook useEffect has a missing dependency: 'fetchToken'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/exhaustive-deps
+  143:33  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react/no-unescaped-entities
+
+/home/saimon/job/crm/CRMsaas/src/app/onboarding/page.tsx
+  100:21  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  100:84  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+/home/saimon/job/crm/CRMsaas/src/app/portal/page.tsx
+   4:3   warning  'Terminal' is defined but never used  @typescript-eslint/no-unused-vars
+  13:3   warning  'Calendar' is defined but never used  @typescript-eslint/no-unused-vars
+  16:8   warning  'Link' is defined but never used      @typescript-eslint/no-unused-vars
+  17:10  warning  'redirect' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/saimon/job/crm/CRMsaas/src/app/signup/page.tsx
+   6:8   warning  'AIActionButton' is defined but never used  @typescript-eslint/no-unused-vars
+  12:62  error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/social/page.tsx
+   10:3    warning  'Calendar' is defined but never used                             @typescript-eslint/no-unused-vars
+   13:3    warning  'BarChart3' is defined but never used                            @typescript-eslint/no-unused-vars
+   14:3    warning  'MessageSquare' is defined but never used                        @typescript-eslint/no-unused-vars
+   16:3    warning  'ExternalLink' is defined but never used                         @typescript-eslint/no-unused-vars
+   72:19   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+   72:248  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+   72:262  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+   72:271  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  110:111  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  110:126  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+/home/saimon/job/crm/CRMsaas/src/app/solutions/enterprise/page.tsx
+    3:3    warning  'Shield' is defined but never used                               @typescript-eslint/no-unused-vars
+    6:3    warning  'EyeOff' is defined but never used                               @typescript-eslint/no-unused-vars
+    7:3    warning  'Server' is defined but never used                               @typescript-eslint/no-unused-vars
+    8:3    warning  'Globe' is defined but never used                                @typescript-eslint/no-unused-vars
+   12:3    warning  'Zap' is defined but never used                                  @typescript-eslint/no-unused-vars
+   17:3    warning  'ShieldAlert' is defined but never used                          @typescript-eslint/no-unused-vars
+   18:3    warning  'Database' is defined but never used                             @typescript-eslint/no-unused-vars
+   19:3    warning  'Key' is defined but never used                                  @typescript-eslint/no-unused-vars
+   20:3    warning  'Briefcase' is defined but never used                            @typescript-eslint/no-unused-vars
+   99:126  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  229:59   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/home/saimon/job/crm/CRMsaas/src/app/solutions/global-scale/page.tsx
+    7:3   warning  'Database' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+    9:3   warning  'ArrowRight' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+   12:3   warning  'Server' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   13:3   warning  'Cloud' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   15:3   warning  'BarChart3' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+   16:3   warning  'TrendingUp' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+   18:3   warning  'MessageCircle' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   19:3   warning  'Mail' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+   20:3   warning  'Share2' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   22:3   warning  'PieChart' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+  124:26  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            react/no-unescaped-entities
+  159:81  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/saimon/job/crm/CRMsaas/src/app/solutions/global-scale/page.tsx:159:81
+  157 |                   {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+  158 |                     <div key={i} className="h-1 bg-white/10 rounded-full overflow-hidden">
+> 159 |                        <div className="h-full bg-indigo-500" style={{ width: `${Math.random() * 100}%` }}></div>
+      |                                                                                 ^^^^^^^^^^^^^ Cannot call impure function
+  160 |                     </div>
+  161 |                   ))}
+  162 |                </div>  react-hooks/purity
+  229:24  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            react/no-unescaped-entities
+  229:29  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            react/no-unescaped-entities
+
+/home/saimon/job/crm/CRMsaas/src/app/tasks/actions.ts
+  18:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/team-actions.ts
+    8:10  warning  'redirect' is defined but never used                 @typescript-eslint/no-unused-vars
+   64:54  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   79:29  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   80:11  error    'name' is never reassigned. Use 'const' instead      prefer-const
+   82:11  error    'company' is never reassigned. Use 'const' instead   prefer-const
+   83:11  error    'industry' is never reassigned. Use 'const' instead  prefer-const
+   84:11  error    'website' is never reassigned. Use 'const' instead   prefer-const
+   85:11  error    'phone' is never reassigned. Use 'const' instead     prefer-const
+   86:11  error    'address' is never reassigned. Use 'const' instead   prefer-const
+   87:11  error    'rating' is never reassigned. Use 'const' instead    prefer-const
+  133:26  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  144:19  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/app/team/page.tsx
+   9:3  warning  'MapPin' is defined but never used        @typescript-eslint/no-unused-vars
+  12:3  warning  'Search' is defined but never used        @typescript-eslint/no-unused-vars
+  13:3  warning  'CheckCircle2' is defined but never used  @typescript-eslint/no-unused-vars
+  14:3  warning  'Calendar' is defined but never used      @typescript-eslint/no-unused-vars
+
+/home/saimon/job/crm/CRMsaas/src/app/vision/manifesto/page.tsx
+    5:3    warning  'Bot' is defined but never used                                  @typescript-eslint/no-unused-vars
+    6:3    warning  'Cpu' is defined but never used                                  @typescript-eslint/no-unused-vars
+    8:3    warning  'TrendingUp' is defined but never used                           @typescript-eslint/no-unused-vars
+   10:3    warning  'History' is defined but never used                              @typescript-eslint/no-unused-vars
+   11:3    warning  'Terminal' is defined but never used                             @typescript-eslint/no-unused-vars
+   13:3    warning  'MessageCircle' is defined but never used                        @typescript-eslint/no-unused-vars
+   16:3    warning  'Lightbulb' is defined but never used                            @typescript-eslint/no-unused-vars
+  106:15   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  106:161  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  148:68   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  148:75   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  148:80   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  148:90   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  152:18   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  152:72   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  168:21   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/home/saimon/job/crm/CRMsaas/src/app/workspaces/[id]/page.tsx
+   54:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   54:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   59:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   63:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   66:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   78:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   86:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   86:57  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   91:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  103:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  104:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  104:63  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  108:59  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  113:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  117:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  119:51  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  119:71  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/components/AIActionButton.tsx
+  13:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  30:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/components/AIEmailGenerator.tsx
+  50:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+  70:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+  70:17  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/components/AIResultModal.tsx
+    4:37  warning  'AlertCircle' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+    5:10  warning  'cn' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+   11:11  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   25:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/saimon/job/crm/CRMsaas/src/components/AIResultModal.tsx:25:5
+  23 |
+  24 |   useEffect(() => {
+> 25 |     setMounted(true);
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  26 |     if (isOpen) {
+  27 |       document.body.style.overflow = "hidden";
+  28 |     } else {  react-hooks/set-state-in-effect
+   92:17  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react/no-unescaped-entities
+   92:35  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react/no-unescaped-entities
+  101:17  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react/no-unescaped-entities
+  101:26  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react/no-unescaped-entities
+
+/home/saimon/job/crm/CRMsaas/src/components/CreateCategoryModal.tsx
+  27:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/components/Dashboard.tsx
+    4:3   warning  'Users' is defined but never used          @typescript-eslint/no-unused-vars
+    5:3   warning  'UserPlus' is defined but never used       @typescript-eslint/no-unused-vars
+    6:3   warning  'Mail' is defined but never used           @typescript-eslint/no-unused-vars
+    9:3   warning  'BarChart3' is defined but never used      @typescript-eslint/no-unused-vars
+   12:3   warning  'Search' is defined but never used         @typescript-eslint/no-unused-vars
+   14:3   warning  'Layers' is defined but never used         @typescript-eslint/no-unused-vars
+   16:3   warning  'PlayCircle' is defined but never used     @typescript-eslint/no-unused-vars
+   17:3   warning  'MessageCircle' is defined but never used  @typescript-eslint/no-unused-vars
+   45:16  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  213:39  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/components/EmailAccountForm.tsx
+  12:67  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/components/ImportLeadsModal.tsx
+   2:67  warning  'Layers' is defined but never used        @typescript-eslint/no-unused-vars
+  10:48  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  44:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/components/Sidebar.tsx
+   13:3   warning  'PhoneCall' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+   17:3   warning  'ChevronRight' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   29:3   warning  'Plus' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+   59:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/saimon/job/crm/CRMsaas/src/components/Sidebar.tsx:59:5
+  57 |   // Close sidebar on navigation
+  58 |   useEffect(() => {
+> 59 |     setIsOpen(false);
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  60 |   }, [pathname]);
+  61 |
+  62 |   const isMarketingRoute =                                                                                                        react-hooks/set-state-in-effect
+  167:10  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/home/saimon/job/crm/CRMsaas/src/components/Sidebar.tsx:167:10
+  165 |         isOpen ? "translate-x-0" : "-translate-x-full"
+  166 |       )}>
+> 167 |         <NavContent />
+      |          ^^^^^^^^^^ This component is created during render
+  168 |       </aside>
+  169 |
+  170 |       {/* Desktop Sidebar (Permanent) */}
+
+/home/saimon/job/crm/CRMsaas/src/components/Sidebar.tsx:76:22
+   74 |   }
+   75 |
+>  76 |   const NavContent = () => (
+      |                      ^^^^^^^
+>  77 |     <>
+      | ^^^^^^
+>  78 |       <div className="p-8 flex items-center justify-between">
+      …
+      | ^^^^^^
+> 133 |     </>
+      | ^^^^^^
+> 134 |   );
+      | ^^^^ The component is created during render here
+  135 |
+  136 |   return (
+  137 |     <>                                                                                                                                                                             react-hooks/static-components
+  172:10  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/home/saimon/job/crm/CRMsaas/src/components/Sidebar.tsx:172:10
+  170 |       {/* Desktop Sidebar (Permanent) */}
+  171 |       <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-72 bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-900 flex-col z-40 transition-all duration-300">
+> 172 |         <NavContent />
+      |          ^^^^^^^^^^ This component is created during render
+  173 |       </aside>
+  174 |
+  175 |       {/* Page Content Spacing - Responsive */}
+
+/home/saimon/job/crm/CRMsaas/src/components/Sidebar.tsx:76:22
+   74 |   }
+   75 |
+>  76 |   const NavContent = () => (
+      |                      ^^^^^^^
+>  77 |     <>
+      | ^^^^^^
+>  78 |       <div className="p-8 flex items-center justify-between">
+      …
+      | ^^^^^^
+> 133 |     </>
+      | ^^^^^^
+> 134 |   );
+      | ^^^^ The component is created during render here
+  135 |
+  136 |   return (
+  137 |     <>  react-hooks/static-components
+
+/home/saimon/job/crm/CRMsaas/src/components/TopNavbar.tsx
+  7:59  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/components/inbox/InboxClient.tsx
+    3:20   warning  'useEffect' is defined but never used                            @typescript-eslint/no-unused-vars
+    5:57   warning  'Bot' is defined but never used                                  @typescript-eslint/no-unused-vars
+    6:32   warning  'CheckCircle2' is defined but never used                         @typescript-eslint/no-unused-vars
+    7:35   warning  'Clock' is defined but never used                                @typescript-eslint/no-unused-vars
+   37:20   error    Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+   40:11   warning  'router' is assigned a value but never used                      @typescript-eslint/no-unused-vars
+  107:21   error    Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  144:21   error    Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  181:21   error    Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  246:21   error    Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  576:102  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  576:116  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+/home/saimon/job/crm/CRMsaas/src/components/workspace/WorkspaceRoom.tsx
+    6:20   warning  'Users' is defined but never used                       @typescript-eslint/no-unused-vars
+    6:33   warning  'MessageSquare' is defined but never used               @typescript-eslint/no-unused-vars
+   76:5    warning  'workspaceDescription' is defined but never used        @typescript-eslint/no-unused-vars
+   84:11   warning  'router' is assigned a value but never used             @typescript-eslint/no-unused-vars
+  105:12   warning  'inviteLink' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  115:12   warning  'isCreatingRole' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  115:28   warning  'setIsCreatingRole' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  335:12   warning  'renamingUserId' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  336:12   warning  'newNickname' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  338:11   warning  'changeNickname' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  432:59   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  433:53   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  436:52   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  711:70   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  712:72   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  712:104  error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  713:53   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  715:39   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  718:67   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  719:48   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  722:68   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  726:57   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  732:66   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  743:65   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  754:66   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  761:71   warning  'isAdminList' is defined but never used                 @typescript-eslint/no-unused-vars
+  794:84   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  795:101  error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  884:60   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  965:84   warning  'e' is defined but never used                           @typescript-eslint/no-unused-vars
+  966:125  error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  998:91   error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/lib/ai-agents.ts
+  101:12  warning  'e' is defined but never used        @typescript-eslint/no-unused-vars
+  284:12  warning  'e' is defined but never used        @typescript-eslint/no-unused-vars
+  313:34  warning  'content' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/saimon/job/crm/CRMsaas/src/lib/auth.ts
+   8:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  16:55  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/lib/automation-engine.ts
+    8:64  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   26:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   43:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   43:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   71:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   71:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   84:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   84:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  122:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  122:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/lib/google-maps-scraper.ts
+   14:20  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   45:49  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   59:24  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  133:21  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  144:37  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  161:41  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  177:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+  186:32  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  206:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+
+/home/saimon/job/crm/CRMsaas/src/lib/imap.ts
+   51:50   error    Unexpected any. Specify a different type                    @typescript-eslint/no-explicit-any
+   65:17   error    Unexpected any. Specify a different type                    @typescript-eslint/no-explicit-any
+   75:14   warning  'e' is defined but never used                               @typescript-eslint/no-unused-vars
+   82:48   error    Unexpected any. Specify a different type                    @typescript-eslint/no-explicit-any
+   85:11   error    'fetchedMessages' is never reassigned. Use 'const' instead  prefer-const
+   93:26   error    'message' is never reassigned. Use 'const' instead          prefer-const
+  101:24   error    'message' is never reassigned. Use 'const' instead          prefer-const
+  106:16   error    'message' is never reassigned. Use 'const' instead          prefer-const
+  130:14   warning  'e' is defined but never used                               @typescript-eslint/no-unused-vars
+  138:47   error    Unexpected any. Specify a different type                    @typescript-eslint/no-explicit-any
+  158:14   warning  'e' is defined but never used                               @typescript-eslint/no-unused-vars
+  171:61   error    Unexpected any. Specify a different type                    @typescript-eslint/no-explicit-any
+  171:104  error    Unexpected any. Specify a different type                    @typescript-eslint/no-explicit-any
+  186:14   warning  'e' is defined but never used                               @typescript-eslint/no-unused-vars
+  191:51   error    Unexpected any. Specify a different type                    @typescript-eslint/no-explicit-any
+  208:9    error    'lock' is never reassigned. Use 'const' instead             prefer-const
+  234:14   warning  'e' is defined but never used                               @typescript-eslint/no-unused-vars
+  238:56   error    Unexpected any. Specify a different type                    @typescript-eslint/no-explicit-any
+  263:14   warning  'e' is defined but never used                               @typescript-eslint/no-unused-vars
+
+/home/saimon/job/crm/CRMsaas/src/lib/reminder-worker.ts
+  73:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saimon/job/crm/CRMsaas/src/lib/services/category.service.ts
+   5:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  15:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 413 problems (241 errors, 172 warnings)
+  12 errors and 0 warnings potentially fixable with the `--fix` option.
+

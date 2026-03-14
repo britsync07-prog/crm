@@ -54,7 +54,7 @@ export default async function CustomerDetails({ params }: CustomerDetailsProps) 
         {/* Left Column (3) - Contact Info */}
         <div className="lg:col-span-3 space-y-6">
           <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-zinc-950">
-            <h2 className="text-sm font-black uppercase tracking-widest text-indigo-500 mb-6 italic">Entity Info</h2>
+            <h2 className="text-sm font-black uppercase tracking-widest text-[#012169] mb-6 italic">Entity Info</h2>
             <div className="space-y-4">
               <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">Status</p>
@@ -98,7 +98,7 @@ export default async function CustomerDetails({ params }: CustomerDetailsProps) 
         {/* Middle Column (5) - Activity Timeline & Quick Actions */}
         <div className="lg:col-span-5 space-y-6">
           <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-zinc-950">
-            <h2 className="text-sm font-black uppercase tracking-widest text-indigo-500 flex gap-4 mb-6 italic">
+            <h2 className="text-sm font-black uppercase tracking-widest text-[#012169] flex gap-4 mb-6 italic">
               Record Event
             </h2>
             <form action={logInteraction} className="space-y-4">
@@ -131,11 +131,11 @@ export default async function CustomerDetails({ params }: CustomerDetailsProps) 
           </div>
 
           <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-zinc-950">
-            <h2 className="text-sm font-black uppercase tracking-widest text-indigo-500 mb-6 italic">Activity Timeline</h2>
+            <h2 className="text-sm font-black uppercase tracking-widest text-[#012169] mb-6 italic">Activity Timeline</h2>
             <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-zinc-200 dark:before:via-white/10 before:to-transparent">
               {customer.interactions.map((interaction) => (
                 <div key={interaction.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white dark:border-zinc-950 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-500 dark:text-indigo-400 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 text-[10px] font-black">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white dark:border-zinc-950 bg-blue-50 dark:bg-[#012169]/20 text-[#012169] dark:text-blue-300 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 text-[10px] font-black">
                     {interaction.type[0].toUpperCase()}
                   </div>
 
@@ -153,7 +153,7 @@ export default async function CustomerDetails({ params }: CustomerDetailsProps) 
                       </div>
                       <span className="text-[9px] font-bold text-zinc-400 uppercase">{new Date(interaction.date).toLocaleDateString()}</span>
                     </div>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400 italic">"{interaction.content}"</p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400 italic">&quot;{interaction.content}&quot;</p>
                   </div>
                 </div>
               ))}
@@ -173,14 +173,14 @@ export default async function CustomerDetails({ params }: CustomerDetailsProps) 
                 <CustomerAIActions customerId={customer.id} />
               </div>
               <p className="mt-6 text-sm text-purple-100 leading-relaxed font-medium italic relative">
-                <span className="absolute -left-3 -top-2 text-2xl opacity-20 font-serif">"</span>
+                <span className="absolute -left-3 -top-2 text-2xl opacity-20 font-serif">&quot;</span>
                 {customer.aiSummary || "Awaiting neural analysis on this customer's relationship profile."}
               </p>
             </div>
           </div>
 
           <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-zinc-950">
-            <h2 className="text-sm font-black uppercase tracking-widest text-indigo-500 mb-6 italic">Control Sequence (Tasks)</h2>
+            <h2 className="text-sm font-black uppercase tracking-widest text-[#012169] mb-6 italic">Control Sequence (Tasks)</h2>
             <form action={createTask} className="mb-6 flex gap-2">
               <input type="hidden" name="customerId" value={customer.id} />
               <input type="hidden" name="priority" value="Medium" />
@@ -210,18 +210,18 @@ export default async function CustomerDetails({ params }: CustomerDetailsProps) 
 
           <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-zinc-950">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-sm font-black uppercase tracking-widest text-indigo-500 italic">Associated Deals</h2>
-              <Link href="/deals/new" className="text-[10px] font-black uppercase text-zinc-400 hover:text-indigo-500 tracking-widest transition-colors">+ Link</Link>
+              <h2 className="text-sm font-black uppercase tracking-widest text-[#012169] italic">Associated Deals</h2>
+              <Link href="/deals/new" className="text-[10px] font-black uppercase text-zinc-400 hover:text-[#012169] tracking-widest transition-colors">+ Link</Link>
             </div>
             <div className="space-y-3">
               {customer.deals.map((deal) => (
-                <div key={deal.id} className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 group hover:border-indigo-500/30 transition-all cursor-pointer">
+                <div key={deal.id} className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 group hover:border-blue-700/30 transition-all cursor-pointer">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">{deal.name}</p>
                     <span className="text-[10px] font-black uppercase text-zinc-400 bg-zinc-200 dark:bg-white/10 px-2 py-0.5 rounded">{deal.probability}%</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500">{deal.stage}</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-[#012169]">{deal.stage}</span>
                     <span className="text-sm font-black text-green-500">${deal.value.toLocaleString()}</span>
                   </div>
                 </div>

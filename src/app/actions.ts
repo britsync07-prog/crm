@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { runLeadScoringAgent, analyzeSentimentReal, runCustomerSummaryAgent, runTaskActionExtractor } from "@/lib/ai-agents";
 import { triggerAutomation } from "@/lib/automation-engine";
 import { getSession } from "@/lib/auth";
+import { LEAD_STAGES, type LeadStage, ensureCustomerFromLead, transitionLeadStage } from "@/lib/crm-lifecycle";
 
 export async function createCustomer(formData: FormData) {
   const session = await getSession();
@@ -65,7 +66,7 @@ export async function createLead(formData: FormData) {
       areaOfOperation,
       dealFocus,
       budgetRange,
-      status: "New",
+      status: LEAD_STAGES.NEW,
     },
   });
 
@@ -80,26 +81,11 @@ export async function convertLeadToCustomer(leadId: string) {
   const session = await getSession();
   if (!session) throw new Error("Unauthorized");
 
-  const lead = await prisma.lead.findUnique({
-    where: { id: leadId },
-  });
+  const lead = await prisma.lead.findUnique({ where: { id: leadId } });
+  if (!lead || lead.userId !== session.id) return;
 
-  if (!lead) return;
-
-  const [customer] = await prisma.$transaction([
-    prisma.customer.create({
-      data: {
-        userId: session.id,
-        name: lead.name,
-        email: lead.email,
-        phone: lead.phone,
-        status: "Active",
-      },
-    }),
-    prisma.lead.delete({
-      where: { id: leadId },
-    }),
-  ]);
+  const customer = await ensureCustomerFromLead(lead.id, session.id);
+  if (!customer) return;
 
   await triggerAutomation("DEAL_CLOSED", { ...customer, leadSource: lead.source });
 
@@ -131,6 +117,14 @@ export async function logInteraction(formData: FormData) {
 
   await triggerAutomation("INTERACTION_LOGGED", interaction);
 
+  if (leadId && (type === "Call" || type === "Email" || type === "Meeting")) {
+    await transitionLeadStage({
+      leadId,
+      nextStage: LEAD_STAGES.CONTACTED,
+      reason: `Outreach interaction logged (${type})`,
+    });
+  }
+
   if (customerId) {
     await runCustomerSummaryAgent(customerId);
     revalidatePath(`/customers/${customerId}`);
@@ -139,6 +133,32 @@ export async function logInteraction(formData: FormData) {
     await runLeadScoringAgent(leadId);
     revalidatePath(`/leads/${leadId}`);
   }
+}
+
+export async function updateLeadStatus(formData: FormData) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+
+  const leadId = formData.get("leadId") as string;
+  const nextStatus = formData.get("status") as string;
+  if (!leadId || !nextStatus) return;
+  if (!Object.values(LEAD_STAGES).includes(nextStatus as LeadStage)) return;
+
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    select: { id: true, userId: true },
+  });
+  if (!lead || lead.userId !== session.id) return;
+
+  await transitionLeadStage({
+    leadId,
+    nextStage: nextStatus as LeadStage,
+    reason: "Manual status update by user",
+    force: true,
+  });
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
 }
 
 export async function createTask(formData: FormData) {
