@@ -31,11 +31,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { title, description, start, end } = body;
+    const { title, description, start, end, userId } = body;
+
+    // Use specific userId if provided and session is ADMIN, else use current session
+    const finalUserId = (session.role === 'ADMIN' && userId) ? userId : session.id;
 
     if (!title || !start || !end) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -43,7 +46,7 @@ export async function POST(req: NextRequest) {
 
     const event = await prisma.calendarEvent.create({
       data: {
-        userId: session.id,
+        userId: finalUserId,
         title,
         description,
         start: new Date(start),

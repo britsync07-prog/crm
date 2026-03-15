@@ -4,11 +4,25 @@ import { prisma } from "@/lib/db";
 import { RoomServiceClient } from "livekit-server-sdk";
 
 export async function POST(req: NextRequest) {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { title, startTime, endTime } = body;
+    const { title, startTime, endTime, hostId } = body;
+
+    let finalHostId = hostId;
+
+    // Use specific hostId if provided and session is ADMIN/SYSTEM
+    // If not provided and it's a system call, find the first available user
+    if (session.id === 'system' && !hostId) {
+        const firstUser = await prisma.user.findFirst({
+            where: { role: 'ADMIN' },
+            select: { id: true }
+        });
+        finalHostId = firstUser?.id || "system"; // fallback to system, but ensure user exists in production
+    } else if (!hostId) {
+        finalHostId = session.id;
+    }
 
     if (!title?.trim()) {
         return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -34,7 +48,7 @@ export async function POST(req: NextRequest) {
         data: {
             title: title.trim(),
             meetingId,
-            hostId: session.id,
+            hostId: finalHostId,
             status: "ACTIVE",
             startTime: start,
             endTime: end,
