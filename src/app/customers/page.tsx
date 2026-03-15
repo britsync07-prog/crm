@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { Users, Plus, Mail, Building2, ChevronRight, UserCircle2, ShieldCheck, Sparkles } from "lucide-react";
 
 export default async function CustomersPage() {
   const session = await getSession();
+  if (!session) redirect("/login");
   const userId = session.id;
 
   const customers = await prisma.customer.findMany({

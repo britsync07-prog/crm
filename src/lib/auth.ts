@@ -39,29 +39,35 @@ export async function logout() {
 }
 
 export async function getSession(req?: NextRequest) {
-  // 1. Try to get session from cookie (Browser)
-  const cookieStore = await cookies();
-  const cookieSession = cookieStore.get("session")?.value;
-  if (cookieSession) return await decrypt(cookieSession);
-
-  // 2. Try to get session from Authorization header (External API)
+  // 1. Try to get session from Authorization header (External API) - Prioritize for speed/reliability
   if (req) {
     const authHeader = req.headers.get("Authorization");
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.substring(7);
       try {
-        return await decrypt(token);
+        const decoded = await decrypt(token);
+        if (decoded) return decoded;
       } catch (e) {
-        console.error("Invalid Bearer token", e);
+        console.error("[Auth] Invalid Bearer token", e);
       }
     }
 
-    // 3. Optional: Global API Key support
+    // 2. Global API Key support
     const apiKey = req.headers.get("x-api-key");
     const globalApiKey = process.env.GLOBAL_API_KEY || "nexus_super_secret_key";
-    if (apiKey === globalApiKey) {
+    
+    if (apiKey && apiKey === globalApiKey.trim()) {
       return { id: "system", email: "system@nexus.ai", role: "ADMIN" };
     }
+  }
+
+  // 3. Try to get session from cookie (Browser)
+  try {
+    const cookieStore = await cookies();
+    const cookieSession = cookieStore.get("session")?.value;
+    if (cookieSession) return await decrypt(cookieSession);
+  } catch (e) {
+    // cookies() might throw in certain non-request contexts
   }
 
   return null;

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { 
   CreditCard, 
   TrendingUp, 
@@ -15,6 +16,7 @@ import Link from "next/link";
 
 export default async function BillingPage() {
   const session = await getSession();
+  if (!session) redirect("/login");
   const userId = session.id;
 
   // In a real app, we'd fetch actual financial data.

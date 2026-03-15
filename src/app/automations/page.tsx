@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { 
   Zap, 
   Play, 
@@ -18,6 +19,7 @@ import Link from "next/link";
 
 export default async function AutomationsPage() {
   const session = await getSession();
+  if (!session) redirect("/login");
   const userId = session.id;
 
   const automations = await prisma.automation.findMany({

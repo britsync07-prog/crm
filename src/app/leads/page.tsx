@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import LeadsPageClient from "./LeadsPageClient";
 
 export default async function LeadsPage({
@@ -8,6 +9,7 @@ export default async function LeadsPage({
   searchParams: Promise<{ categoryId?: string }>;
 }) {
   const session = await getSession();
+  if (!session) redirect("/login");
   const userId = session.id;
   const { categoryId } = await searchParams;
 

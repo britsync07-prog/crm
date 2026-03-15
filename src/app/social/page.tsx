@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import {
   Share2,
   Facebook,
@@ -20,6 +21,7 @@ import Link from "next/link";
 
 export default async function SocialMediaPage() {
   const session = await getSession();
+  if (!session) redirect("/login");
   const userId = session.id;
 
   const accounts = await prisma.socialAccount.findMany({

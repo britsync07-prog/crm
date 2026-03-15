@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import WorkspacesList from "@/components/workspace/WorkspacesList";
 
 export default async function WorkspacesPage() {
   const session = await getSession();
+  if (!session) redirect("/login");
   const userId = session.id;
 
   const workspaces = await prisma.workspace.findMany({

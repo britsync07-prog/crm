@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import {
   Users2,
   ShieldCheck,
@@ -17,6 +18,7 @@ import Link from "next/link";
 
 export default async function TeamPage() {
   const session = await getSession();
+  if (!session) redirect("/login");
   const userId = session.id;
 
   // Real HR Data filtered by workspace/user

@@ -4,8 +4,12 @@ import { prisma } from "@/lib/db";
 import { RoomServiceClient } from "livekit-server-sdk";
 
 export async function POST(req: NextRequest) {
+    console.log("[API] Meeting create request received. Header x-api-key:", req.headers.get("x-api-key") ? "Present" : "Missing");
     const session = await getSession(req);
-    if (!session?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session?.id) {
+        console.warn("[API] Unauthorized meeting create attempt. Session:", session);
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const body = await req.json();
     const { title, startTime, endTime, hostId } = body;
