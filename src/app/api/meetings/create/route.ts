@@ -34,7 +34,14 @@ export async function POST(req: NextRequest) {
 
     // Default to "now" if not provided, or ensure validity
     const start = startTime ? new Date(startTime) : new Date();
-    const end = endTime ? new Date(endTime) : new Date(Date.now() + 3600000); // Default 1 hour
+    
+    // Default end time should be relative to start time (1 hour later by default)
+    let end;
+    if (endTime) {
+        end = new Date(endTime);
+    } else {
+        end = new Date(start.getTime() + 3600000);
+    }
 
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
         return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
@@ -42,6 +49,25 @@ export async function POST(req: NextRequest) {
 
     if (end <= start) {
         return NextResponse.json({ error: "End time must be after start time" }, { status: 400 });
+    }
+
+    // Verify finalHostId exists in User table to avoid P2003
+    const hostUser = await prisma.user.findUnique({
+        where: { id: finalHostId },
+        select: { id: true }
+    });
+
+    if (!hostUser) {
+        // Fallback to first available admin if provided hostId fails
+        const firstAdmin = await prisma.user.findFirst({
+            where: { role: 'ADMIN' },
+            select: { id: true }
+        });
+        
+        if (!firstAdmin) {
+            return NextResponse.json({ error: "No valid host account found in database. Please create an admin user first." }, { status: 500 });
+        }
+        finalHostId = firstAdmin.id;
     }
 
     // Generate a short 8-character meeting ID

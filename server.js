@@ -27,6 +27,13 @@ const dev = process.env.NODE_ENV !== "production";
     // Only use --dev in non-production environments
     if (dev) {
         args.push("--dev");
+    } else {
+        // In production, use the keys from .env
+        const apiKey = process.env.LIVEKIT_API_KEY;
+        const apiSecret = process.env.LIVEKIT_API_SECRET;
+        if (apiKey && apiSecret) {
+            args.push("--keys", `${apiKey}: ${apiSecret}`);
+        }
     }
 
     const config = path.join(livekitDir, "config.yaml");
