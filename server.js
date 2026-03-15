@@ -21,9 +21,14 @@ const dev = process.env.NODE_ENV !== "production";
         return;
     }
 
-    // --dev uses devkey/secret automatically. 
     // Bind to 0.0.0.0 so external clients can hit the WebSocket on the VPS
-    const args = ["--dev", "--bind", "0.0.0.0"];
+    const args = ["--bind", "0.0.0.0"];
+    
+    // Only use --dev in non-production environments
+    if (dev) {
+        args.push("--dev");
+    }
+
     const config = path.join(livekitDir, "config.yaml");
     if (fs.existsSync(config)) args.push("--config", config);
 
@@ -44,7 +49,7 @@ const dev = process.env.NODE_ENV !== "production";
     process.on("SIGINT", () => { lk.kill(); process.exit(); });
     process.on("SIGTERM", () => { lk.kill(); process.exit(); });
 
-    console.log("[LiveKit] Starting LiveKit server (--dev mode)…");
+    console.log(`[LiveKit] Starting LiveKit server (${dev ? "Development" : "Production"} mode)…`);
 })();
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -178,6 +183,7 @@ app.prepare().then(() => {
             process.exit(1);
         })
         .listen(port, () => {
+            console.log(`> App Mode: ${dev ? "DEVELOPMENT" : "PRODUCTION"}`);
             console.log(`> Ready on http://${hostname}:${port}`);
             console.log(`> Socket.IO server running`);
 
