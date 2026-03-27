@@ -16,8 +16,11 @@ module.exports = {
         NEXT_PUBLIC_EXTERNAL_API_KEY: "your-secure-api-key",
         LIVEKIT_API_KEY: "devkey",
         LIVEKIT_API_SECRET: "secret",
-        LIVEKIT_HOST: "http://127.0.0.1:7880",
-        NEXT_PUBLIC_LIVEKIT_URL: "wss://leadhunter-meeting.work.gd"
+        LIVEKIT_HOST: "https://meet.truecrm.online",
+        NEXT_PUBLIC_LIVEKIT_URL: "wss://meet.truecrm.online",
+        APP_URL: "https://truecrm.online",
+        NEXT_PUBLIC_APP_URL: "https://truecrm.online",
+        NEXTAUTH_URL: "https://truecrm.online"
       }
     }
   ]

@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,226 +6,199 @@ datasource db {
   provider = "sqlite"
 }
 
-// ---------------------------------------------------------
-// CORE USERS & AUTH
-// ---------------------------------------------------------
-
 model User {
-  id           String    @id @default(cuid())
-  name         String?
-  email        String    @unique
-  password     String
-  role         String    @default("USER") // ADMIN, USER, AGENCY, CLIENT
-  isVerified   Boolean   @default(false)
-  verifyToken  String?
-  resetToken   String?
-  resetExpires DateTime?
-  image        String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  // Multi-user ownership & Relations
-  workspaces        Workspace[]        @relation("WorkspaceOwner")
-  workspacesAdmin   WorkspaceUser[]
-  workspaceMessages WorkspaceMessage[] @relation("WorkspaceMessages")
-  customRoles       WorkspaceUserRole[]
+  id                String              @id @default(cuid())
+  name              String?
+  email             String              @unique
+  password          String
+  role              String              @default("USER")
+  isVerified        Boolean             @default(false)
+  verifyToken       String?
+  resetToken        String?
+  resetExpires      DateTime?
+  image             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  activityLogs      ActivityLog[]
+  automations       Automation[]
+  bookings          Booking[]           @relation("UserBookings")
+  calendarEvents    CalendarEvent[]
+  calendarSettings  CalendarSettings?
+  campaigns         Campaign[]
+  categories        Category[]
   customers         Customer[]
-  deals           Deal[]
-  leads           Lead[]
-  emailAccounts   EmailAccount[]
-  socialAccounts  SocialAccount[]
-  campaigns       Campaign[]
-  automations     Automation[]
-  notifications   Notification[]
-  activityLogs    ActivityLog[]
-  scrapeJobs      ScrapeJob[]
-  assignedTasks   Task[]          @relation("AssignedTasks")
-  employeeProfile Employee?
-  categories      Category[]
-  bookings        Booking[]       @relation("UserBookings")
-  rooms           Room[]          @relation("UserRooms")
-  createdMeetings Meeting[]       @relation("CreatedMeetings")
-  forms           Form[]          @relation("UserForms")
-  calendarSettings CalendarSettings?
-  calendarEvents   CalendarEvent[]
+  deals             Deal[]
+  emailAccounts     EmailAccount[]
+  employeeProfile   Employee?
+  forms             Form[]              @relation("UserForms")
+  leads             Lead[]
+  createdMeetings   Meeting[]           @relation("CreatedMeetings")
+  notifications     Notification[]
+  rooms             Room[]              @relation("UserRooms")
+  scrapeJobs        ScrapeJob[]
+  socialAccounts    SocialAccount[]
+  assignedTasks     Task[]              @relation("AssignedTasks")
+  workspaces        Workspace[]         @relation("WorkspaceOwner")
+  workspaceMessages WorkspaceMessage[]  @relation("WorkspaceMessages")
+  workspacesAdmin   WorkspaceUser[]
+  customRoles       WorkspaceUserRole[]
 }
 
-// ---------------------------------------------------------
-// WORKSPACES & HR (Modules 3 & 8)
-// ---------------------------------------------------------
-
 model Workspace {
-  id          String             @id @default(cuid())
+  id          String            @id @default(cuid())
   name        String
-  description String?            
+  description String?
   ownerId     String
-  owner       User               @relation("WorkspaceOwner", fields: [ownerId], references: [id])
-  users       WorkspaceUser[]
-  employees   Employee[]
-  projects    Project[]
-  pipelines   Pipeline[]
-  socialPosts SocialPost[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   channels    Channel[]
+  employees   Employee[]
+  pipelines   Pipeline[]
+  projects    Project[]
+  socialPosts SocialPost[]
+  owner       User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   invites     WorkspaceInvite[]
   roles       WorkspaceRole[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  users       WorkspaceUser[]
 }
 
 model WorkspaceUser {
   id          String    @id @default(cuid())
   workspaceId String
   userId      String
-  role        String    @default("MEMBER") // ADMIN, MEMBER, VIEWER
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  role        String    @default("MEMBER")
   user        User      @relation(fields: [userId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
 
   @@unique([workspaceId, userId])
 }
 
 model WorkspaceRole {
-  id          String   @id @default(cuid())
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name        String
-  color       String   @default("#6366f1")
-  users       WorkspaceUserRole[]
-  
-  allowedChannels Channel[]
-
-  createdAt   DateTime @default(now())
+  id              String              @id @default(cuid())
+  workspaceId     String
+  name            String
+  color           String              @default("#6366f1")
+  createdAt       DateTime            @default(now())
+  workspace       Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  users           WorkspaceUserRole[]
+  allowedChannels Channel[]           @relation("ChannelToWorkspaceRole")
 }
 
 model WorkspaceUserRole {
-  userId      String
-  roleId      String
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role        WorkspaceRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  
+  userId String
+  roleId String
+  role   WorkspaceRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@id([userId, roleId])
 }
 
 model Channel {
-  id          String    @id @default(cuid())
-  name        String
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  messages    WorkspaceMessage[]
-  
-  isPrivate   Boolean   @default(false)
-  allowedRoles WorkspaceRole[]
-
-  createdAt   DateTime  @default(now())
+  id           String             @id @default(cuid())
+  name         String
+  workspaceId  String
+  isPrivate    Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+  workspace    Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages     WorkspaceMessage[]
+  allowedRoles WorkspaceRole[]    @relation("ChannelToWorkspaceRole")
 }
 
 model WorkspaceMessage {
-  id          String    @id @default(cuid())
-  channelId   String
-  channel     Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User      @relation("WorkspaceMessages", fields: [userId], references: [id])
-  content     String
-  createdAt   DateTime  @default(now())
+  id        String   @id @default(cuid())
+  channelId String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  user      User     @relation("WorkspaceMessages", fields: [userId], references: [id])
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
 }
 
 model WorkspaceInvite {
   id          String    @id @default(uuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   expiresAt   DateTime?
   maxUses     Int?
   uses        Int       @default(0)
   createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
-// ---------------------------------------------------------
-// MEDIA HUB — Meetings & LiveKit Rooms
-// ---------------------------------------------------------
-
 model Meeting {
-  id         String   @id @default(cuid())
-  meetingId  String   @unique // Short ID like 8Hsk29sd
-  hostId     String
-  host       User     @relation("CreatedMeetings", fields: [hostId], references: [id])
-  title      String
-  status     String   @default("ACTIVE") // ACTIVE, ENDED, CANCELED
-  startTime  DateTime @default(now())
-  endTime    DateTime @default(now())
-  formId     String?
+  id               String   @id @default(cuid())
+  meetingId        String   @unique
+  hostId           String
+  title            String
+  status           String   @default("ACTIVE")
+  startTime        DateTime @default(now())
+  endTime          DateTime @default(now())
+  createdAt        DateTime @default(now())
+  formId           String?
   formSubmissionId String?
-  submitterEmail String?
-  metadata   String?
-  createdAt  DateTime @default(now())
+  metadata         String?
+  submitterEmail   String?
+  host             User     @relation("CreatedMeetings", fields: [hostId], references: [id])
 }
 
 model Employee {
-  id            String       @id @default(cuid())
-  userId        String       @unique
-  user          User         @relation(fields: [userId], references: [id])
-  workspaceId   String?
-  workspace     Workspace?   @relation(fields: [workspaceId], references: [id])
-  department    String?
-  position      String?
-  salary        Float?
-  commission    Float?       @default(0)
-  hireDate      DateTime?
-  status        String       @default("ACTIVE")
-  attendances   Attendance[]
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id          String       @id @default(cuid())
+  userId      String       @unique
+  workspaceId String?
+  department  String?
+  position    String?
+  salary      Float?
+  commission  Float?       @default(0)
+  hireDate    DateTime?
+  status      String       @default("ACTIVE")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  attendances Attendance[]
+  workspace   Workspace?   @relation(fields: [workspaceId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
 }
 
 model Attendance {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id])
   date       DateTime
   checkIn    DateTime
   checkOut   DateTime?
-  status     String   @default("PRESENT") // PRESENT, ABSENT, LEAVE
-  createdAt  DateTime @default(now())
+  status     String    @default("PRESENT")
+  createdAt  DateTime  @default(now())
+  employee   Employee  @relation(fields: [employeeId], references: [id])
 }
 
-// ---------------------------------------------------------
-// CRM: LEADS, CUSTOMERS, CLIENT PORTAL (Modules 5 & 6)
-// ---------------------------------------------------------
-
 model Customer {
-  id              String        @id @default(cuid())
+  id              String         @id @default(cuid())
   userId          String
-  user            User          @relation(fields: [userId], references: [id])
   name            String
-  email           String        @unique
+  email           String         @unique
   phone           String?
   company         String?
   licenseType     String?
   areaOfOperation String?
   dealFocus       String?
   budgetRange     String?
-  status          String        @default("Active")
+  status          String         @default("Active")
   aiSummary       String?
-  
-  // Client Portal Access
-  portalAccess    Boolean       @default(false)
+  portalAccess    Boolean        @default(false)
   portalPassword  String?
-
-  tags            Tag[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  interactions    Interaction[]
-  tasks           Task[]        @relation("CustomerTasks")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
   bookings        Booking[]
-  invoices        Invoice[]
+  user            User           @relation(fields: [userId], references: [id])
   deals           Deal[]
+  interactions    Interaction[]
+  invoices        Invoice[]
   projects        Project[]
   subscriptions   Subscription[]
+  tasks           Task[]         @relation("CustomerTasks")
+  tags            Tag[]          @relation("CustomerToTag")
 }
 
 model Lead {
   id              String         @id @default(cuid())
   userId          String
-  user            User           @relation(fields: [userId], references: [id])
   name            String
   email           String         @unique
   phone           String?
@@ -249,32 +219,29 @@ model Lead {
   isDisposable    Boolean        @default(false)
   aiScore         Int            @default(0)
   aiInsights      String?
-  
   categoryId      String?
-  category        Category?      @relation(fields: [categoryId], references: [id])
-  
-  tags            Tag[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
-  
-  interactions    Interaction[]
+  scrapeJobId     String?
   bookings        Booking[]
   campaigns       CampaignLead[]
   deals           Deal[]
-  tasks           Task[]         @relation("LeadTasks")
-  
-  scrapeJobId     String?
+  interactions    Interaction[]
   scrapeJob       ScrapeJob?     @relation(fields: [scrapeJobId], references: [id])
+  category        Category?      @relation(fields: [categoryId], references: [id])
+  user            User           @relation(fields: [userId], references: [id])
+  tasks           Task[]         @relation("LeadTasks")
+  tags            Tag[]          @relation("LeadToTag")
 }
 
 model Category {
   id        String   @id @default(cuid())
   name      String
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  leads     Lead[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  leads     Lead[]
 
   @@unique([userId, name])
 }
@@ -282,22 +249,18 @@ model Category {
 model Tag {
   id        String     @id @default(cuid())
   name      String     @unique
-  customers Customer[]
-  leads     Lead[]
+  customers Customer[] @relation("CustomerToTag")
+  leads     Lead[]     @relation("LeadToTag")
 }
 
-// ---------------------------------------------------------
-// ADVANCED PIPELINE & DEALS (Module 5)
-// ---------------------------------------------------------
-
 model Pipeline {
-  id          String      @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   workspaceId String
-  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
   stages      Stage[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
 }
 
 model Stage {
@@ -305,53 +268,41 @@ model Stage {
   name       String
   order      Int
   pipelineId String
-  pipeline   Pipeline @relation(fields: [pipelineId], references: [id])
   deals      Deal[]
+  pipeline   Pipeline @relation(fields: [pipelineId], references: [id])
 }
 
 model Deal {
   id            String    @id @default(cuid())
   userId        String
-  user          User      @relation(fields: [userId], references: [id])
   name          String
   value         Float     @default(0)
-  
-  // Advanced Pipeline Integration
   stageId       String?
-  stageModel    Stage?    @relation(fields: [stageId], references: [id])
-  stage         String    @default("New Lead") // Legacy support
-  
-  probability   Int       @default(50) // 0-100%
+  stage         String    @default("New Lead")
+  probability   Int       @default(50)
   expectedClose DateTime?
-
   leadId        String?
-  lead          Lead?     @relation(fields: [leadId], references: [id])
   customerId    String?
-  customer      Customer? @relation(fields: [customerId], references: [id])
-
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  lead          Lead?     @relation(fields: [leadId], references: [id])
+  stageModel    Stage?    @relation(fields: [stageId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
 }
-
-// ---------------------------------------------------------
-// ADVANCED TASK & PROJECT MANAGEMENT (Module 3)
-// ---------------------------------------------------------
 
 model Project {
   id          String     @id @default(cuid())
   name        String
   description String?
-  status      String     @default("PLANNING") // PLANNING, ACTIVE, COMPLETED
-  
+  status      String     @default("PLANNING")
   workspaceId String?
-  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
-  
   customerId  String?
-  customer    Customer?  @relation(fields: [customerId], references: [id])
-  
-  tasks       Task[]     @relation("ProjectTasks")
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  customer    Customer?  @relation(fields: [customerId], references: [id])
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  tasks       Task[]     @relation("ProjectTasks")
 }
 
 model Task {
@@ -359,43 +310,28 @@ model Task {
   title         String
   description   String?
   aiActionItems String?
-  
-  // Advanced PM properties
   dueDate       DateTime?
-  status        String    @default("Todo") // Todo, In Progress, Review, Done
-  priority      String    @default("Medium") // Low, Medium, High, Urgent
-  timeTracked   Int       @default(0) // In seconds
-  
-  // Relations
+  status        String    @default("Todo")
+  priority      String    @default("Medium")
+  timeTracked   Int       @default(0)
   projectId     String?
-  project       Project?  @relation("ProjectTasks", fields: [projectId], references: [id])
-  
   customerId    String?
-  customer      Customer? @relation("CustomerTasks", fields: [customerId], references: [id])
-  
   leadId        String?
-  lead          Lead?     @relation("LeadTasks", fields: [leadId], references: [id])
-  
   assigneeId    String?
-  assignee      User?     @relation("AssignedTasks", fields: [assigneeId], references: [id])
-  
-  // Subtasks
   parentTaskId  String?
-  parentTask    Task?     @relation("Subtasks", fields: [parentTaskId], references: [id])
-  subtasks      Task[]    @relation("Subtasks")
-
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  parentTask    Task?     @relation("Subtasks", fields: [parentTaskId], references: [id])
+  subtasks      Task[]    @relation("Subtasks")
+  assignee      User?     @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  lead          Lead?     @relation("LeadTasks", fields: [leadId], references: [id])
+  customer      Customer? @relation("CustomerTasks", fields: [customerId], references: [id])
+  project       Project?  @relation("ProjectTasks", fields: [projectId], references: [id])
 }
-
-// ---------------------------------------------------------
-// EMAIL, CAMPAIGNS & SOCIAL MEDIA (Modules 1, 2, 4)
-// ---------------------------------------------------------
 
 model EmailAccount {
   id           String     @id @default(cuid())
   userId       String
-  user         User       @relation(fields: [userId], references: [id])
   email        String     @unique
   host         String
   port         Int
@@ -409,117 +345,106 @@ model EmailAccount {
   warmupStatus Boolean    @default(false)
   isActive     Boolean    @default(true)
   campaigns    Campaign[]
+  user         User       @relation(fields: [userId], references: [id])
 }
 
 model SocialAccount {
-  id           String     @id @default(cuid())
+  id           String       @id @default(cuid())
   userId       String
-  user         User       @relation(fields: [userId], references: [id])
-  platform     String     // FACEBOOK, LINKEDIN, TWITTER
-  accessToken  String     // Encrypted
-  refreshToken String?    // Encrypted
+  platform     String
+  accessToken  String
+  refreshToken String?
   tokenExpires DateTime?
-  isActive     Boolean    @default(true)
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  user         User         @relation(fields: [userId], references: [id])
   posts        SocialPost[]
-  createdAt    DateTime   @default(now())
 }
 
 model SocialPost {
-  id              String         @id @default(cuid())
+  id              String        @id @default(cuid())
   workspaceId     String
-  workspace       Workspace      @relation(fields: [workspaceId], references: [id])
   socialAccountId String
-  socialAccount   SocialAccount  @relation(fields: [socialAccountId], references: [id])
   content         String
-  mediaUrls       String?        // JSON array of URLs
-  status          String         @default("DRAFT") // DRAFT, SCHEDULED, PUBLISHED, FAILED
+  mediaUrls       String?
+  status          String        @default("DRAFT")
   scheduledFor    DateTime?
   publishedAt     DateTime?
-  likes           Int            @default(0)
-  comments        Int            @default(0)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  likes           Int           @default(0)
+  comments        Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id])
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id])
 }
 
 model Campaign {
   id             String         @id @default(cuid())
   userId         String
-  user           User           @relation(fields: [userId], references: [id])
   name           String
   subject        String
   body           String
-  type           String         @default("EMAIL") // EMAIL, SMS
-  status         String         @default("Draft") // Draft, Active, Completed
-  
+  type           String         @default("EMAIL")
+  status         String         @default("Draft")
   emailAccountId String?
-  emailAccount   EmailAccount?  @relation(fields: [emailAccountId], references: [id])
-  
-  leads          CampaignLead[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+  emailAccount   EmailAccount?  @relation(fields: [emailAccountId], references: [id])
+  user           User           @relation(fields: [userId], references: [id])
+  leads          CampaignLead[]
 }
 
 model CampaignLead {
   id         String    @id @default(cuid())
   campaignId String
   leadId     String
-  campaign   Campaign  @relation(fields: [campaignId], references: [id])
-  lead       Lead      @relation(fields: [leadId], references: [id])
   status     String    @default("Pending")
   sentAt     DateTime?
   openedAt   DateTime?
   repliedAt  DateTime?
+  lead       Lead      @relation(fields: [leadId], references: [id])
+  campaign   Campaign  @relation(fields: [campaignId], references: [id])
 }
 
-// ---------------------------------------------------------
-// FINANCE & BILLING (Module 7)
-// ---------------------------------------------------------
-
 model Invoice {
-  id          String    @id @default(cuid())
-  invoiceRef  String    @unique
-  amount      Float
-  status      String    @default("Draft") // Draft, Sent, Paid, Overdue
-  dueDate     DateTime
-  paidAt      DateTime?
-  stripeId    String?   // External reference
-  
-  customerId  String
-  customer    Customer  @relation(fields: [customerId], references: [id])
-  
-  payments    Payment[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String    @id @default(cuid())
+  invoiceRef String    @unique
+  amount     Float
+  status     String    @default("Draft")
+  dueDate    DateTime
+  paidAt     DateTime?
+  stripeId   String?
+  customerId String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  customer   Customer  @relation(fields: [customerId], references: [id])
+  payments   Payment[]
 }
 
 model Payment {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   invoiceId     String
-  invoice       Invoice   @relation(fields: [invoiceId], references: [id])
   amount        Float
-  method        String    // STRIPE, BANK_TRANSFER, CASH
+  method        String
   transactionId String?
-  status        String    @default("COMPLETED")
-  createdAt     DateTime  @default(now())
+  status        String   @default("COMPLETED")
+  createdAt     DateTime @default(now())
+  invoice       Invoice  @relation(fields: [invoiceId], references: [id])
 }
 
 model Subscription {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   customerId  String
-  customer    Customer  @relation(fields: [customerId], references: [id])
   planName    String
   amount      Float
-  interval    String    @default("MONTHLY") // MONTHLY, YEARLY
-  status      String    @default("ACTIVE") // ACTIVE, CANCELED, PAST_DUE
+  interval    String   @default("MONTHLY")
+  status      String   @default("ACTIVE")
   nextBilling DateTime
   stripeSubId String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  customer    Customer @relation(fields: [customerId], references: [id])
 }
-
-// ---------------------------------------------------------
-// COMMUNICATION, LOGS & AUTOMATION (Modules 9)
-// ---------------------------------------------------------
 
 model Interaction {
   id         String    @id @default(cuid())
@@ -529,8 +454,8 @@ model Interaction {
   date       DateTime  @default(now())
   customerId String?
   leadId     String?
-  customer   Customer? @relation(fields: [customerId], references: [id])
   lead       Lead?     @relation(fields: [leadId], references: [id])
+  customer   Customer? @relation(fields: [customerId], references: [id])
 }
 
 model Booking {
@@ -539,70 +464,69 @@ model Booking {
   startTime  DateTime
   endTime    DateTime
   userId     String?
-  user       User?     @relation("UserBookings", fields: [userId], references: [id])
   customerId String?
   leadId     String?
-  customer   Customer? @relation(fields: [customerId], references: [id])
   lead       Lead?     @relation(fields: [leadId], references: [id])
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  user       User?     @relation("UserBookings", fields: [userId], references: [id])
 }
 
 model Automation {
   id          String          @id @default(cuid())
   userId      String
-  user        User            @relation(fields: [userId], references: [id])
   name        String
   description String?
   triggerType String
   isActive    Boolean         @default(true)
-  steps       WorkflowStep[]
-  logs        AutomationLog[]
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
+  user        User            @relation(fields: [userId], references: [id])
+  logs        AutomationLog[]
+  steps       WorkflowStep[]
 }
 
 model WorkflowStep {
   id           String     @id @default(cuid())
   automationId String
-  automation   Automation @relation(fields: [automationId], references: [id])
   type         String
   order        Int
   config       String
+  automation   Automation @relation(fields: [automationId], references: [id])
 }
 
 model AutomationLog {
   id            String     @id @default(cuid())
   automationId  String
-  automation    Automation @relation(fields: [automationId], references: [id])
-  status        String // SUCCESS, FAILURE
+  status        String
   message       String?
-  executionTime Int // ms
+  executionTime Int
   createdAt     DateTime   @default(now())
+  automation    Automation @relation(fields: [automationId], references: [id])
 }
 
 model Notification {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
   title     String
   message   String
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model ActivityLog {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
   action    String
   details   String?
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model ScrapeJob {
   id         String      @id @default(cuid())
   userId     String
-  user       User        @relation(fields: [userId], references: [id])
-  status     String      @default("Pending") // Pending, Running, Completed, Failed, Stopped
+  status     String      @default("Pending")
   progress   Int         @default(0)
   totalLeads Int         @default(0)
   keyword    String?
@@ -610,20 +534,20 @@ model ScrapeJob {
   message    String?
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
-  logs       ScrapeLog[]
   leads      Lead[]
+  user       User        @relation(fields: [userId], references: [id])
+  logs       ScrapeLog[]
 }
 
 model ScrapeLog {
   id        String    @id @default(cuid())
   jobId     String
-  job       ScrapeJob @relation(fields: [jobId], references: [id])
   message   String
-  level     String    @default("INFO") // INFO, ERROR
+  level     String    @default("INFO")
   createdAt DateTime  @default(now())
+  job       ScrapeJob @relation(fields: [jobId], references: [id])
 }
 
-// Keep legacy Team models intact for now to prevent breaking existing routes
 model Team {
   id       String    @id @default(cuid())
   name     String
@@ -635,19 +559,19 @@ model Team {
 model Room {
   id        String   @id @default(cuid())
   name      String
-  type      String   @default("VIDEO") // AUDIO, VIDEO
-  status    String   @default("EMPTY") // EMPTY, ACTIVE
+  type      String   @default("VIDEO")
+  status    String   @default("EMPTY")
   userId    String?
-  user      User?    @relation("UserRooms", fields: [userId], references: [id])
   teamId    String
-  team      Team     @relation(fields: [teamId], references: [id])
   createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id])
+  user      User?    @relation("UserRooms", fields: [userId], references: [id])
 }
 
 model Member {
   id     String @id @default(cuid())
   name   String
-  role   String // ADMIN, MEMBER
+  role   String
   teamId String
   team   Team   @relation(fields: [teamId], references: [id])
 }
@@ -657,99 +581,79 @@ model Message {
   content    String
   createdAt  DateTime @default(now())
   teamId     String
-  team       Team     @relation(fields: [teamId], references: [id])
   senderName String
+  team       Team     @relation(fields: [teamId], references: [id])
 }
 
 model OnboardingSession {
   id         String              @id @default(cuid())
   leadId     String?
   customerId String?
-  status     String              @default("IN_PROGRESS") // COMPLETED, IN_PROGRESS
-  messages   OnboardingMessage[]
+  status     String              @default("IN_PROGRESS")
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
+  messages   OnboardingMessage[]
 }
 
 model OnboardingMessage {
   id        String            @id @default(cuid())
   sessionId String
-  session   OnboardingSession @relation(fields: [sessionId], references: [id])
   content   String
-  sender    String // USER, AI, CLIENT
+  sender    String
   createdAt DateTime          @default(now())
+  session   OnboardingSession @relation(fields: [sessionId], references: [id])
 }
 
-// ---------------------------------------------------------
-// CUSTOM FORMS (Module 10)
-// ---------------------------------------------------------
-
 model Form {
-  id          String           @id @default(cuid())
-  title       String
-  description String?
-  ownerId     String
-  owner       User             @relation("UserForms", fields: [ownerId], references: [id])
-  meetingSchedulingEnabled Boolean @default(false)
-  meetingDurationMin Int      @default(60)
-  
-  fields      FormField[]
-  submissions FormSubmission[]
-  
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id                       String           @id @default(cuid())
+  title                    String
+  description              String?
+  ownerId                  String
+  meetingSchedulingEnabled Boolean          @default(false)
+  meetingDurationMin       Int              @default(60)
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+  owner                    User             @relation("UserForms", fields: [ownerId], references: [id])
+  fields                   FormField[]
+  submissions              FormSubmission[]
 }
 
 model FormField {
   id        String   @id @default(cuid())
   formId    String
-  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
-  
   label     String
-  type      String   // TEXT, TEXTAREA, DROPDOWN, CHECKBOX, RADIO
+  type      String
   required  Boolean  @default(false)
-  options   String?  // JSON string for selection options
+  options   String?
   order     Int      @default(0)
-  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
 }
 
 model FormSubmission {
   id        String   @id @default(cuid())
   formId    String
-  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
-  
-  data      String   // JSON string of all field values
-  
+  data      String
   createdAt DateTime @default(now())
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
 }
 
-// ---------------------------------------------------------
-// CALENDAR & REMINDERS (Module 11)
-// ---------------------------------------------------------
-
 model CalendarSettings {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  availableStart   String   @default("09:00")
-  availableEnd     String   @default("17:00")
-  timeZone         String   @default("UTC")
-  
-  // Which email account to use for sending reminders
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  availableStart    String   @default("09:00")
+  availableEnd      String   @default("17:00")
+  timeZone          String   @default("UTC")
   reminderAccountId String?
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CalendarEvent {
   id           String   @id @default(cuid())
   userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
   title        String
   description  String?
   start        DateTime
@@ -758,9 +662,8 @@ model CalendarEvent {
   source       String?
   meetingId    String?
   externalMeta String?
-  
   reminderSent Boolean  @default(false)
-  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

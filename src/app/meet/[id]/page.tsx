@@ -34,7 +34,12 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
 
         const isHttpsPage = window.location.protocol === "https:";
         if (!configuredUrl) {
-            return isHttpsPage ? "wss://leadhunter-meeting.work.gd" : "ws://localhost:7880";
+            const hostname = window.location.hostname;
+            if (hostname === "localhost" || hostname === "127.0.0.1") {
+                return "ws://localhost:7880";
+            }
+
+            return `wss://meet.${hostname.replace(/^www\./, "")}`;
         }
 
         if (isHttpsPage && configuredUrl.startsWith("ws://")) {

@@ -1,6 +1,6 @@
 # Meeting API Documentation
 
-Base URL: `https://leadhunter-meeting.work.gd/`
+Base URL: `https://truecrm.online/`
 
 Implementation references:
 - `src/app/api/meetings/create/route.ts`
@@ -154,7 +154,7 @@ If no meeting booking:
   "meeting": {
     "id": "...",
     "roomId": "ab12cd34",
-    "meetingUrl": "https://leadhunter-meeting.work.gd/meet/ab12cd34",
+    "meetingUrl": "https://truecrm.online/meet/ab12cd34",
     "start": "2026-03-15T10:00:00.000Z",
     "end": "2026-03-15T11:00:00.000Z"
   },
@@ -175,8 +175,8 @@ If no meeting booking:
 
 ## Full Endpoint URLs (Using Base URL)
 
-- `POST https://leadhunter-meeting.work.gd/api/meetings/create`
-- `GET https://leadhunter-meeting.work.gd/api/meetings/list`
-- `GET https://leadhunter-meeting.work.gd/api/meetings/{meetingId}/token`
-- `GET https://leadhunter-meeting.work.gd/api/forms/public/{formId}/availability?date=YYYY-MM-DD`
-- `POST https://leadhunter-meeting.work.gd/api/forms/public/{formId}/submit`
+- `POST https://truecrm.online/api/meetings/create`
+- `GET https://truecrm.online/api/meetings/list`
+- `GET https://truecrm.online/api/meetings/{meetingId}/token`
+- `GET https://truecrm.online/api/forms/public/{formId}/availability?date=YYYY-MM-DD`
+- `POST https://truecrm.online/api/forms/public/{formId}/submit`
