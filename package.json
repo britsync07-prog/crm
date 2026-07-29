@@ -17,7 +17,6 @@
     "@google/generative-ai": "^0.24.1",
     "@livekit/components-react": "^2.9.20",
     "@livekit/components-styles": "^1.2.0",
-    "@next/swc-win32-x64-msvc": "^16.1.6",
     "@prisma/adapter-better-sqlite3": "^7.4.2",
     "@prisma/client": "^7.4.2",
     "@types/sanitize-html": "^2.16.1",
