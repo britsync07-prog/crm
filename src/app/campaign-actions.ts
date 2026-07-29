@@ -60,6 +60,40 @@ export async function addEmailAccount(
 }
 
 
+export async function deleteEmailAccount(accountId: string) {
+  try {
+    const session = await getSession();
+    if (!session) return { error: "Unauthorized" };
+
+    await prisma.emailAccount.delete({
+      where: { id: accountId, userId: session.id },
+    });
+
+    revalidatePath("/settings/email");
+    revalidatePath("/inbox");
+    return { error: null };
+  } catch (e: any) {
+    return { error: e.message ?? "Failed to delete account" };
+  }
+}
+
+export async function deleteAllEmailAccounts() {
+  try {
+    const session = await getSession();
+    if (!session) return { error: "Unauthorized" };
+
+    await prisma.emailAccount.deleteMany({
+      where: { userId: session.id },
+    });
+
+    revalidatePath("/settings/email");
+    revalidatePath("/inbox");
+    return { error: null };
+  } catch (e: any) {
+    return { error: e.message ?? "Failed to delete accounts" };
+  }
+}
+
 export async function createCampaign(formData: FormData) {
   const session = await getSession();
   if (!session) throw new Error("Unauthorized");

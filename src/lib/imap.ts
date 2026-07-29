@@ -188,7 +188,7 @@ export async function fetchEmailBody(account: any, mailboxPath: string, uid: str
   return null;
 }
 
-export async function performEmailAction(account: any, mailboxPath: string, uid: string, action: 'archive' | 'trash' | 'spam' | 'read' | 'unread') {
+export async function performEmailAction(account: any, mailboxPath: string, uid: string, action: 'archive' | 'trash' | 'spam' | 'read' | 'unread' | 'star' | 'unstar') {
   if (!account.imapHost || !account.imapPort) return false;
 
   const client = new ImapFlow({
@@ -211,6 +211,10 @@ export async function performEmailAction(account: any, mailboxPath: string, uid:
         await client.messageFlagsAdd(uid, ['\\Seen']);
       } else if (action === 'unread') {
         await client.messageFlagsRemove(uid, ['\\Seen']);
+      } else if (action === 'star') {
+        await client.messageFlagsAdd(uid, ['\\Flagged']);
+      } else if (action === 'unstar') {
+        await client.messageFlagsRemove(uid, ['\\Flagged']);
       } else if (action === 'trash') {
         const trashPath = await resolveMailboxPath(client, 'TRASH');
         await client.messageMove(uid, trashPath);
@@ -262,6 +266,80 @@ export async function appendEmailToSentFolder(account: any, rawMessage: Buffer |
       await client.logout();
     } catch { console.warn('IMAP logout error (append sent)'); }
   }
+}
+
+export async function performBatchEmailAction(
+  account: any,
+  mailboxPath: string,
+  uids: string[],
+  action: 'archive' | 'trash' | 'spam' | 'read' | 'unread' | 'star' | 'unstar'
+) {
+  if (!account.imapHost || !account.imapPort || uids.length === 0) return { success: 0, failed: 0 };
+
+  const client = new ImapFlow({
+    host: account.imapHost,
+    port: account.imapPort,
+    secure: account.encryption === 'SSL' || account.imapPort === 993,
+    auth: { user: account.username, pass: account.password },
+    logger: false
+  });
+
+  let success = 0, failed = 0;
+  const numericUids = uids.map(Number).filter(n => !isNaN(n));
+
+  try {
+    await client.connect();
+    const actualMailboxPath = await resolveMailboxPath(client, mailboxPath);
+    const lock = await client.getMailboxLock(actualMailboxPath);
+    try {
+      if (action === 'read') {
+        await client.messageFlagsAdd(numericUids, ['\\Seen']);
+        success = numericUids.length;
+      } else if (action === 'unread') {
+        await client.messageFlagsRemove(numericUids, ['\\Seen']);
+        success = numericUids.length;
+      } else if (action === 'star') {
+        await client.messageFlagsAdd(numericUids, ['\\Flagged']);
+        success = numericUids.length;
+      } else if (action === 'unstar') {
+        await client.messageFlagsRemove(numericUids, ['\\Flagged']);
+        success = numericUids.length;
+      } else if (action === 'trash') {
+        const trashPath = await resolveMailboxPath(client, 'TRASH');
+        for (const uid of uids) {
+          try {
+            await client.messageMove(uid, trashPath);
+            success++;
+          } catch { failed++; }
+        }
+      } else if (action === 'archive') {
+        const archivePath = await resolveMailboxPath(client, 'ARCHIVE');
+        for (const uid of uids) {
+          try {
+            await client.messageMove(uid, archivePath);
+            success++;
+          } catch { failed++; }
+        }
+      } else if (action === 'spam') {
+        const spamPath = await resolveMailboxPath(client, 'SPAM');
+        for (const uid of uids) {
+          try {
+            await client.messageMove(uid, spamPath);
+            success++;
+          } catch { failed++; }
+        }
+      }
+    } finally {
+      lock.release();
+    }
+  } catch (error) {
+    console.error(`IMAP Batch Action Error (${action}):`, error);
+    failed = uids.length - success;
+  } finally {
+    try { await client.logout(); } catch { }
+  }
+
+  return { success, failed };
 }
 
 export async function fetchRecentInboxReplyCandidates(

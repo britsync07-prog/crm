@@ -67,7 +67,7 @@ export async function PATCH(
         const body = await req.json();
         const { action, mailbox, accountId } = body;
 
-        if (!["archive", "trash", "spam", "read", "unread"].includes(action)) {
+        if (!["archive", "trash", "spam", "read", "unread", "star", "unstar"].includes(action)) {
             return NextResponse.json({ error: "Invalid action" }, { status: 400 });
         }
 

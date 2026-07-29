@@ -20,6 +20,10 @@ export async function sendRealEmail(config: {
 
   if (!account) throw new Error("Email account not found");
 
+  if (account.sentToday >= account.dailyLimit) {
+    throw new Error(`Daily send limit reached (${account.sentToday}/${account.dailyLimit}) for ${account.email}`);
+  }
+
   const transporter = nodemailer.createTransport({
     host: account.host,
     port: account.port,

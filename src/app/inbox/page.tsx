@@ -32,22 +32,5 @@ export default async function UnifiedInboxPage() {
     }
   }
 
-  // Fallback if no real emails were found or no IMAP account is configured
-  if (threads.length === 0) {
-    threads = [
-      {
-        id: "system-1",
- from: "BritCRM System",
-        subject: "No Emails Found or Account Not Configured",
-        snippet: "To view your real inbox here, navigate to Settings > Email and connect an account with IMAP credentials.",
-        date: new Date().toLocaleDateString(),
-        sentiment: "Neutral",
-        aiSummary: "System Notification: IMAP setup required.",
-        isRead: false,
-        mailbox: "INBOX"
-      }
-    ];
-  }
-
   return <InboxClient initialEmails={threads} emailAccounts={emailAccounts} />;
 }

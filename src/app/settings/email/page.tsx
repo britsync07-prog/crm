@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { EmailAccountForm } from "@/components/EmailAccountForm";
+import { DeleteAccountButton, RemoveAllButton } from "@/components/EmailAccountActions";
 import { Mail, Zap, CheckCircle2 } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
@@ -61,6 +62,7 @@ export default async function EmailSettingsPage() {
                       <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">{acc.isActive ? 'Active' : 'Offline'}</span>
                       <div className={`h-2.5 w-2.5 rounded-full animate-pulse shadow-lg ${acc.isActive ? 'bg-green-500 shadow-green-500/40' : 'bg-red-500 shadow-red-500/40'}`} />
                     </div>
+                    <DeleteAccountButton accountId={acc.id} email={acc.email} />
                   </div>
                 </div>
               ))}
@@ -70,6 +72,9 @@ export default async function EmailSettingsPage() {
                   <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Waiting for Authentication</p>
                 </div>
               )}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <RemoveAllButton hasAccounts={accounts.length > 0} />
             </div>
           </div>
 

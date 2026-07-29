@@ -70,6 +70,7 @@ export default function InboxClient({
     const folders = [
         { name: "Inbox", imapFolder: "INBOX", icon: Inbox },
         { name: "Starred", imapFolder: "STARRED", fallback: "Starred", icon: Star },
+        { name: "Archive", imapFolder: "ARCHIVE", fallback: "Archive", icon: Archive },
         { name: "Sent", imapFolder: "SENT", fallback: "Sent", icon: Send },
         { name: "Drafts", imapFolder: "DRAFTS", fallback: "Drafts", icon: FileText },
         { name: "Spam", imapFolder: "SPAM", fallback: "Junk", icon: AlertCircle },
@@ -89,12 +90,21 @@ export default function InboxClient({
 
     const activeAccount = emailAccounts.find(a => a.id === activeAccountId);
 
-    const fetchFolder = async (folder: string, accountId: string = activeAccountId) => {
+    // Auto-poll every 30s when in list view
+    useEffect(() => {
+        if (selectedEmail) return;
+        const interval = setInterval(() => {
+            fetchFolder(activeFolder, activeAccountId, true);
+        }, 30000);
+        return () => clearInterval(interval);
+    }, [selectedEmail, activeFolder, activeAccountId]);
+
+    const fetchFolder = async (folder: string, accountId: string = activeAccountId, silent: boolean = false) => {
         setActiveFolder(folder);
         setSelectedEmail(null);
         setSelectedEmailIds(new Set());
         setSearchQuery("");
-        setLoading(true);
+        if (!silent) setLoading(true);
         setActionError(null);
         try {
             const res = await fetch(`/api/emails?mailbox=${encodeURIComponent(folder)}&accountId=${accountId}`);
@@ -106,10 +116,10 @@ export default function InboxClient({
                 setEmails(data.emails || []);
             }
         } catch (e: any) {
-            setActionError(e.message || "Network error.");
+            if (!silent) setActionError(e.message || "Network error.");
             setEmails([]);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
 
@@ -211,15 +221,11 @@ export default function InboxClient({
             setEmails(prev => prev.map(m => selectedEmailIds.has(m.id) ? { ...m, isRead: action === 'read' } : m));
         }
 
-        // In a real production app, you'd want a batch endpoint to handle this in one round trip.
-        // For now, we process them sequentially or in parallel depending on the API structure.
-        for (const id of idsToProcess) {
-            fetch(`/api/emails/${id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action, mailbox: activeFolder, accountId: activeAccountId })
-            }).catch(e => console.error(`Failed to ${action} email ${id}`, e));
-        }
+        fetch(`/api/emails/batch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, mailbox: activeFolder, accountId: activeAccountId, uids: idsToProcess })
+        }).catch(e => console.error(`Failed to batch ${action}`, e));
     };
 
     const openReply = () => {
@@ -227,6 +233,14 @@ export default function InboxClient({
         setComposeTo(selectedEmail.from);
         setComposeSubject(`Re: ${selectedEmail.subject}`);
         setComposeBody(`\n\n---\nOn ${selectedEmail.date}, ${selectedEmail.from} wrote:\n> ${selectedEmail.snippet}`);
+        setIsComposing(true);
+    };
+
+    const openForward = () => {
+        if (!selectedEmail) return;
+        setComposeTo("");
+        setComposeSubject(`Fwd: ${selectedEmail.subject}`);
+        setComposeBody(`\n\n--- Forwarded message ---\nFrom: ${selectedEmail.from}\nDate: ${selectedEmail.date}\nSubject: ${selectedEmail.subject}\n\n${selectedEmail.text || selectedEmail.snippet}`);
         setIsComposing(true);
     };
 
@@ -533,7 +547,7 @@ export default function InboxClient({
                                                     <button onClick={openReply} className="px-6 py-2 rounded-full border border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 font-medium text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2">
                                                         <Reply className="w-4 h-4" /> Reply
                                                     </button>
-                                                    <button onClick={openReply} className="px-6 py-2 rounded-full border border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 font-medium text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2">
+                                                    <button onClick={openForward} className="px-6 py-2 rounded-full border border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 font-medium text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2">
                                                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>
                                                         Forward
                                                     </button>
@@ -597,10 +611,19 @@ export default function InboxClient({
                                         <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
                                     </div>
                                 ) : filteredEmails.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-zinc-500">
+                                    <div className="flex flex-col items-center justify-center h-full text-zinc-500 px-8">
                                         <Inbox className="w-12 h-12 mb-4 text-zinc-300 dark:text-zinc-700" />
-                                        <div className="text-base">Nothing to see here</div>
-                                        {searchQuery && <div className="text-sm mt-1">No results for "{searchQuery}"</div>}
+                                        {emailAccounts.length === 0 ? (
+                                            <>
+                                                <div className="text-base font-medium">No accounts connected</div>
+                                                <div className="text-sm mt-1 text-center max-w-sm">Connect an email account in Settings &gt; Email to start receiving mail here.</div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="text-base">{searchQuery ? 'No results found' : 'Nothing here'}</div>
+                                                {searchQuery && <div className="text-sm mt-1">No results for "{searchQuery}"</div>}
+                                            </>
+                                        )}
                                     </div>
                                 ) : (
                                     <table className="w-full table-fixed text-sm">
@@ -610,7 +633,7 @@ export default function InboxClient({
                                                     key={thread.id}
                                                     onClick={() => openEmail(thread)}
                                                     className={`group cursor-pointer hover:shadow-[inset_1px_0_0_#dadce0,inset_-1px_0_0_#dadce0,0_1px_2px_0_rgba(60,64,67,.3),0_1px_3px_1px_rgba(60,64,67,.15)] dark:hover:shadow-[inset_1px_0_0_#3c4043,inset_-1px_0_0_#3c4043,0_1px_2px_0_rgba(0,0,0,.3),0_1px_3px_1px_rgba(0,0,0,.15)] hover:z-10 relative transition-none
-                                                        ${!thread.isRead ? 'bg-white dark:bg-[#121212] font-bold text-zinc-900 dark:text-zinc-100' : 'bg-[#f2f6fc] dark:bg-[#1a1a1a] text-zinc-700 dark:text-zinc-300'}
+                                                        ${!thread.isRead ? 'bg-[#f2f6fc] dark:bg-[#1a1a2e] font-bold text-zinc-900 dark:text-zinc-100' : 'bg-white dark:bg-[#121212] text-zinc-700 dark:text-zinc-300'}
                                                         ${selectedEmailIds.has(thread.id) ? 'bg-blue-50 dark:bg-blue-900/10' : ''}
                                                     `}>
 

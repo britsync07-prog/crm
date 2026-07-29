@@ -1,0 +1,32 @@
+========================================
+PROJECT NAME (10-50 characters):
+BritCRM: AI-Powered Autonomous Sales Infrastructure
+
+INDUSTRIES (Up to 6):
+Software Development, Real Estate, Marketing & Advertising, Technology, Financial Services, E-commerce
+
+PROJECT CATEGORIES (Up to 4):
+Full Stack Development, SaaS Development, AI Development, Web Application
+
+SEARCH TAGS:
+Nextjs, AI CRM, Lead Generation, Full Stack, Prisma
+
+PROJECT DESCRIPTION (Max 1400 characters):
+    The Goal: BritCRM was built to eliminate the "cognitive grunt work" of modern sales teams. Traditional CRMs are passive databases; BritCRM is an active execution engine that autonomously identifies leads, verifies data, and initiates engagement using human-level AI intelligence.
+
+    The Solution & Features: I developed a comprehensive "All-in-One Business Operating System" featuring:
+    • Autonomous Discovery: A Puppeteer-based scraper that crawls Google Maps and public databases to find high-intent leads.
+    • Neural Outreach Engine: Cognitive AI agents (Google Gemini) that generate hyper-personalized, narrative-driven email campaigns.
+    • Unified Workspace: Real-time messaging via Socket.io and high-performance video conferencing powered by LiveKit.
+    • Visual Automation: A custom workflow builder for complex branching logic based on user intent signals.
+    • Full Lifecycle Management: Integrated Sales Pipelines, HR/Employee Hub, Billing (Invoices/Subscriptions), and Task Tracking with AI Action Items.
+
+    Technical Implementation & Challenges: Built with Next.js 15 (App Router), React 19, and TypeScript for a robust, type-safe architecture. The backend leverages Prisma ORM with a multi-tenant workspace isolation model. Key technical challenges included handling headless browser automation at scale and orchestrating real-time communication protocols (WebSockets & WebRTC) within a high-performance Next.js environment.
+
+ATTACHMENT SUGGESTIONS:
+1. Cinematic Hero Section: A screenshot of the landing page featuring the "Sales outreach reimagined" headline and the futuristic dark-themed UI.
+2. Neural Engine Dashboard: The automation builder interface showing a visual workflow with trigger nodes and AI steps.
+3. Lead Discovery View: A view of the "Finder" results showing scraped business profiles, AI scores, and extracted contact details.
+4. CRM Pipeline Kanban: A professional-looking sales pipeline showing deal cards being tracked through various stages.
+5. Live Video Meeting: A screenshot of the active meeting room interface (LiveKit) demonstrating real-time collaboration features.
+========================================
