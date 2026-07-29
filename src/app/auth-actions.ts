@@ -37,7 +37,7 @@ export async function loginAction(prevState: any, formData: FormData) {
     redirect(`/invite/${inviteToken}`);
   }
 
-  redirect("/");
+  redirect("/billing");
 }
 
 export async function signupAction(prevState: any, formData: FormData) {
@@ -129,7 +129,7 @@ export async function signupAction(prevState: any, formData: FormData) {
     redirect(signupCallback);
   }
 
-  redirect("/");
+  redirect("/billing");
 }
 
 export async function logoutAction() {
