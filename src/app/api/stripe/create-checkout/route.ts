@@ -19,13 +19,46 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const member = await prisma.organizationMember.findFirst({
+  let member = await prisma.organizationMember.findFirst({
     where: { userId: session.id, role: "admin" },
     include: { organization: true },
   });
 
   if (!member) {
-    return NextResponse.json({ error: "Only org admins can manage billing" }, { status: 403 });
+    let orgId = user.organizationId;
+    let org;
+
+    if (!orgId) {
+      org = await prisma.organization.create({
+        data: {
+          name: `${user.name || "My"}'s Organization`,
+          ownerId: user.id,
+          plan: "free",
+          seatLimit: 1,
+        },
+      });
+      orgId = org.id;
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { organizationId: orgId },
+      });
+    } else {
+      org = await prisma.organization.findUnique({ where: { id: orgId } });
+    }
+
+    member = await prisma.organizationMember.create({
+      data: {
+        organizationId: orgId!,
+        userId: user.id,
+        email: user.email,
+        role: "admin",
+        status: "active",
+        invitedById: user.id,
+        lastActive: new Date(),
+      },
+      include: { organization: true },
+    });
   }
 
   const { plan = "business" } = await req.json().catch(() => ({ plan: "business" }));
