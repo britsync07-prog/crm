@@ -62,13 +62,17 @@ export async function sendSystemEmail({
   const { from } = getProfileConfig(profile);
   const transporter = createTransport(profile);
 
-  await transporter.sendMail({
-    from,
-    to,
-    subject,
-    html,
-    text: html.replace(/<[^>]*>?/gm, ""),
-  });
-
-  return { sent: true };
+  try {
+    await transporter.sendMail({
+      from,
+      to,
+      subject,
+      html,
+      text: html.replace(/<[^>]*>?/gm, ""),
+    });
+    return { sent: true };
+  } catch (err) {
+    console.error("[SystemMailer] Error sending system email:", err);
+    return { sent: false, error: err };
+  }
 }

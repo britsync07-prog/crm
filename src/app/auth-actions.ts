@@ -8,7 +8,7 @@ import { sendSystemEmail } from "@/lib/system-mailer";
 import { welcomeEmailTemplate } from "@/lib/email-templates/welcome";
 
 export async function loginAction(prevState: any, formData: FormData) {
-  const email = formData.get("email") as string;
+  const email = (formData.get("email") as string)?.toLowerCase()?.trim();
   const password = formData.get("password") as string;
   const inviteToken = formData.get("inviteToken") as string;
 
@@ -28,6 +28,11 @@ export async function loginAction(prevState: any, formData: FormData) {
 
   await login(user);
 
+  const callbackUrl = formData.get("callbackUrl") as string;
+  if (callbackUrl && callbackUrl.startsWith("/")) {
+    redirect(callbackUrl);
+  }
+
   if (inviteToken) {
     redirect(`/invite/${inviteToken}`);
   }
@@ -37,7 +42,7 @@ export async function loginAction(prevState: any, formData: FormData) {
 
 export async function signupAction(prevState: any, formData: FormData) {
   const name = formData.get("name") as string;
-  const email = formData.get("email") as string;
+  const email = (formData.get("email") as string)?.toLowerCase()?.trim();
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
   const inviteToken = formData.get("inviteToken") as string;
@@ -118,6 +123,12 @@ export async function signupAction(prevState: any, formData: FormData) {
   });
 
   await login(user);
+
+  const signupCallback = formData.get("callbackUrl") as string;
+  if (signupCallback && signupCallback.startsWith("/")) {
+    redirect(signupCallback);
+  }
+
   redirect("/");
 }
 

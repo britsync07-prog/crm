@@ -11,6 +11,7 @@ const initialState = { error: null };
 function LoginForm() {
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get("invite") ?? "";
+  const callbackUrl = searchParams.get("callbackUrl") ?? "";
   const [state, formAction] = useActionState(loginAction as any, initialState);
 
   return (
@@ -32,6 +33,7 @@ function LoginForm() {
           )}
 
           {inviteToken && <input type="hidden" name="inviteToken" value={inviteToken} />}
+          {callbackUrl && <input type="hidden" name="callbackUrl" value={callbackUrl} />}
 
           <div className="space-y-4">
             <div className="space-y-2">
@@ -81,7 +83,7 @@ function LoginForm() {
 
         <p className="text-center text-sm text-zinc-500">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-[#012169] font-bold hover:underline">Sign up for free</Link>
+          <Link href={`/signup${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`} className="text-[#012169] font-bold hover:underline">Sign up for free</Link>
         </p>
       </div>
     </div>

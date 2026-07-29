@@ -11,6 +11,7 @@ const initialState = { error: null };
 function SignupForm() {
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get("invite") ?? "";
+  const callbackUrl = searchParams.get("callbackUrl") ?? "";
   const [state, formAction] = useActionState(signupAction as any, initialState);
 
   return (
@@ -36,6 +37,7 @@ function SignupForm() {
           )}
 
           {inviteToken && <input type="hidden" name="inviteToken" value={inviteToken} />}
+          {callbackUrl && <input type="hidden" name="callbackUrl" value={callbackUrl} />}
 
           <div className="space-y-4">
             <div className="space-y-2">
@@ -109,7 +111,13 @@ function SignupForm() {
 
         <p className="text-center text-sm text-zinc-500">
           Already have an account?{" "}
-          <Link href={`/login${inviteToken ? `?invite=${inviteToken}` : ""}`} className="text-[#012169] font-bold hover:underline">Log in</Link>
+          <Link href={`/login${
+            callbackUrl 
+              ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` 
+              : inviteToken 
+                ? `?invite=${inviteToken}` 
+                : ""
+          }`} className="text-[#012169] font-bold hover:underline">Log in</Link>
         </p>
       </div>
     </div>
