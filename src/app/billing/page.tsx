@@ -19,28 +19,31 @@ export default async function BillingDashboard() {
   let invoicesError = false;
   let clientsError = false;
 
-  try {
-    const revRes = await getRevenueSummary(yearStart, todayStr);
-    revenue = revRes.data;
-  } catch (e) {
+  const [revRes, invRes, clRes] = await Promise.allSettled([
+    getRevenueSummary(yearStart, todayStr),
+    listInvoices({ page: 1, page_size: 10 }),
+    listClients({ page: 1, page_size: 1 })
+  ]);
+
+  if (revRes.status === "fulfilled") {
+    revenue = revRes.value.data;
+  } else {
     revenueError = true;
-    if (process.env.NODE_ENV === "development") console.error("[Billing] Revenue error:", e);
+    if (process.env.NODE_ENV === "development") console.error("[Billing] Revenue error:", revRes.reason);
   }
 
-  try {
-    const invRes = await listInvoices({ page: 1, page_size: 10 });
-    invoices = invRes.data || [];
-  } catch (e) {
+  if (invRes.status === "fulfilled") {
+    invoices = invRes.value.data || [];
+  } else {
     invoicesError = true;
-    if (process.env.NODE_ENV === "development") console.error("[Billing] Invoices error:", e);
+    if (process.env.NODE_ENV === "development") console.error("[Billing] Invoices error:", invRes.reason);
   }
 
-  try {
-    const clRes = await listClients({ page: 1, page_size: 1 });
-    clientsCount = clRes.total || 0;
-  } catch (e) {
+  if (clRes.status === "fulfilled") {
+    clientsCount = clRes.value.total || 0;
+  } else {
     clientsError = true;
-    if (process.env.NODE_ENV === "development") console.error("[Billing] Clients error:", e);
+    if (process.env.NODE_ENV === "development") console.error("[Billing] Clients error:", clRes.reason);
   }
 
   const totalInvoiced = revenue?.total_invoiced ?? 0;
