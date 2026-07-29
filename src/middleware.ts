@@ -26,13 +26,13 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/landing", req.nextUrl));
   }
 
-  // 5. Redirect to / if the user is authenticated and trying to access public routes (except landing)
+  // 5. Redirect to /billing if the user is authenticated and trying to access public routes (except landing)
   if (
     isPublicRoute &&
     session &&
     path !== "/landing"
   ) {
-    return NextResponse.redirect(new URL("/", req.nextUrl));
+    return NextResponse.redirect(new URL("/billing", req.nextUrl));
   }
 
   return NextResponse.next();
