@@ -10,3 +10,8 @@ export const prisma =
   new PrismaClient({ adapter });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma_v4 = prisma;
+
+// Ensure WAL mode is active
+prisma.$executeRawUnsafe("PRAGMA journal_mode = WAL;").catch((err) => {
+  console.error("Failed to set WAL mode:", err);
+});
