@@ -4,11 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  LayoutDashboard,
   Users,
   UserPlus,
   Users2,
-  Send,
   Settings,
   Zap,
   Landmark,
@@ -24,14 +22,12 @@ import {
 import { cn } from "@/lib/utils";
 
 const menuItems = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Unified Inbox", href: "/inbox", icon: Mail },
   { name: "Customers", href: "/customers", icon: Users },
   { name: "Leads", href: "/leads", icon: UserPlus },
   { name: "Billing & Finance", href: "/billing", icon: CreditCard },
   { name: "Team Hub", href: "/team", icon: Users2, matchPrefix: true },
   { name: "Calls & Meetings", href: "/calls", icon: Video },
-  { name: "Outreach", href: "/campaigns", icon: Send },
   { name: "Forms", href: "/forms", icon: FileText },
   { name: "Calendar", href: "/calendar", icon: CalendarIcon },
   { name: "Automations", href: "/automations", icon: Zap },
