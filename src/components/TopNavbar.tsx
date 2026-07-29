@@ -3,6 +3,7 @@
 import { logoutAction } from "@/app/auth-actions";
 import { Bell, Search, User } from "lucide-react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 export default function TopNavbar({ session }: { session: any }) {
   const pathname = usePathname();
@@ -16,7 +17,8 @@ export default function TopNavbar({ session }: { session: any }) {
     pathname.startsWith("/meet/") || 
     pathname.startsWith("/features/") || 
     pathname.startsWith("/solutions/") || 
-    pathname.startsWith("/vision/");
+    pathname.startsWith("/vision/") || 
+    pathname.startsWith("/admin");
 
   // Hide TopNavbar on marketing routes
   if (isMarketingRoute) {
@@ -36,7 +38,10 @@ export default function TopNavbar({ session }: { session: any }) {
       </div>
 
       <div className="flex items-center gap-6">
-        <button className="relative p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors">
+        <button
+          onClick={() => alert("No new notifications.")}
+          className="relative p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors"
+        >
           <Bell className="w-5 h-5 text-slate-500" />
           <span className="absolute top-2 right-2 w-2 h-2 bg-[#c8102e] rounded-full border-2 border-white dark:border-slate-950"></span>
         </button>
@@ -56,8 +61,11 @@ export default function TopNavbar({ session }: { session: any }) {
                 <p className="text-xs font-bold truncate text-zinc-900 dark:text-zinc-50">{session?.email}</p>
                 <p className="text-[10px] mt-1 font-black uppercase tracking-widest text-[#012169] dark:text-blue-300">BritSync Workspace</p>
               </div>
-              <button className="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors">Profile Settings</button>
-              <button className="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors">Help & Support</button>
+              {session?.role === "ADMIN" && (
+                <Link href="/admin" className="block w-full text-left px-4 py-2 text-xs text-amber-600 font-bold hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-colors">Admin Panel</Link>
+              )}
+              <Link href="/settings/email" className="block w-full text-left px-4 py-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors">Profile Settings</Link>
+              <button onClick={() => window.open('mailto:support@britsyncai.com')} className="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors">Help & Support</button>
               <form action={logoutAction}>
                 <button type="submit" className="w-full text-left px-4 py-2 text-xs text-[#c8102e] hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors mt-2">Log out</button>
               </form>

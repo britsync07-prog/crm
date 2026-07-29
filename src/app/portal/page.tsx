@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { 
-  Terminal, 
   Clock, 
   FileText, 
   MessageSquare, 
@@ -9,8 +8,6 @@ import {
   ArrowUpRight,
   Shield,
   Zap,
-  Download,
-  Calendar,
   TrendingUp
 } from "lucide-react";
 import Link from "next/link";
@@ -33,11 +30,6 @@ export default async function ClientPortalPage() {
     include: { tasks: true }
   });
 
-  const invoices = await prisma.invoice.findMany({
-    where: { customer: { id: clientId } },
-    orderBy: { createdAt: "desc" }
-  });
-
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black p-6 md:p-12 animate-in fade-in duration-1000">
       <div className="max-w-[1400px] mx-auto space-y-12">
@@ -57,9 +49,9 @@ export default async function ClientPortalPage() {
           </div>
           
           <div className="flex items-center gap-4">
-            <button className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-50 transition-all flex items-center gap-2">
+            <a href="mailto:support@britsyncai.com" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-50 transition-all flex items-center gap-2">
               <MessageSquare className="w-4 h-4" /> Open Support
-            </button>
+            </a>
           </div>
         </div>
 
@@ -128,36 +120,18 @@ export default async function ClientPortalPage() {
 
           {/* Sidebar: Financials & Files */}
           <div className="space-y-8">
-            <div className="bg-zinc-900 rounded-[40px] p-8 text-white space-y-8 shadow-2xl shadow-black/50 border border-white/5 relative overflow-hidden">
+            <a href="/billing" className="block bg-zinc-900 rounded-[40px] p-8 text-white space-y-6 shadow-2xl shadow-black/50 border border-white/5 relative overflow-hidden hover:bg-zinc-800 transition-all group">
               <div className="absolute bottom-0 right-0 p-4 opacity-10">
                 <FileText className="w-24 h-24" />
               </div>
               <div>
-                <h3 className="text-xl font-black uppercase italic italic tracking-tight">Ledger Status</h3>
-                <p className="text-zinc-400 text-xs font-medium">All financial obligations are current.</p>
+                <h3 className="text-xl font-black uppercase italic tracking-tight">Ledger Status</h3>
+                <p className="text-zinc-400 text-xs font-medium">Managed via BritLedger</p>
               </div>
-              
-              <div className="space-y-4">
-                {invoices.slice(0, 3).map(inv => (
-                  <div key={inv.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer group">
-                    <div>
-                      <p className="text-[10px] font-black text-blue-300 uppercase tracking-tighter">#{inv.invoiceRef}</p>
-                      <p className="text-sm font-bold">${inv.amount.toLocaleString()}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-[9px] font-black uppercase px-2 py-1 rounded ${inv.status === 'Paid' ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                        {inv.status}
-                      </span>
-                      <Download className="w-4 h-4 text-zinc-500 group-hover:text-white transition-colors" />
-                    </div>
-                  </div>
-                ))}
+              <div className="flex items-center gap-2 text-blue-300 text-[10px] font-black uppercase tracking-widest group-hover:gap-3 transition-all">
+                Open Billing <ArrowUpRight className="w-3 h-3" />
               </div>
-              
-              <button className="w-full py-4 rounded-2xl bg-white text-black text-xs font-black uppercase tracking-[0.2em] hover:bg-[#012169] hover:text-white transition-all">
-                Full Statement
-              </button>
-            </div>
+            </a>
 
             <div className="bg-white dark:bg-zinc-950 p-8 rounded-[40px] border border-zinc-200 dark:border-white/10 shadow-sm space-y-6">
               <h3 className="text-lg font-black uppercase italic tracking-tight">Vault Assets</h3>

@@ -174,7 +174,7 @@ export class GoogleMapsScraper {
         }
         previousCount = resultCount;
       }
-    } catch (e) {}
+    } catch (e) { console.error('Scraper iteration error:', e); }
   }
 
   private async findEmails(url: string): Promise<string[]> {

@@ -1,20 +1,12 @@
 import { AnalyticsService } from "@/lib/services/analytics.service";
 import { getSession } from "@/lib/auth";
 import { 
-  Users, 
-  UserPlus, 
-  Mail, 
   CheckCircle2, 
   TrendingUp, 
-  BarChart3, 
   Zap, 
   ArrowUpRight, 
-  Search, 
   DollarSign, 
-  Layers,
   Sparkles,
-  PlayCircle,
-  MessageCircle,
   Clock,
   Target,
   CreditCard,
@@ -28,6 +20,13 @@ import { cn } from "@/lib/utils";
 export default async function Dashboard() { 
   const session = await getSession();
   const userId = session.id;
+
+  const member = await prisma.organizationMember.findFirst({
+    where: { userId, status: "active" },
+    include: { organization: { select: { subscriptionStatus: true, plan: true } } },
+  });
+
+  const subStatus = member?.organization?.subscriptionStatus ?? "free";
 
   const [
     pipelineStats,
@@ -52,6 +51,20 @@ export default async function Dashboard() {
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-10 py-8 sm:py-12 space-y-12 sm:space-y-16 animate-in fade-in duration-1000 pb-32">
+      {subStatus === "free" && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-[#012169]/10 to-red-500/5 border border-[#012169]/20 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-[#012169]" />
+            <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
+              You&apos;re on the <span className="text-[#012169]">Free</span> plan.{" "}
+              <Link href="/settings/billing" className="underline hover:text-[#012169] transition-colors">Upgrade</Link> for unlimited everything.
+            </p>
+          </div>
+          <Link href="/settings/billing" className="shrink-0 bg-[#012169] text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#012169]/90 transition-all">
+            Upgrade
+          </Link>
+        </div>
+      )}
       {/* Dynamic Intelligence Header */}
       <div className="relative rounded-[3rem] sm:rounded-[4.5rem] bg-gradient-to-br from-[#012169] via-[#0b2a74] to-[#c8102e] border-[6px] border-white/60 dark:border-blue-900/30 p-8 sm:p-16 overflow-hidden group shadow-2xl">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/20 blur-[150px] rounded-full translate-x-1/2 -translate-y-1/2 group-hover:bg-white/30 transition-all duration-1000"></div>
@@ -76,9 +89,9 @@ export default async function Dashboard() {
             </p>
 
             <div className="flex flex-wrap items-center gap-4 sm:gap-6 pt-2">
-              <Link href="/finder" className="bg-white text-[#012169] px-10 py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[#c8102e] hover:text-white transition-all shadow-2xl shadow-black/30 active:scale-95 flex items-center gap-3">
+              <span className="bg-white text-[#012169] px-10 py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] opacity-80 cursor-not-allowed flex items-center gap-3">
                 <Rocket className="w-4 h-4" /> Global Scan
-              </Link>
+              </span>
               <Link href="/billing" className="text-blue-100/80 hover:text-white text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group px-4 py-4">
                 Financial Audit <ArrowUpRight className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
               </Link>
@@ -227,9 +240,11 @@ export default async function Dashboard() {
                       </div>
                     )}
                   </div>
-                  <button className="w-12 h-12 rounded-2xl border-2 border-zinc-100 dark:border-zinc-900 flex items-center justify-center hover:bg-green-500 hover:border-green-500 hover:text-white transition-all shadow-sm active:scale-90">
-                    <CheckCircle2 className="w-6 h-6" />
-                  </button>
+                  <form method="POST" action={`/api/tasks/${task.id}/complete`}>
+                    <button type="submit" className="w-12 h-12 rounded-2xl border-2 border-zinc-100 dark:border-zinc-900 flex items-center justify-center hover:bg-green-500 hover:border-green-500 hover:text-white transition-all shadow-sm active:scale-90">
+                      <CheckCircle2 className="w-6 h-6" />
+                    </button>
+                  </form>
                 </div>
               </div>
             ))}

@@ -65,6 +65,7 @@ export default function InboxClient({
 
     // UI state
     const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+    const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
 
     const folders = [
         { name: "Inbox", imapFolder: "INBOX", icon: Inbox },
@@ -181,6 +182,20 @@ export default function InboxClient({
         } catch (e: any) {
             setActionError(e.message);
         }
+    };
+
+    const toggleStar = (emailId: string) => {
+        const email = emails.find(m => m.id === emailId);
+        const newStarred = email ? !email.isStarred : true;
+        setEmails(prev => prev.map(m => m.id === emailId ? { ...m, isStarred: !m.isStarred } : m));
+        if (selectedEmail?.id === emailId) {
+            setSelectedEmail({ ...selectedEmail, isStarred: !selectedEmail.isStarred });
+        }
+        fetch(`/api/emails/${emailId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: newStarred ? 'star' : 'unstar', mailbox: activeFolder, accountId: activeAccountId })
+        }).catch(e => console.error('Failed to toggle star', e));
     };
 
     const handleBatchAction = async (action: 'archive' | 'trash' | 'spam' | 'read' | 'unread') => {
@@ -424,7 +439,7 @@ export default function InboxClient({
                                     {/* Subject */}
                                     <div className="flex items-center justify-between mb-8 pl-16">
                                         <h1 className="text-2xl font-normal text-zinc-900 dark:text-zinc-100">{selectedEmail.subject}</h1>
-                                        <button className={`text-zinc-400 hover:text-yellow-400 transition-colors ${selectedEmail.isStarred ? 'text-yellow-400 fill-yellow-400' : ''}`}>
+                                        <button onClick={() => toggleStar(selectedEmail.id)} className={`text-zinc-400 hover:text-yellow-400 transition-colors ${selectedEmail.isStarred ? 'text-yellow-400 fill-yellow-400' : ''}`}>
                                             <Star className="w-5 h-5" />
                                         </button>
                                     </div>
@@ -546,9 +561,21 @@ export default function InboxClient({
                                 <button className="w-8 h-8 rounded flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500" onClick={() => fetchFolder(activeFolder)}>
                                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 1 0 2.13-5.88L21 8"></path></svg>
                                 </button>
-                                <button className="w-8 h-8 rounded flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500">
-                                    <MoreVertical className="w-4 h-4" />
-                                </button>
+                                <div className="relative">
+                                    <button onClick={() => setMoreDropdownOpen(!moreDropdownOpen)} className="w-8 h-8 rounded flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500">
+                                        <MoreVertical className="w-4 h-4" />
+                                    </button>
+                                    {moreDropdownOpen && (
+                                        <div className="absolute top-8 right-0 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl py-1 z-50 text-sm">
+                                            <button onClick={() => { setMoreDropdownOpen(false); handleBatchAction('read'); }} className="w-full text-left px-4 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-3 text-zinc-700 dark:text-zinc-300">
+                                                <Mail className="w-4 h-4" /> Mark all as read
+                                            </button>
+                                            <button onClick={() => { setMoreDropdownOpen(false); fetchFolder(activeFolder); }} className="w-full text-left px-4 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-3 text-zinc-700 dark:text-zinc-300">
+                                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 1 0 2.13-5.88L21 8"></path></svg> Refresh
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
 
                                 {selectedEmailIds.size > 0 && (
                                     <>
@@ -598,7 +625,7 @@ export default function InboxClient({
                                                                     className={`w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 cursor-pointer ${selectedEmailIds.has(thread.id) ? 'opacity-100' : 'opacity-30 group-hover:opacity-100'}`}
                                                                 />
                                                             </div>
-                                                            <button onClick={(e) => { e.stopPropagation(); }} className={`transition-colors ${thread.isStarred ? 'text-yellow-400 fill-yellow-400' : 'text-zinc-400 group-hover:text-zinc-500 hover:text-yellow-400'}`}>
+                                                            <button onClick={(e) => { e.stopPropagation(); toggleStar(thread.id); }} className={`transition-colors ${thread.isStarred ? 'text-yellow-400 fill-yellow-400' : 'text-zinc-400 group-hover:text-zinc-500 hover:text-yellow-400'}`}>
                                                                 <Star className="w-4 h-4" />
                                                             </button>
                                                         </div>

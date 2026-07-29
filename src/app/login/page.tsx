@@ -2,12 +2,15 @@
 
 import { loginAction } from "@/app/auth-actions";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Mail, Lock, LogIn } from "lucide-react";
-import { useActionState } from "react";
+import { useActionState, Suspense } from "react";
 
 const initialState = { error: null };
 
-export default function LoginPage() {
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get("invite") ?? "";
   const [state, formAction] = useActionState(loginAction as any, initialState);
 
   return (
@@ -17,7 +20,7 @@ export default function LoginPage() {
           <div className="w-12 h-12 bg-gradient-to-br from-[#012169] to-[#c8102e] rounded-xl flex items-center justify-center mx-auto mb-4">
             <span className="text-white font-bold text-xl">B</span>
           </div>
- <h1 className="text-2xl font-bold tracking-tight">Welcome to BritCRM</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Welcome to BritCRM</h1>
           <p className="text-zinc-500 text-sm">Sign in to your BritSync workspace</p>
         </div>
 
@@ -27,6 +30,8 @@ export default function LoginPage() {
               {state.error}
             </div>
           )}
+
+          {inviteToken && <input type="hidden" name="inviteToken" value={inviteToken} />}
 
           <div className="space-y-4">
             <div className="space-y-2">
@@ -45,7 +50,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Password</label>
-                <Link href="/forgot-password" title="Coming soon" className="text-[10px] font-bold text-[#012169] hover:underline">Forgot password?</Link>
+                <Link href="/forgot-password" className="text-[10px] font-bold text-[#012169] hover:underline">Forgot password?</Link>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
@@ -80,5 +85,17 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-white font-bold">
+        Loading...
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

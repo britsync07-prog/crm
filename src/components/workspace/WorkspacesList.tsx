@@ -57,7 +57,7 @@ export default function WorkspacesList({ workspaces: initial, currentUserId }: P
 
                 <div className="flex items-center gap-3">
                     <Link
-                        href="/workspaces/new"
+                        href="/team/workspaces/new"
                         className="flex items-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-black px-6 py-3 text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
                     >
                         <Plus className="w-4 h-4" /> New Workspace
@@ -78,7 +78,10 @@ export default function WorkspacesList({ workspaces: initial, currentUserId }: P
                                         <Layout className="w-7 h-7" />
                                     </div>
                                     <div className="flex gap-2">
-                                        <button className="p-2.5 rounded-xl bg-zinc-50 dark:bg-white/5 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
+                                        <button
+                                            onClick={() => console.log('settings', ws.id)}
+                                            className="p-2.5 rounded-xl bg-zinc-50 dark:bg-white/5 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all"
+                                        >
                                             <Settings2 className="w-4 h-4" />
                                         </button>
                                         {isOwner && (
@@ -132,7 +135,7 @@ export default function WorkspacesList({ workspaces: initial, currentUserId }: P
                             </div>
 
                             <div className="p-6 bg-zinc-50/50 dark:bg-white/[0.02] border-t border-zinc-100 dark:border-white/5">
-                                <Link href={`/workspaces/${ws.id}`} className="w-full py-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 group-hover:bg-[#012169] group-hover:text-white group-hover:border-blue-600 transition-all">
+                                <Link href={`/team/workspaces/${ws.id}`} className="w-full py-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 group-hover:bg-[#012169] group-hover:text-white group-hover:border-blue-600 transition-all">
                                     Access Terminal <ArrowUpRight className="w-3 h-3" />
                                 </Link>
                             </div>

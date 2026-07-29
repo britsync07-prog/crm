@@ -59,48 +59,15 @@ export class AnalyticsService {
   }
 
   /**
-   * Calculate Financial Metrics (MRR, Total Revenue, etc.)
+   * Financial Metrics — delegated to BritLedger
    */
   static async getFinancialStats(userId: string) {
-    // 1. Total Revenue from Paid Invoices
-    const paidInvoices = await prisma.invoice.findMany({
-      where: {
-        customer: { userId },
-        status: "Paid",
-      },
-      select: { amount: true },
-    });
-    const totalRevenue = paidInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-
-    // 2. Pending Revenue (Unpaid Invoices)
-    const pendingInvoices = await prisma.invoice.findMany({
-      where: {
-        customer: { userId },
-        status: { in: ["Sent", "Draft"] },
-      },
-      select: { amount: true },
-    });
-    const pendingRevenue = pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-
-    // 3. Monthly Recurring Revenue (MRR) from active subscriptions
-    const activeSubscriptions = await prisma.subscription.findMany({
-      where: {
-        customer: { userId },
-        status: "ACTIVE",
-      },
-      select: { amount: true, interval: true },
-    });
-
-    const mrr = activeSubscriptions.reduce((sum, sub) => {
-      if (sub.interval === "YEARLY") return sum + sub.amount / 12;
-      return sum + sub.amount;
-    }, 0);
-
     return {
-      totalRevenue,
-      pendingRevenue,
-      mrr,
-      activeSubscriptionsCount: activeSubscriptions.length,
+      totalRevenue: 0,
+      pendingRevenue: 0,
+      mrr: 0,
+      activeSubscriptionsCount: 0,
+      note: "Financial data now managed via BritLedger. Use billing dashboard.",
     };
   }
 

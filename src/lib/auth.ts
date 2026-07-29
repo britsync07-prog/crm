@@ -2,8 +2,9 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-const secretKey = "secret"; // In prod, use process.env.JWT_SECRET
-const key = new TextEncoder().encode(secretKey);
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error("JWT_SECRET environment variable is required");
+const key = new TextEncoder().encode(JWT_SECRET);
 
 export async function encrypt(payload: any) {
   return await new SignJWT(payload)
@@ -54,9 +55,8 @@ export async function getSession(req?: NextRequest) {
 
     // 2. Global API Key support
     const apiKey = req.headers.get("x-api-key");
-    const globalApiKey = process.env.GLOBAL_API_KEY || "nexus_super_secret_key";
-    
-    if (apiKey && apiKey === globalApiKey.trim()) {
+    if (!process.env.GLOBAL_API_KEY) { /* API key auth disabled */ }
+    else if (apiKey && apiKey === process.env.GLOBAL_API_KEY.trim()) {
       return { id: "system", email: "system@nexus.ai", role: "ADMIN" };
     }
   }

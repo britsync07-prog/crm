@@ -7,41 +7,85 @@ datasource db {
 }
 
 model User {
-  id                String              @id @default(cuid())
-  name              String?
-  email             String              @unique
-  password          String
-  role              String              @default("USER")
-  isVerified        Boolean             @default(false)
-  verifyToken       String?
-  resetToken        String?
-  resetExpires      DateTime?
-  image             String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  activityLogs      ActivityLog[]
-  automations       Automation[]
-  bookings          Booking[]           @relation("UserBookings")
-  calendarEvents    CalendarEvent[]
-  calendarSettings  CalendarSettings?
-  campaigns         Campaign[]
-  categories        Category[]
-  customers         Customer[]
-  deals             Deal[]
-  emailAccounts     EmailAccount[]
-  employeeProfile   Employee?
-  forms             Form[]              @relation("UserForms")
-  leads             Lead[]
-  createdMeetings   Meeting[]           @relation("CreatedMeetings")
-  notifications     Notification[]
-  rooms             Room[]              @relation("UserRooms")
-  scrapeJobs        ScrapeJob[]
-  socialAccounts    SocialAccount[]
-  assignedTasks     Task[]              @relation("AssignedTasks")
-  workspaces        Workspace[]         @relation("WorkspaceOwner")
-  workspaceMessages WorkspaceMessage[]  @relation("WorkspaceMessages")
-  workspacesAdmin   WorkspaceUser[]
-  customRoles       WorkspaceUserRole[]
+  id                  String              @id @default(cuid())
+  name                String?
+  email               String              @unique
+  password            String
+  role                String              @default("USER")
+  status              String              @default("ACTIVE")
+  bannedAt            DateTime?
+  bannedBy            String?
+  isVerified          Boolean             @default(false)
+  newsletterOptedIn   Boolean             @default(true)
+  verifyToken         String?
+  resetToken          String?
+  resetExpires        DateTime?
+  image               String?
+  organizationId      String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  activityLogs        ActivityLog[]
+  automations         Automation[]
+  bookings            Booking[]           @relation("UserBookings")
+  calendarEvents      CalendarEvent[]
+  calendarSettings    CalendarSettings?
+  campaigns           Campaign[]
+  categories          Category[]
+  customers           Customer[]
+  deals               Deal[]
+  emailAccounts       EmailAccount[]
+  employeeProfile     Employee?
+  forms               Form[]              @relation("UserForms")
+  leads               Lead[]
+  createdMeetings     Meeting[]           @relation("CreatedMeetings")
+  notifications       Notification[]
+  rooms               Room[]              @relation("UserRooms")
+  scrapeJobs          ScrapeJob[]
+  socialAccounts      SocialAccount[]
+  assignedTasks       Task[]              @relation("AssignedTasks")
+  workspaces          Workspace[]         @relation("WorkspaceOwner")
+  workspaceMessages   WorkspaceMessage[]  @relation("WorkspaceMessages")
+  workspacesAdmin     WorkspaceUser[]
+  customRoles         WorkspaceUserRole[]
+  ownedOrganization   Organization?       @relation("OwnedOrganization")
+  memberProfile       OrganizationMember?
+  invitedMembers      OrganizationMember[] @relation("InvitedBy")
+}
+
+model Organization {
+  id                   String               @id @default(cuid())
+  name                 String               @default("My Organization")
+  ownerId              String               @unique
+  plan                 String               @default("free")
+  seatLimit            Int                  @default(1)
+  stripeCustomerId     String?              @unique
+  stripeSubscriptionId String?              @unique
+  subscriptionStatus   String               @default("free")
+  subscriptionEndDate  DateTime?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  owner                User                 @relation("OwnedOrganization", fields: [ownerId], references: [id])
+  members              OrganizationMember[]
+}
+
+model OrganizationMember {
+  id               String       @id @default(cuid())
+  organizationId   String
+  userId           String?      @unique
+  email            String
+  role             String       @default("member")
+  status           String       @default("pending")
+  inviteToken      String       @unique @default(cuid())
+  invitedById      String
+  lastActive       DateTime?
+  createdAt        DateTime     @default(now())
+
+  organization     Organization @relation(fields: [organizationId], references: [id])
+  user             User?        @relation(fields: [userId], references: [id])
+  invitedBy        User         @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  @@unique([organizationId, email])
 }
 
 model Workspace {
@@ -189,9 +233,7 @@ model Customer {
   user            User           @relation(fields: [userId], references: [id])
   deals           Deal[]
   interactions    Interaction[]
-  invoices        Invoice[]
-  projects        Project[]
-  subscriptions   Subscription[]
+   projects        Project[]
   tasks           Task[]         @relation("CustomerTasks")
   tags            Tag[]          @relation("CustomerToTag")
 }
@@ -404,46 +446,6 @@ model CampaignLead {
   repliedAt  DateTime?
   lead       Lead      @relation(fields: [leadId], references: [id])
   campaign   Campaign  @relation(fields: [campaignId], references: [id])
-}
-
-model Invoice {
-  id         String    @id @default(cuid())
-  invoiceRef String    @unique
-  amount     Float
-  status     String    @default("Draft")
-  dueDate    DateTime
-  paidAt     DateTime?
-  stripeId   String?
-  customerId String
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  customer   Customer  @relation(fields: [customerId], references: [id])
-  payments   Payment[]
-}
-
-model Payment {
-  id            String   @id @default(cuid())
-  invoiceId     String
-  amount        Float
-  method        String
-  transactionId String?
-  status        String   @default("COMPLETED")
-  createdAt     DateTime @default(now())
-  invoice       Invoice  @relation(fields: [invoiceId], references: [id])
-}
-
-model Subscription {
-  id          String   @id @default(cuid())
-  customerId  String
-  planName    String
-  amount      Float
-  interval    String   @default("MONTHLY")
-  status      String   @default("ACTIVE")
-  nextBilling DateTime
-  stripeSubId String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  customer    Customer @relation(fields: [customerId], references: [id])
 }
 
 model Interaction {
@@ -666,4 +668,14 @@ model CalendarEvent {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Newsletter {
+  id        String    @id @default(cuid())
+  subject   String
+  body      String
+  recipientCount Int  @default(0)
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+  createdBy String
 }

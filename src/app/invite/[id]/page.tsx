@@ -23,7 +23,7 @@ export default async function InvitePage({ params }: { params: Promise<{ id: str
                 <div className="text-center">
                     <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Invalid Invite Link</h1>
                     <p className="text-zinc-500 mt-2 mb-6">This invite link is invalid or has expired.</p>
-                    <Link href="/workspaces" className="text-[#012169] hover:text-[#012169] font-medium">
+                    <Link href="/team/workspaces" className="text-[#012169] hover:text-[#012169] font-medium">
                         Return to Workspaces
                     </Link>
                 </div>
@@ -37,7 +37,7 @@ export default async function InvitePage({ params }: { params: Promise<{ id: str
                 <div className="text-center">
                     <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Invite Expired</h1>
                     <p className="text-zinc-500 mt-2 mb-6">This invite link has expired. Please ask for a new one.</p>
-                    <Link href="/workspaces" className="text-[#012169] hover:text-[#012169] font-medium">
+                    <Link href="/team/workspaces" className="text-[#012169] hover:text-[#012169] font-medium">
                         Return to Workspaces
                     </Link>
                 </div>
@@ -51,7 +51,7 @@ export default async function InvitePage({ params }: { params: Promise<{ id: str
     });
 
     if (existingMembership || invite.workspace.ownerId === session.id) {
-        redirect(`/workspaces/${invite.workspaceId}`);
+        redirect(`/team/workspaces/${invite.workspaceId}`);
     }
 
     return (
@@ -81,7 +81,7 @@ export default async function InvitePage({ params }: { params: Promise<{ id: str
                         });
                     }
 
-                    redirect(`/workspaces/${invite.workspaceId}`);
+                    redirect(`/team/workspaces/${invite.workspaceId}`);
                 }}>
                     <button type="submit" className="w-full bg-[#012169] hover:bg-[#c8102e] text-white font-medium py-3 px-4 rounded-xl transition-colors">
                         Accept Invite

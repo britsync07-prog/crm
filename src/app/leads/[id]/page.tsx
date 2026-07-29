@@ -246,7 +246,7 @@ export default async function LeadDetails({ params }: LeadDetailsProps) {
           <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-zinc-950">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-sm font-black uppercase tracking-widest text-[#012169] italic">Associated Deals</h2>
-              <Link href="/deals/new" className="text-[10px] font-black uppercase text-zinc-400 hover:text-[#012169] tracking-widest transition-colors">+ Link</Link>
+              <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">+ Link</span>
             </div>
             <div className="space-y-3">
               {lead.deals.map((deal) => (

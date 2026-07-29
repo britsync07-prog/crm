@@ -461,7 +461,7 @@ export default function WorkspaceRoom({
             {/* Left: Channels Sidebar */}
             <div className="w-60 border-r border-zinc-100 dark:border-zinc-800 flex flex-col bg-zinc-50 dark:bg-zinc-950 shrink-0">
                 <div className="p-4 border-b border-zinc-100 dark:border-zinc-800">
-                    <Link href="/workspaces" className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 mb-3">
+                    <Link href="/team/workspaces" className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 mb-3">
                         <ChevronRight className="w-3 h-3 rotate-180" />
                         <span>All Workspaces</span>
                     </Link>

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { 
   Search, 
@@ -210,7 +212,12 @@ export default function AIDiscoveryPage() {
               <p className="text-lg text-blue-100 font-medium leading-relaxed">
                 Use our cognitive builder to define not just titles and industries, but specific psychological profiles and business triggers.
               </p>
-              <button className="px-10 py-5 bg-white text-[#012169] rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:scale-95 transition-all shadow-2xl">Launch ICP Lab</button>
+              <button
+                onClick={() => window.location.href = '/signup'}
+                className="px-10 py-5 bg-white text-[#012169] rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:scale-95 transition-all shadow-2xl"
+              >
+                Launch ICP Lab
+              </button>
             </div>
             <div className="flex-1 w-full bg-white/10 backdrop-blur-3xl p-12 rounded-[40px] border border-white/20 space-y-8 opacity-50 relative group cursor-not-allowed">
                <div className="absolute inset-0 flex items-center justify-center z-20">

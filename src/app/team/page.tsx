@@ -7,15 +7,9 @@ import {
   Briefcase,
   TrendingUp,
   Clock,
-  MapPin,
   MoreVertical,
-  Plus,
-  Search,
   CheckCircle2,
-  Calendar
 } from "lucide-react";
-import Link from "next/link";
-
 export default async function TeamPage() {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -49,13 +43,7 @@ export default async function TeamPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link
-            href="/team/new"
-            className="flex items-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-black px-6 py-3 text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
-          >
-            <Plus className="w-4 h-4" /> Add Personnel
-          </Link>
-        </div>
+          </div>
       </div>
 
       {/* Team Intelligence Overview */}
@@ -113,7 +101,10 @@ export default async function TeamPage() {
           <h2 className="text-xl font-black uppercase italic tracking-tight">Active Personnel</h2>
           <div className="flex items-center gap-2">
             {departments.map(dept => (
-              <button key={dept} className="px-4 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:border-[#012169] hover:text-[#012169] transition-all">
+              <button
+                key={dept}
+                className="px-4 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:border-[#012169] hover:text-[#012169] transition-all"
+              >
                 {dept}
               </button>
             ))}

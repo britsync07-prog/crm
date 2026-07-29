@@ -183,7 +183,7 @@ export async function fetchEmailBody(account: any, mailboxPath: string, uid: str
   } finally {
     try {
       await client.logout();
-    } catch { }
+    } catch { console.warn('IMAP logout error (fetch body)'); }
   }
   return null;
 }
@@ -231,7 +231,7 @@ export async function performEmailAction(account: any, mailboxPath: string, uid:
   } finally {
     try {
       await client.logout();
-    } catch { }
+    } catch { console.warn('IMAP logout error (action)'); }
   }
 }
 
@@ -260,7 +260,7 @@ export async function appendEmailToSentFolder(account: any, rawMessage: Buffer |
   } finally {
     try {
       await client.logout();
-    } catch { }
+    } catch { console.warn('IMAP logout error (append sent)'); }
   }
 }
 
@@ -312,7 +312,7 @@ export async function fetchRecentInboxReplyCandidates(
   } finally {
     try {
       await client.logout();
-    } catch { }
+    } catch { console.warn('IMAP logout error (reply sync)'); }
   }
 
   return candidates;

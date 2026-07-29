@@ -8,13 +8,9 @@ import {
   Linkedin,
   Twitter,
   Youtube,
-  Calendar,
   Clock,
   Plus,
-  BarChart3,
-  MessageSquare,
   ThumbsUp,
-  ExternalLink,
   Bot
 } from "lucide-react";
 import Link from "next/link";
@@ -49,12 +45,6 @@ export default async function SocialMediaPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link
-            href="/social/new"
-            className="flex items-center gap-2 rounded-xl bg-[#012169] text-white px-6 py-3 text-xs font-black uppercase tracking-widest hover:bg-[#c8102e] transition-all shadow-xl shadow-blue-900/20"
-          >
-            <Plus className="w-4 h-4" /> Create Post
-          </Link>
         </div>
       </div>
 
@@ -74,7 +64,9 @@ export default async function SocialMediaPage() {
                   "Based on current engagement DNA, the best time to post on <span className="text-white font-bold">LinkedIn</span> is <span className="text-blue-300 font-black">9:15 AM tomorrow</span>. Your audience is showing high interest in 'Scalable SaaS' topics."
                 </p>
               </div>
-              <button className="bg-white text-black px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#012169] hover:text-white transition-all whitespace-nowrap">
+              <button
+                className="bg-white text-black px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#012169] hover:text-white transition-all whitespace-nowrap"
+              >
                 Generate Drafts
               </button>
             </div>
@@ -135,7 +127,7 @@ export default async function SocialMediaPage() {
           <div className="bg-white dark:bg-zinc-950 p-8 rounded-[40px] border border-zinc-200 dark:border-white/10 shadow-sm space-y-8">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-black uppercase italic tracking-tight">Connected</h3>
-              <Link href="/social/connect" className="text-[10px] font-black uppercase text-[#012169] tracking-widest">+ Connect</Link>
+              <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">+ Connect</span>
             </div>
 
             <div className="space-y-4">

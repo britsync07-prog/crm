@@ -107,7 +107,9 @@ export default async function OnboardingPage() {
                     <div className="w-6 h-6 rounded-full bg-zinc-200 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[8px] font-black">AI</div>
                     <div className="w-6 h-6 rounded-full bg-[#012169] border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[8px] font-black text-white">SA</div>
                   </div>
-                  <button className="rounded-xl bg-zinc-900 dark:bg-zinc-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white dark:text-zinc-950 hover:scale-105 transition-all">
+                  <button
+                    className="rounded-xl bg-zinc-900 dark:bg-zinc-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white dark:text-zinc-950 hover:scale-105 transition-all"
+                  >
                     Take Over
                   </button>
                 </div>

@@ -17,7 +17,7 @@ export async function searchForLeads(formData: FormData) {
   await findLeadsInIndustry(industry, session.id);
 
   revalidatePath("/leads");
-  revalidatePath("/finder");
+  revalidatePath("/leads");
 }
 
 export async function importLeadsFromCSV(formData: FormData) {

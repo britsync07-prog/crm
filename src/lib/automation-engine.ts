@@ -101,16 +101,8 @@ async function performAction(config: any, payload: any) {
       break;
 
     case "CREATE_INVOICE":
-      if (payload.customerId) {
-        await prisma.invoice.create({
-          data: {
-            invoiceRef: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-            amount: data.amount || 0,
-            customerId: payload.customerId,
-            dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-          },
-        });
-      }
+      // Invoice creation moved to BritLedger
+      console.log(`[Automation] Invoice creation delegated to BritLedger for customer ${payload.customerId}`);
       break;
       
     case "ADD_TAG":

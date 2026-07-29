@@ -13,27 +13,23 @@ import {
   Zap,
   Landmark,
   CreditCard,
-  Layers,
   Mail,
-  Share2,
   Video,
   FileText,
   Calendar as CalendarIcon,
   Menu,
-  X
+  X,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Unified Inbox", href: "/inbox", icon: Mail },
-  { name: "Workspaces", href: "/workspaces", icon: Layers },
   { name: "Customers", href: "/customers", icon: Users },
   { name: "Leads", href: "/leads", icon: UserPlus },
-  { name: "Omni Social", href: "/social", icon: Share2 },
   { name: "Billing & Finance", href: "/billing", icon: CreditCard },
-  { name: "Team Hub", href: "/team", icon: Users2 },
-  { name: "Onboarding", href: "/onboarding", icon: UserPlus },
+  { name: "Team Hub", href: "/team", icon: Users2, matchPrefix: true },
   { name: "Calls & Meetings", href: "/calls", icon: Video },
   { name: "Outreach", href: "/campaigns", icon: Send },
   { name: "Forms", href: "/forms", icon: FileText },
@@ -60,7 +56,7 @@ const NavContent = ({ pathname, setIsOpen }: { pathname: string; setIsOpen: (val
 
     <nav className="flex-1 px-4 py-5 space-y-1 overflow-y-auto custom-scrollbar">
       {menuItems.map((item) => {
-        const isActive = pathname === item.href;
+        const isActive = item.matchPrefix ? pathname.startsWith(item.href) : pathname === item.href;
         return (
           <Link
             key={item.name}
@@ -87,17 +83,43 @@ const NavContent = ({ pathname, setIsOpen }: { pathname: string; setIsOpen: (val
 
     <div className="p-6 border-t border-blue-100/80 dark:border-blue-900/30 space-y-4">
       <Link
-        href="/settings"
+        href="/settings/email"
         onClick={() => setIsOpen(false)}
         className={cn(
           "flex items-center gap-4 px-4 py-3 rounded-2xl transition-all border-2 border-transparent",
-          pathname === "/settings" 
+          pathname.startsWith("/settings") 
            ? "bg-[#012169] text-white font-black italic border-[#012169]" 
            : "text-slate-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 hover:text-slate-900"
         )}
       >
         <Settings className="w-4.5 h-4.5" />
         <span className="text-[11px] font-black uppercase tracking-wider">System Settings</span>
+      </Link>
+      <Link
+        href="/settings/team"
+        onClick={() => setIsOpen(false)}
+        className={cn(
+          "flex items-center gap-4 px-4 py-3 rounded-2xl transition-all border-2 border-transparent",
+          pathname === "/settings/team"
+           ? "bg-[#012169] text-white font-black italic border-[#012169]"
+           : "text-slate-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 hover:text-slate-900"
+        )}
+      >
+        <UserCog className="w-4.5 h-4.5" />
+        <span className="text-[11px] font-black uppercase tracking-wider">Team</span>
+      </Link>
+      <Link
+        href="/settings/billing"
+        onClick={() => setIsOpen(false)}
+        className={cn(
+          "flex items-center gap-4 px-4 py-3 rounded-2xl transition-all border-2 border-transparent",
+          pathname === "/settings/billing"
+           ? "bg-[#012169] text-white font-black italic border-[#012169]"
+           : "text-slate-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 hover:text-slate-900"
+        )}
+      >
+        <CreditCard className="w-4.5 h-4.5" />
+        <span className="text-[11px] font-black uppercase tracking-wider">Subscription</span>
       </Link>
     </div>
   </>
@@ -111,11 +133,14 @@ export default function Sidebar() {
     pathname === "/landing" ||
     pathname === "/login" ||
     pathname === "/signup" ||
+    pathname === "/pricing" ||
+    pathname.startsWith("/invite/") ||
     pathname.startsWith("/f/") ||
     pathname.startsWith("/meet/") ||
     pathname.startsWith("/features/") ||
     pathname.startsWith("/solutions/") ||
-    pathname.startsWith("/vision/");
+    pathname.startsWith("/vision/") ||
+    pathname.startsWith("/admin");
 
   if (isMarketingRoute) {
     return null;

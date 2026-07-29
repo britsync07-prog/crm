@@ -2,13 +2,15 @@
 
 import { signupAction } from "@/app/auth-actions";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Mail, Lock, User, UserPlus } from "lucide-react";
-import AIActionButton from "@/components/AIActionButton";
-import { useActionState } from "react";
+import { useActionState, Suspense } from "react";
 
 const initialState = { error: null };
 
-export default function SignupPage() {
+function SignupForm() {
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get("invite") ?? "";
   const [state, formAction] = useActionState(signupAction as any, initialState);
 
   return (
@@ -18,8 +20,12 @@ export default function SignupPage() {
           <div className="w-12 h-12 bg-gradient-to-br from-[#012169] to-[#c8102e] rounded-xl flex items-center justify-center mx-auto mb-4">
             <span className="text-white font-bold text-xl">B</span>
           </div>
- <h1 className="text-2xl font-bold tracking-tight">Create your BritCRM account</h1>
-          <p className="text-zinc-500 text-sm">Start your BritSync workspace trial</p>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {inviteToken ? "Accept Invitation" : "Create your BritCRM account"}
+          </h1>
+          <p className="text-zinc-500 text-sm">
+            {inviteToken ? "Join your team on BritCRM" : "Start your BritSync workspace trial"}
+          </p>
         </div>
 
         <form action={formAction} className="space-y-6">
@@ -28,6 +34,8 @@ export default function SignupPage() {
               {state.error}
             </div>
           )}
+
+          {inviteToken && <input type="hidden" name="inviteToken" value={inviteToken} />}
 
           <div className="space-y-4">
             <div className="space-y-2">
@@ -95,15 +103,27 @@ export default function SignupPage() {
             className="w-full bg-[#012169] text-white py-3 rounded-lg font-bold hover:bg-[#c8102e] transition-colors shadow-lg flex items-center justify-center text-sm gap-2"
           >
             <UserPlus className="w-4 h-4" />
-            Create My Account
+            {inviteToken ? "Accept & Create Account" : "Create My Account"}
           </button>
         </form>
 
         <p className="text-center text-sm text-zinc-500">
           Already have an account?{" "}
-          <Link href="/login" className="text-[#012169] font-bold hover:underline">Log in</Link>
+          <Link href={`/login${inviteToken ? `?invite=${inviteToken}` : ""}`} className="text-[#012169] font-bold hover:underline">Log in</Link>
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-white font-bold">
+        Loading...
+      </div>
+    }>
+      <SignupForm />
+    </Suspense>
   );
 }

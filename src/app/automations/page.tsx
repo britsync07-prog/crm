@@ -85,10 +85,14 @@ export default async function AutomationsPage() {
                   </div>
 
                   <div className="flex md:flex-col gap-2 justify-center border-l border-zinc-100 dark:border-white/5 pl-6">
-                    <button className="p-2.5 rounded-xl bg-zinc-50 dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 transition-all text-zinc-400 hover:text-zinc-900 dark:hover:text-white">
+                    <button
+                      className="p-2.5 rounded-xl bg-zinc-50 dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 transition-all text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                    >
                       <Settings2 className="w-4 h-4" />
                     </button>
-                    <button className="p-2.5 rounded-xl bg-zinc-50 dark:bg-white/5 hover:bg-red-50 hover:text-red-500 transition-all text-zinc-400">
+                    <button
+                      className="p-2.5 rounded-xl bg-zinc-50 dark:bg-white/5 hover:bg-red-50 hover:text-red-500 transition-all text-zinc-400"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>

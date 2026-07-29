@@ -248,7 +248,7 @@ export default function CognitiveSDRPage() {
               {[
                 { q: "Is the content truly unique?", a: "Yes. Every sentence is generated in real-time. We don't use static templates with variables; we use cognitive narrative paths." },
                 { q: "Can I review before sending?", a: "Absolutely. You can set 'Approval Mode' for any agent, or let them operate in 'Autonomous Strike' mode for high-volume list validation." },
-                { q: "How many agents can I deploy?", a: "Unlimited on Elite plans. Each agent can handle approximately 500 personalized interactions per day across channels." }
+                { q: "How many agents can I deploy?", a: "Unlimited on the Business plan. Each agent can handle approximately 500 personalized interactions per day across channels." }
               ].map((faq, i) => (
                 <div key={i} className="p-10 rounded-[40px] bg-white/5 border border-white/10 space-y-4 hover:bg-white/[0.08] transition-all">
                   <h4 className="text-xl font-bold text-white italic">{faq.q}</h4>
