@@ -41,9 +41,14 @@ function BillingSettings() {
         body: JSON.stringify({ plan: planSlug }),
       });
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Failed to initiate subscription checkout.");
+      }
     } catch (err) {
       console.error(err);
+      alert("An unexpected error occurred.");
     }
     setLoading(false);
   }
