@@ -8,6 +8,9 @@ let cachedToken: string | null = null;
 let tokenExpiry: number = 0;
 
 async function login(): Promise<string> {
+  if (!EMAIL || !PASSWORD) {
+    throw new Error("Missing BritLedger credentials (BRITLEDGER_EMAIL or BRITLEDGER_PASSWORD)");
+  }
   const res = await axios.post(`${BASE_URL}/auth/login`, {
     email: EMAIL,
     password: PASSWORD,
