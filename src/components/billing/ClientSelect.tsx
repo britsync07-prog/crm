@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Search, ChevronDown, User } from "lucide-react";
 import type { Client } from "@/lib/britledger/types";
-import { listClients } from "@/lib/britledger/clients";
+import { listClientsAction } from "@/app/billing/actions";
 
 interface ClientSelectProps {
   value: string;
@@ -24,8 +24,12 @@ export default function ClientSelect({ value, onChange, onAddNew }: ClientSelect
     async function load() {
       setLoading(true);
       try {
-        const res = await listClients({ page: 1, page_size: 50, search: search || undefined });
-        setClients(res.data);
+        const res = await listClientsAction({ page: 1, page_size: 50, search: search || undefined });
+        if (res.success && res.data) {
+          setClients(res.data);
+        } else {
+          console.error('Failed to load clients:', res.error);
+        }
       } catch (err) { console.error('Failed to load clients:', err); }
       setLoading(false);
     }

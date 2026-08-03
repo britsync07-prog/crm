@@ -2,10 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { createInvoice, recordPayment } from "@/lib/britledger/invoices";
-import { createClient } from "@/lib/britledger/clients";
+import { createClient, listClients } from "@/lib/britledger/clients";
 import { createQuotation, sendQuotation } from "@/lib/britledger/quotations";
 import { invalidateCache } from "@/lib/britledger/client";
 import type { InvoiceCreate, PaymentCreate, ClientCreate, QuotationCreate } from "@/lib/britledger/types";
+
+export async function listClientsAction(params?: { page?: number; page_size?: number; search?: string }) {
+  try {
+    const res = await listClients(params);
+    return { success: true, data: res.data };
+  } catch (err: any) {
+    return { success: false, error: err?.response?.data?.message || err?.message || "Failed to list clients" };
+  }
+}
 
 export async function createInvoiceAction(data: InvoiceCreate) {
   try {

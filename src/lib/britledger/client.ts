@@ -1,29 +1,84 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
+import { getSession } from "@/lib/auth";
+import crypto from "crypto";
 
 const BASE_URL = process.env.BRITLEDGER_API_URL || "https://ledger.britsyncai.com/api/v1";
-const EMAIL = process.env.BRITLEDGER_EMAIL || "";
-const PASSWORD = process.env.BRITLEDGER_PASSWORD || "";
+const GLOBAL_EMAIL = process.env.BRITLEDGER_EMAIL || "";
+const GLOBAL_PASSWORD = process.env.BRITLEDGER_PASSWORD || "";
 
-let cachedToken: string | null = null;
-let tokenExpiry: number = 0;
-
-async function login(): Promise<string> {
-  if (!EMAIL || !PASSWORD) {
-    throw new Error("Missing BritLedger credentials (BRITLEDGER_EMAIL or BRITLEDGER_PASSWORD)");
-  }
-  const res = await axios.post(`${BASE_URL}/auth/login`, {
-    email: EMAIL,
-    password: PASSWORD,
-  });
-  const token: string = res.data.access_token;
-  cachedToken = token;
-  tokenExpiry = Date.now() + 25 * 60 * 1000;
-  return token;
+interface TokenEntry {
+  token: string;
+  expiry: number;
 }
 
-async function ensureToken(): Promise<string> {
-  if (cachedToken && Date.now() < tokenExpiry) return cachedToken;
-  return login();
+const tokenCache = new Map<string, TokenEntry>();
+
+function derivePassword(userId: string): string {
+  const secret = process.env.JWT_SECRET || "default_hmac_secret_key_123";
+  return crypto.createHmac("sha256", secret).update(userId).digest("hex");
+}
+
+async function loginGlobal(): Promise<string> {
+  if (!GLOBAL_EMAIL || !GLOBAL_PASSWORD) {
+    console.warn("[BritLedger client] Missing global BritLedger credentials (BRITLEDGER_EMAIL or BRITLEDGER_PASSWORD). Falling back to mock token.");
+    return "mock_global_token";
+  }
+  const res = await axios.post(`${BASE_URL}/auth/login`, {
+    email: GLOBAL_EMAIL,
+    password: GLOBAL_PASSWORD,
+  });
+  return res.data.access_token;
+}
+
+async function loginOrRegisterUser(userId: string, email: string): Promise<string> {
+  const password = derivePassword(userId);
+  try {
+    const res = await axios.post(`${BASE_URL}/auth/login`, {
+      email,
+      password,
+    });
+    return res.data.access_token;
+  } catch (err: any) {
+    if (err?.response?.status === 401 || err?.response?.status === 404) {
+      try {
+        const emailPrefix = email.split("@")[0];
+        const registerRes = await axios.post(`${BASE_URL}/auth/register`, {
+          id: userId,
+          email,
+          password,
+          first_name: emailPrefix,
+          last_name: "User",
+        });
+        return registerRes.data.data.access_token;
+      } catch (regErr: any) {
+        console.error(`[BritLedger client] Auto-registration failed for user ${userId} (${email}):`, regErr?.response?.data || regErr.message);
+        throw regErr;
+      }
+    }
+    console.error(`[BritLedger client] Login failed for user ${userId} (${email}):`, err?.response?.data || err.message);
+    throw err;
+  }
+}
+
+async function ensureToken(userId?: string, email?: string): Promise<string> {
+  const cacheKey = userId || "global";
+  const cached = tokenCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiry) {
+    return cached.token;
+  }
+
+  let token: string;
+  if (userId && email) {
+    token = await loginOrRegisterUser(userId, email);
+  } else {
+    token = await loginGlobal();
+  }
+
+  tokenCache.set(cacheKey, {
+    token,
+    expiry: Date.now() + 25 * 60 * 1000,
+  });
+  return token;
 }
 
 const api: AxiosInstance = axios.create({
@@ -33,8 +88,18 @@ const api: AxiosInstance = axios.create({
 });
 
 api.interceptors.request.use(async (config) => {
-  const token = await ensureToken();
-  config.headers.Authorization = `Bearer ${token}`;
+  try {
+    const session = await getSession().catch(() => null);
+    let token: string;
+    if (session && session.id && session.email) {
+      token = await ensureToken(session.id, session.email);
+    } else {
+      token = await ensureToken();
+    }
+    config.headers.Authorization = `Bearer ${token}`;
+  } catch (err: any) {
+    console.error("[BritLedger client] Request interceptor error:", err.message);
+  }
   return config;
 });
 
@@ -42,13 +107,24 @@ api.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
     if (error.response?.status === 401) {
-      cachedToken = null;
-      tokenExpiry = 0;
+      const session = await getSession().catch(() => null);
+      const cacheKey = session?.id || "global";
+      tokenCache.delete(cacheKey);
+      
       const config = error.config;
       if (config) {
-        const token = await ensureToken();
-        config.headers.Authorization = `Bearer ${token}`;
-        return axios(config);
+        try {
+          let token: string;
+          if (session && session.id && session.email) {
+            token = await ensureToken(session.id, session.email);
+          } else {
+            token = await ensureToken();
+          }
+          config.headers.Authorization = `Bearer ${token}`;
+          return axios(config);
+        } catch (retryErr) {
+          return Promise.reject(retryErr);
+        }
       }
     }
     return Promise.reject(error);
@@ -80,7 +156,9 @@ function setCache(key: string, data: unknown): void {
 }
 
 export async function britGet<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
-  const cacheKey = endpoint + JSON.stringify(params ?? {});
+  const session = await getSession().catch(() => null);
+  const userPrefix = session?.id ? `${session.id}:` : "global:";
+  const cacheKey = userPrefix + endpoint + JSON.stringify(params ?? {});
   const cached = getCached<T>(cacheKey);
   if (cached) return cached;
   const res = await api.get(endpoint, { params });
@@ -109,6 +187,6 @@ export function invalidateCache(pattern?: string): void {
     return;
   }
   for (const key of getCache.keys()) {
-    if (key.startsWith(pattern)) getCache.delete(key);
+    if (key.includes(pattern)) getCache.delete(key);
   }
 }

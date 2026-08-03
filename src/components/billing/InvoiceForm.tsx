@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import ClientSelect from "./ClientSelect";
 import ActionModal from "./ActionModal";
-import { createClient } from "@/lib/britledger/clients";
+import { createClientAction } from "@/app/billing/actions";
 import type { InvoiceItem } from "@/lib/britledger/types";
 import { generateInvoiceNumber, generateQuotationNumber, calculateSubtotal, calculateTax, calculateTotal, formatCurrency } from "@/lib/britledger/utils";
 
@@ -68,13 +68,16 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
     if (!newClientName) return;
     setCreatingClient(true);
     try {
-      const res = await createClient({ name: newClientName, email: newClientEmail || undefined });
-      if (!res?.data?.id) return;
-      setClientId(res.data.id);
-      setClientName(res.data.name ?? newClientName);
-      setShowNewClient(false);
-      setNewClientName("");
-      setNewClientEmail("");
+      const res = await createClientAction({ name: newClientName, email: newClientEmail || undefined });
+      if (res.success && res.data?.id) {
+        setClientId(res.data.id);
+        setClientName(res.data.name ?? newClientName);
+        setShowNewClient(false);
+        setNewClientName("");
+        setNewClientEmail("");
+      } else {
+        console.error('Failed to create client:', res.error);
+      }
     } catch (err) { console.error('Failed to create client:', err); }
     setCreatingClient(false);
   }
