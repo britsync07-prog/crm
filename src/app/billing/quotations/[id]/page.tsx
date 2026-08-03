@@ -10,12 +10,13 @@ interface Props {
 
 export default async function QuotationDetailPage(props: Props) {
   const { id } = await props.params;
+  let quotation;
+  let client = null;
 
   try {
     const quoRes = await getQuotation(id);
-    const quotation = quoRes.data;
+    quotation = quoRes.data;
 
-    let client = null;
     try {
       const clRes = await getClient(quotation.client_id);
       client = clRes.data;
@@ -25,14 +26,6 @@ export default async function QuotationDetailPage(props: Props) {
       }
     }
 
-    return (
-      <div className="max-w-4xl space-y-8">
-        <Link href="/billing/quotations" className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-[#012169] transition-colors">
-          <ArrowLeft className="w-3 h-3" /> Back to Quotations
-        </Link>
-        <QuotationDetailClient quotation={quotation} client={client} id={id} />
-      </div>
-    );
   } catch (e: any) {
     const errorMsg = e?.response?.data?.message || e?.message || "Failed to load quotation";
     return (
@@ -43,4 +36,13 @@ export default async function QuotationDetailPage(props: Props) {
       </div>
     );
   }
+
+  return (
+    <div className="max-w-4xl space-y-8">
+      <Link href="/billing/quotations" className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-[#012169] transition-colors">
+        <ArrowLeft className="w-3 h-3" /> Back to Quotations
+      </Link>
+      <QuotationDetailClient quotation={quotation} client={client} id={id} />
+    </div>
+  );
 }

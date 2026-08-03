@@ -5,13 +5,13 @@ import { prisma } from "@/lib/db";
 // Assign Custom Role to a user
 export async function POST(
     req: NextRequest,
-    { params }: { params: Promise<{ id: string; userId: string }> | { id: string; userId: string } }
+    { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
     try {
         const session = await getSession();
         if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        const resolvedParams = params instanceof Promise ? await params : params;
+        const resolvedParams = await params;
         const workspaceId = resolvedParams.id;
         const targetUserId = resolvedParams.userId;
 
@@ -56,13 +56,13 @@ export async function POST(
 // Remove Custom Role from a user
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: Promise<{ id: string; userId: string }> | { id: string; userId: string } }
+    { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
     try {
         const session = await getSession();
         if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        const resolvedParams = params instanceof Promise ? await params : params;
+        const resolvedParams = await params;
         const workspaceId = resolvedParams.id;
         const targetUserId = resolvedParams.userId;
 

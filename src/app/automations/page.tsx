@@ -16,6 +16,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import Link from "next/link";
+import { deleteAutomationFlow } from "@/app/automation-actions";
 
 export default async function AutomationsPage() {
   const session = await getSession();
@@ -85,16 +86,23 @@ export default async function AutomationsPage() {
                   </div>
 
                   <div className="flex md:flex-col gap-2 justify-center border-l border-zinc-100 dark:border-white/5 pl-6">
-                    <button
+                    <Link
+                      href="/automations/new"
                       className="p-2.5 rounded-xl bg-zinc-50 dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 transition-all text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                      title="Create or replace workflow"
                     >
                       <Settings2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      className="p-2.5 rounded-xl bg-zinc-50 dark:bg-white/5 hover:bg-red-50 hover:text-red-500 transition-all text-zinc-400"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    </Link>
+                    <form action={deleteAutomationFlow}>
+                      <input type="hidden" name="id" value={auto.id} />
+                      <button
+                        type="submit"
+                        className="p-2.5 rounded-xl bg-zinc-50 dark:bg-white/5 hover:bg-red-50 hover:text-red-500 transition-all text-zinc-400"
+                        title="Delete workflow"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </form>
                   </div>
                 </div>
               </div>

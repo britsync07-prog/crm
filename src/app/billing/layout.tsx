@@ -1,6 +1,8 @@
 import { CreditCard } from "lucide-react";
 import NavTabs from "@/components/billing/NavTabs";
 
+export const dynamic = "force-dynamic";
+
 export default function BillingLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-700 pb-20 px-6 pt-20 lg:pt-8">

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { sendSystemEmail } from "@/lib/system-mailer";
 import { resetPasswordEmailTemplate } from "@/lib/email-templates/reset-password";
+import { getAppBaseUrl } from "@/lib/app-url";
 import crypto from "crypto";
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -20,7 +21,8 @@ function checkRateLimit(ip: string): boolean {
 export async function POST(req: Request) {
   try {
     const { email } = await req.json();
-    if (!email) {
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    if (!normalizedEmail) {
       return Response.json({ error: "Email is required" }, { status: 400 });
     }
 
@@ -32,7 +34,7 @@ export async function POST(req: Request) {
       return Response.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
     if (user) {
       const resetToken = crypto.randomUUID();
@@ -43,15 +45,22 @@ export async function POST(req: Request) {
         data: { resetToken, resetExpires },
       });
 
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const baseUrl = getAppBaseUrl();
       const resetLink = `${baseUrl}/reset-password/${resetToken}`;
 
-      await sendSystemEmail({
+      const delivery = await sendSystemEmail({
         to: user.email,
         subject: "Reset your BritCRM password",
         html: resetPasswordEmailTemplate(user.name || "there", resetLink),
         profile: "transactional",
       });
+
+      if (!delivery.sent) {
+        return Response.json(
+          { error: "Password reset email could not be sent. Check transactional SMTP settings." },
+          { status: 503 }
+        );
+      }
     }
 
     return Response.json({ success: true });

@@ -6,11 +6,10 @@ import { Users, Hash } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function InvitePage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
+export default async function InvitePage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const session = await getSession();
-    if (!session) redirect(`/login?callbackUrl=/invite/${(params as any).id || (await params).id}`);
-
-    const id = params instanceof Promise ? (await params).id : params.id;
+    if (!session) redirect(`/login?callbackUrl=/invite/${id}`);
 
     const invite = await prisma.workspaceInvite.findUnique({
         where: { id },

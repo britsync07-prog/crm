@@ -4,13 +4,13 @@ import { prisma } from "@/lib/db";
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: Promise<{ id: string }> | { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getSession();
         if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        const workspaceId = params instanceof Promise ? (await params).id : params.id;
+        const { id: workspaceId } = await params;
         const body = await req.json();
         const { name } = body;
 

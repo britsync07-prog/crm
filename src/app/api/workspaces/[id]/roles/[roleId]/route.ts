@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string; roleId: string }> | { id: string; roleId: string } }
+    { params }: { params: Promise<{ id: string; roleId: string }> }
 ) {
     try {
         const session = await getSession();
@@ -12,7 +12,7 @@ export async function PATCH(
             return new NextResponse("Unauthorized", { status: 401 });
         }
 
-        const resolvedParams = params instanceof Promise ? await params : params;
+        const resolvedParams = await params;
         const { id: workspaceId, roleId } = resolvedParams;
 
         // Verify Admin rights
@@ -65,7 +65,7 @@ export async function PATCH(
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string; roleId: string }> | { id: string; roleId: string } }
+    { params }: { params: Promise<{ id: string; roleId: string }> }
 ) {
     try {
         const session = await getSession();
@@ -73,7 +73,7 @@ export async function DELETE(
             return new NextResponse("Unauthorized", { status: 401 });
         }
 
-        const resolvedParams = params instanceof Promise ? await params : params;
+        const resolvedParams = await params;
         const { id: workspaceId, roleId } = resolvedParams;
 
         const workspace = await prisma.workspace.findUnique({

@@ -42,3 +42,17 @@ export async function createAutomationFlow(formData: FormData) {
   revalidatePath("/automations");
   redirect("/automations");
 }
+
+export async function deleteAutomationFlow(formData: FormData) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+
+  const id = formData.get("id") as string;
+  if (!id) throw new Error("Automation id is required");
+
+  await prisma.automation.deleteMany({
+    where: { id, userId: session.id },
+  });
+
+  revalidatePath("/automations");
+}

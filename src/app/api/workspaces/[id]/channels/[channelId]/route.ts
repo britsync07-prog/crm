@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 // PATCH /api/workspaces/[id]/channels/[channelId]
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string; channelId: string }> | { id: string; channelId: string } }
+    { params }: { params: Promise<{ id: string; channelId: string }> }
 ) {
     try {
         const session = await getSession();
@@ -13,7 +13,7 @@ export async function PATCH(
             return new NextResponse("Unauthorized", { status: 401 });
         }
 
-        const resolvedParams = params instanceof Promise ? await params : params;
+        const resolvedParams = await params;
         const { id: workspaceId, channelId } = resolvedParams;
 
         // Verify Admin rights

@@ -78,12 +78,13 @@ export default function WorkspacesList({ workspaces: initial, currentUserId }: P
                                         <Layout className="w-7 h-7" />
                                     </div>
                                     <div className="flex gap-2">
-                                        <button
-                                            onClick={() => console.log('settings', ws.id)}
+                                        <Link
+                                            href={`/team/workspaces/${ws.id}`}
                                             className="p-2.5 rounded-xl bg-zinc-50 dark:bg-white/5 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all"
+                                            title="Open workspace settings"
                                         >
                                             <Settings2 className="w-4 h-4" />
-                                        </button>
+                                        </Link>
                                         {isOwner && (
                                             <button
                                                 onClick={() => setDeletingId(ws.id)}

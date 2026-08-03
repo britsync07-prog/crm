@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, Sparkles, ArrowRight, Loader2 } from "lucide-react";
 
 const PLANS = [
@@ -71,6 +72,7 @@ const PLANS = [
 ];
 
 export default function PricingPage() {
+  const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [subStatus, setSubStatus] = useState<string>("free");
   const [loading, setLoading] = useState<string | null>(null);
@@ -87,11 +89,11 @@ export default function PricingPage() {
 
   async function handleSubscribe(slug: string) {
     if (!userId) {
-      window.location.href = "/signup";
+      router.push("/signup");
       return;
     }
     if (slug === "enterprise") {
-      window.location.href = "mailto:sales@britsyncai.com";
+      window.location.assign("mailto:sales@britsyncai.com");
       return;
     }
     setLoading(slug);
@@ -102,7 +104,7 @@ export default function PricingPage() {
         body: JSON.stringify({ plan: slug }),
       });
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
+      if (data.url) window.location.assign(data.url);
     } catch (err) {
       console.error(err);
     }

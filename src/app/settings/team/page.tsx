@@ -39,7 +39,11 @@ export default function TeamSettingsPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    queueMicrotask(() => {
+      void load();
+    });
+  }, [load]);
 
   const activeCount = members.filter((m) => m.status === "active").length;
   const isAdmin = myRole === "admin";

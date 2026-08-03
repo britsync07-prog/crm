@@ -10,12 +10,13 @@ interface Props {
 
 export default async function InvoiceDetailPage(props: Props) {
   const { id } = await props.params;
+  let invoice;
+  let client = null;
 
   try {
     const invRes = await getInvoice(id);
-    const invoice = invRes.data;
+    invoice = invRes.data;
 
-    let client = null;
     try {
       const clRes = await getClient(invoice.client_id);
       client = clRes.data;
@@ -25,14 +26,6 @@ export default async function InvoiceDetailPage(props: Props) {
       }
     }
 
-    return (
-      <div className="max-w-4xl space-y-8">
-        <Link href="/billing/invoices" className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-[#012169] transition-colors">
-          <ArrowLeft className="w-3 h-3" /> Back to Invoices
-        </Link>
-        <InvoiceDetailClient invoice={invoice} client={client} id={id} />
-      </div>
-    );
   } catch (e: any) {
     const errorMsg = e?.response?.data?.message || e?.message || "Failed to load invoice";
     return (
@@ -43,4 +36,13 @@ export default async function InvoiceDetailPage(props: Props) {
       </div>
     );
   }
+
+  return (
+    <div className="max-w-4xl space-y-8">
+      <Link href="/billing/invoices" className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-[#012169] transition-colors">
+        <ArrowLeft className="w-3 h-3" /> Back to Invoices
+      </Link>
+      <InvoiceDetailClient invoice={invoice} client={client} id={id} />
+    </div>
+  );
 }

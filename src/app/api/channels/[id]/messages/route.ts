@@ -4,13 +4,13 @@ import { prisma } from "@/lib/db";
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: Promise<{ id: string }> | { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getSession();
         if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        const channelId = params instanceof Promise ? (await params).id : params.id;
+        const { id: channelId } = await params;
 
         // Verify user belongs to the workspace that owns this channel
         const channel = await prisma.channel.findUnique({

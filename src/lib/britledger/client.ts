@@ -20,8 +20,7 @@ function derivePassword(userId: string): string {
 
 async function loginGlobal(): Promise<string> {
   if (!GLOBAL_EMAIL || !GLOBAL_PASSWORD) {
-    console.warn("[BritLedger client] Missing global BritLedger credentials (BRITLEDGER_EMAIL or BRITLEDGER_PASSWORD). Falling back to mock token.");
-    return "mock_global_token";
+    throw new Error("Missing global BritLedger credentials (BRITLEDGER_EMAIL or BRITLEDGER_PASSWORD).");
   }
   const res = await axios.post(`${BASE_URL}/auth/login`, {
     email: GLOBAL_EMAIL,
@@ -94,11 +93,12 @@ api.interceptors.request.use(async (config) => {
     if (session && session.id && session.email) {
       token = await ensureToken(session.id, session.email);
     } else {
-      token = await ensureToken();
+      throw new Error("BritLedger requests require an authenticated CRM session.");
     }
     config.headers.Authorization = `Bearer ${token}`;
   } catch (err: any) {
     console.error("[BritLedger client] Request interceptor error:", err.message);
+    return Promise.reject(err);
   }
   return config;
 });
@@ -118,7 +118,7 @@ api.interceptors.response.use(
           if (session && session.id && session.email) {
             token = await ensureToken(session.id, session.email);
           } else {
-            token = await ensureToken();
+            throw new Error("BritLedger retry requires an authenticated CRM session.");
           }
           config.headers.Authorization = `Bearer ${token}`;
           return axios(config);

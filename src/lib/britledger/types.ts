@@ -148,9 +148,9 @@ export interface QuotationCreate {
 
 export interface RevenueReport {
   total_invoiced: number;
-  total_collected: number;
-  total_outstanding: number;
-  total_overdue: number;
+  total_collected?: number;
+  total_outstanding?: number;
+  total_overdue?: number;
 }
 
 export interface ProfitLossReport {
@@ -173,6 +173,63 @@ export interface Payment {
   status: PaymentStatus;
   payment_date: string;
   notes?: string;
+}
+
+export interface ExpenseReport {
+  total_expenses: number;
+  by_category?: Record<string, number>;
+  by_month?: Record<string, number>;
+}
+
+export interface VATSummary {
+  box1: number;
+  box2: number;
+  box3: number;
+  box4: number;
+  box5: number;
+  box6: number;
+  box7: number;
+}
+
+export interface PaymentSettings {
+  user_id?: string;
+  stripe_public_key?: string | null;
+  stripe_account_id?: string | null;
+  stripe_enabled?: boolean;
+  paypal_client_id?: string | null;
+  paypal_enabled?: boolean;
+  bank_name?: string | null;
+  account_name?: string | null;
+  account_number?: string | null;
+  sort_code?: string | null;
+  iban?: string | null;
+  swift_bic?: string | null;
+  bank_transfer_enabled?: boolean;
+  company_logo_url?: string | null;
+  company_vat_number?: string | null;
+  company_address?: string | null;
+}
+
+export interface PaymentSessionCreate {
+  invoice_id: string;
+  provider: "stripe" | "paypal";
+  success_url: string;
+  cancel_url: string;
+}
+
+export interface PaymentSessionResponse {
+  checkout_url?: string | null;
+}
+
+export interface Expense {
+  id: string;
+  amount: number;
+  [key: string]: unknown;
+}
+
+export interface VATRecord {
+  id: string;
+  [key: string]: unknown;
 }
 
 

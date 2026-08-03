@@ -23,7 +23,7 @@ export default async function InvoiceList(props: Props) {
   let invoices: Invoice[] = [];
   let total = 0;
   let totalPages = 0;
-  let clientMap: Record<string, string> = {};
+  const clientMap: Record<string, string> = {};
   let loadError = false;
 
   try {

@@ -6,14 +6,14 @@ import WorkspaceRoom from "@/components/workspace/WorkspaceRoom";
 export const dynamic = "force-dynamic";
 
 interface Props {
-    params: Promise<{ id: string }> | { id: string };
+    params: Promise<{ id: string }>;
 }
 
 export default async function WorkspacePage({ params }: Props) {
     const session = await getSession();
     if (!session) redirect("/login");
 
-    const id = params instanceof Promise ? (await params).id : params.id;
+    const { id } = await params;
 
     const workspace = await prisma.workspace.findUnique({
         where: { id },

@@ -1,6 +1,6 @@
 import { britGet } from "./client";
 import { logMissingResponseFields } from "./utils";
-import type { BritApiResponse, RevenueReport, ProfitLossReport } from "./types";
+import type { BritApiResponse, RevenueReport, ProfitLossReport, ExpenseReport } from "./types";
 
 const REVENUE_REQUIRED_FIELDS = ["total_invoiced"] as const;
 
@@ -20,4 +20,15 @@ export async function getProfitLoss(
   date_to: string
 ): Promise<BritApiResponse<ProfitLossReport>> {
   return britGet("/reports/profit-loss", { date_from, date_to });
+}
+
+export async function getExpenseSummary(
+  date_from: string,
+  date_to: string
+): Promise<BritApiResponse<ExpenseReport>> {
+  return britGet("/reports/expenses", { date_from, date_to });
+}
+
+export async function getYearlyReport(year: number, fiscal_year_start = 4): Promise<BritApiResponse<Record<string, unknown>>> {
+  return britGet(`/reports/yearly/${year}`, { fiscal_year_start });
 }

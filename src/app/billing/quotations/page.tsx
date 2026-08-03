@@ -20,7 +20,7 @@ export default async function QuotationList(props: Props) {
 
   let quotations: Quotation[] = [];
   let total = 0;
-  let clientMap: Record<string, string> = {};
+  const clientMap: Record<string, string> = {};
   let loadError = false;
 
   try {

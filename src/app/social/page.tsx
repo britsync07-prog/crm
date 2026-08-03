@@ -9,7 +9,6 @@ import {
   Twitter,
   Youtube,
   Clock,
-  Plus,
   ThumbsUp,
   Bot
 } from "lucide-react";
@@ -64,11 +63,12 @@ export default async function SocialMediaPage() {
                   "Based on current engagement DNA, the best time to post on <span className="text-white font-bold">LinkedIn</span> is <span className="text-blue-300 font-black">9:15 AM tomorrow</span>. Your audience is showing high interest in 'Scalable SaaS' topics."
                 </p>
               </div>
-              <button
+              <Link
+                href="/campaigns/new"
                 className="bg-white text-black px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#012169] hover:text-white transition-all whitespace-nowrap"
               >
                 Generate Drafts
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -98,7 +98,7 @@ export default async function SocialMediaPage() {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Scheduled for {new Date(post.scheduledFor!).toLocaleString()}</span>
                         <div className="flex gap-2">
-                          <button className="p-2 rounded-xl bg-zinc-50 dark:bg-white/5 hover:bg-red-50 hover:text-red-500 text-zinc-400 transition-all"><ThumbsUp className="w-4 h-4" /></button>
+                          <span className="p-2 rounded-xl bg-zinc-50 dark:bg-white/5 text-zinc-400" title={`${post.likes} likes`}><ThumbsUp className="w-4 h-4" /></span>
                         </div>
                       </div>
                       <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200 line-clamp-2 italic">"{post.content}"</p>

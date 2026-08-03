@@ -5,19 +5,13 @@ import { fetchEmailBody, performEmailAction } from "@/lib/imap";
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: Promise<{ uid: string }> | { uid: string } }
+    { params }: { params: Promise<{ uid: string }> }
 ) {
     try {
         const session = await getSession();
         if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        // Await params if it's a promise (Next.js 15+ behavior)
-        let uid = '';
-        if (params instanceof Promise) {
-            uid = (await params).uid;
-        } else {
-            uid = params.uid;
-        }
+        const { uid } = await params;
 
         const { searchParams } = new URL(req.url);
         const mailbox = searchParams.get("mailbox") || "INBOX";
@@ -50,19 +44,13 @@ export async function GET(
 
 export async function PATCH(
     req: NextRequest,
-    { params }: { params: Promise<{ uid: string }> | { uid: string } }
+    { params }: { params: Promise<{ uid: string }> }
 ) {
     try {
         const session = await getSession();
         if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        // Await params if it's a promise (Next.js 15+ behavior)
-        let uid = '';
-        if (params instanceof Promise) {
-            uid = (await params).uid;
-        } else {
-            uid = params.uid;
-        }
+        const { uid } = await params;
 
         const body = await req.json();
         const { action, mailbox, accountId } = body;

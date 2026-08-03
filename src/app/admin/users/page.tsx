@@ -36,7 +36,11 @@ export default function AdminUsersPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(query, page); }, [query, page, load]);
+  useEffect(() => {
+    queueMicrotask(() => {
+      void load(query, page);
+    });
+  }, [query, page, load]);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();

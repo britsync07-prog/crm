@@ -76,9 +76,11 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
         setNewClientName("");
         setNewClientEmail("");
       } else {
-        console.error('Failed to create client:', res.error);
+        window.alert(res.error || "Failed to create client");
       }
-    } catch (err) { console.error('Failed to create client:', err); }
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Failed to create client");
+    }
     setCreatingClient(false);
   }
 

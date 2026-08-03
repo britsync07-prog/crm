@@ -42,7 +42,7 @@ function BillingSettings() {
       });
       const data = await res.json();
       if (data.url) {
-        window.location.href = data.url;
+        window.location.assign(data.url);
       } else {
         alert(data.error || "Failed to initiate subscription checkout.");
       }
@@ -58,7 +58,7 @@ function BillingSettings() {
     try {
       const res = await fetch("/api/stripe/portal", { method: "POST" });
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
+      if (data.url) window.location.assign(data.url);
     } catch (err) {
       console.error(err);
     }
@@ -236,7 +236,7 @@ function BillingSettings() {
                 <button
                   onClick={() => {
                     if (p.slug === "enterprise") {
-                      window.location.href = "mailto:sales@britsyncai.com";
+                      window.location.assign("mailto:sales@britsyncai.com");
                     } else {
                       handleSubscribe(p.slug);
                     }

@@ -38,13 +38,14 @@ export default function TopNavbar({ session }: { session: any }) {
       </div>
 
       <div className="flex items-center gap-6">
-        <button
-          onClick={() => alert("No new notifications.")}
+        <Link
+          href="/inbox"
           className="relative p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors"
+          title="Open inbox"
         >
           <Bell className="w-5 h-5 text-slate-500" />
           <span className="absolute top-2 right-2 w-2 h-2 bg-[#c8102e] rounded-full border-2 border-white dark:border-slate-950"></span>
-        </button>
+        </Link>
 
         <div className="flex items-center gap-3 border-l border-blue-100 dark:border-blue-900/30 pl-6">
           <div className="text-right hidden sm:block">

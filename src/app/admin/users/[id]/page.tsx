@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { ArrowLeft, User, Shield, Ban, AlertTriangle, Key, CreditCard, Trash2, Loader2, Activity } from "lucide-react";
 import Link from "next/link";
@@ -48,6 +49,7 @@ interface UserDetail {
 
 export default function AdminUserDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [user, setUser] = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [newPassword, setNewPassword] = useState("");
@@ -64,7 +66,11 @@ export default function AdminUserDetailPage() {
     setLoading(false);
   }, [id]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    queueMicrotask(() => {
+      void load();
+    });
+  }, [load]);
 
   async function handlePasswordChange() {
     if (!newPassword || newPassword.length < 6) { toast.error("Password must be at least 6 characters"); return; }
@@ -99,7 +105,7 @@ export default function AdminUserDetailPage() {
   async function handleDelete() {
     setOperating(true);
     const res = await deleteUserAction(id);
-    if (res.error) toast.error(res.error); else { toast.success("User deleted"); window.location.href = "/admin/users"; }
+    if (res.error) toast.error(res.error); else { toast.success("User deleted"); router.push("/admin/users"); }
     setOperating(false);
   }
 

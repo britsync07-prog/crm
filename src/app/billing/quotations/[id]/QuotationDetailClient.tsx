@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Send, CheckCircle, AlertTriangle } from "lucide-react";
+import { Send, CheckCircle, AlertTriangle, FileText } from "lucide-react";
+import { useRouter } from "next/navigation";
 import StatusBadge from "@/components/billing/StatusBadge";
 import { formatCurrency, formatDate, normalizeStatus, getItemRate, getItemAmount } from "@/lib/britledger/utils";
-import { sendQuotationAction } from "@/app/billing/actions";
+import { convertQuotationAction, sendQuotationAction } from "@/app/billing/actions";
 import type { Quotation, Client } from "@/lib/britledger/types";
 
 interface ClientProps {
@@ -14,7 +15,9 @@ interface ClientProps {
 }
 
 export default function QuotationDetailClient({ quotation, client, id }: ClientProps) {
+  const router = useRouter();
   const [sending, setSending] = useState(false);
+  const [converting, setConverting] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [currentStatus, setCurrentStatus] = useState(quotation.status);
@@ -36,8 +39,25 @@ export default function QuotationDetailClient({ quotation, client, id }: ClientP
     setSending(false);
   }
 
+  async function handleConvert() {
+    setConverting(true);
+    setSendError(null);
+    try {
+      const res = await convertQuotationAction(id);
+      if (res.success && res.data?.invoice_id) {
+        router.push(`/billing/invoices/${res.data.invoice_id}`);
+      } else {
+        setSendError(res.error || "Failed to convert");
+      }
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : "Failed to convert");
+    }
+    setConverting(false);
+  }
+
   const quoStatus = normalizeStatus(currentStatus);
   const canSend = quoStatus === "Draft";
+  const canConvert = quoStatus === "Sent" || quoStatus === "Accepted";
 
   return (
     <>
@@ -53,6 +73,11 @@ export default function QuotationDetailClient({ quotation, client, id }: ClientP
           {canSend && (
             <button onClick={handleSend} disabled={sending} className="flex items-center gap-2 rounded-xl bg-[#012169] text-white px-5 py-3 text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg disabled:opacity-40">
               <Send className="w-3.5 h-3.5" /> {sending ? "Sending..." : "Send to Client"}
+            </button>
+          )}
+          {canConvert && (
+            <button onClick={handleConvert} disabled={converting} className="flex items-center gap-2 rounded-xl bg-green-600 text-white px-5 py-3 text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg disabled:opacity-40">
+              <FileText className="w-3.5 h-3.5" /> {converting ? "Converting..." : "Convert to Invoice"}
             </button>
           )}
           {sendSuccess && (
@@ -153,6 +178,11 @@ export default function QuotationDetailClient({ quotation, client, id }: ClientP
               {canSend && (
                 <button onClick={handleSend} disabled={sending} className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-white/5 text-sm font-bold transition-colors text-left disabled:opacity-40">
                   <Send className="w-4 h-4 text-[#012169]" /> {sending ? "Sending..." : "Send to Client"}
+                </button>
+              )}
+              {canConvert && (
+                <button onClick={handleConvert} disabled={converting} className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-white/5 text-sm font-bold transition-colors text-left disabled:opacity-40">
+                  <FileText className="w-4 h-4 text-green-600" /> {converting ? "Converting..." : "Convert to Invoice"}
                 </button>
               )}
             </div>
