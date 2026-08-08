@@ -29,7 +29,7 @@ export function EmailAccountForm() {
                 </div>
                 <div className="space-y-0.5">
                     <h2 className="text-xl font-black italic uppercase tracking-tighter leading-none">Add Gateway</h2>
-                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">SMTP & IMAP PROTOCOL</p>
+                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">SMTP SEND + IMAP INBOX</p>
                 </div>
             </div>
 
@@ -41,7 +41,7 @@ export function EmailAccountForm() {
                 )}
                 {state?.success && (
                     <div className="p-4 text-xs bg-green-50 border border-green-200 text-green-700 rounded-2xl text-center font-black uppercase tracking-widest animate-in fade-in zoom-in-95 duration-300">
-                        ✅ Gateway Connected
+                        Mailbox Connected
                     </div>
                 )}
 
@@ -62,10 +62,10 @@ export function EmailAccountForm() {
                                 <input name="port" required type="number" defaultValue="587" className="w-full rounded-2xl border-2 border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 px-5 py-4 text-sm font-bold outline-none focus:border-blue-600 transition-all" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">TLS/SSL</label>
+                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">SMTP Security</label>
                                 <select name="encryption" className="w-full rounded-2xl border-2 border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 px-5 py-4 text-sm font-bold outline-none focus:border-blue-600 transition-all appearance-none cursor-pointer">
-                                    <option value="TLS">TLS</option>
-                                    <option value="SSL">SSL</option>
+                                    <option value="TLS">STARTTLS</option>
+                                    <option value="SSL/TLS">SSL/TLS</option>
                                 </select>
                             </div>
                         </div>
@@ -84,7 +84,7 @@ export function EmailAccountForm() {
 
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Username</label>
-                        <input name="username" required className="w-full rounded-2xl border-2 border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 px-5 py-4 text-sm font-bold outline-none focus:border-blue-600 transition-all" />
+                        <input name="username" required placeholder="FULL MAILBOX EMAIL" className="w-full rounded-2xl border-2 border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 px-5 py-4 text-sm font-bold outline-none focus:border-blue-600 transition-all placeholder:text-zinc-300 uppercase" />
                     </div>
 
                     <div className="space-y-2">
@@ -94,7 +94,7 @@ export function EmailAccountForm() {
                 </div>
 
                 <button type="submit" className="w-full rounded-2xl bg-zinc-900 dark:bg-white px-6 py-5 text-[10px] font-black text-zinc-50 dark:text-zinc-950 uppercase tracking-[0.3em] hover:bg-[#012169] hover:text-white dark:hover:bg-[#012169] dark:hover:text-white transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3">
-                    <Save className="w-4 h-4" /> Link SMTP Gateway
+                    <Save className="w-4 h-4" /> Link Mailbox
                 </button>
             </form>
         </div>

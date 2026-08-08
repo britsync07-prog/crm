@@ -56,13 +56,18 @@ export default function AdminUserDetailPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [operating, setOperating] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setLoadError(null);
     try {
       const res = await fetch(`/api/admin/users/${id}`);
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load user");
       setUser(data);
-    } catch {}
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Failed to load user");
+    }
     setLoading(false);
   }, [id]);
 
@@ -120,7 +125,7 @@ export default function AdminUserDetailPage() {
   if (!user) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-12">
-        <p className="text-zinc-500">User not found</p>
+        <p className={loadError ? "text-red-500" : "text-zinc-500"}>{loadError || "User not found"}</p>
         <Link href="/admin/users" className="text-[#012169] font-bold text-sm mt-4 inline-block">&larr; Back to users</Link>
       </div>
     );

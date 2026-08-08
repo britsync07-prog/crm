@@ -679,3 +679,18 @@ model Newsletter {
   createdAt DateTime  @default(now())
   createdBy String
 }
+
+model SystemEmailProfile {
+  id         String   @id @default(cuid())
+  profile    String   @unique
+  host       String?
+  port       Int      @default(587)
+  username   String?
+  password   String?
+  fromEmail  String?
+  fromName   String?
+  secureMode String   @default("STARTTLS")
+  isEnabled  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

@@ -31,11 +31,13 @@ interface FullEmail extends EmailItem {
 export default function InboxClient({
     initialEmails,
     emailAccounts,
-    initialActiveAccountId
+    initialActiveAccountId,
+    initialError
 }: {
     initialEmails: EmailItem[],
     emailAccounts: any[],
-    initialActiveAccountId?: string
+    initialActiveAccountId?: string,
+    initialError?: string | null
 }) {
     const router = useRouter();
     const [activeAccountId, setActiveAccountId] = useState(initialActiveAccountId || (emailAccounts.length > 0 ? emailAccounts[0].id : ""));
@@ -61,7 +63,7 @@ export default function InboxClient({
     const [sendStatus, setSendStatus] = useState<{ ok: boolean; message: string } | null>(null);
 
     // Action feedback
-    const [actionError, setActionError] = useState<string | null>(null);
+    const [actionError, setActionError] = useState<string | null>(initialError || null);
 
     // UI state
     const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
@@ -205,7 +207,19 @@ export default function InboxClient({
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: newStarred ? 'star' : 'unstar', mailbox: activeFolder, accountId: activeAccountId })
-        }).catch(e => console.error('Failed to toggle star', e));
+        }).then(async res => {
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                setActionError(data.error || "Failed to update star.");
+                setEmails(prev => prev.map(m => m.id === emailId ? { ...m, isStarred: !newStarred } : m));
+                if (selectedEmail?.id === emailId) {
+                    setSelectedEmail({ ...selectedEmail, isStarred: !newStarred });
+                }
+            }
+        }).catch(e => {
+            setActionError(e.message || "Failed to update star.");
+            setEmails(prev => prev.map(m => m.id === emailId ? { ...m, isStarred: !newStarred } : m));
+        });
     };
 
     const handleBatchAction = async (action: 'archive' | 'trash' | 'spam' | 'read' | 'unread') => {
@@ -225,7 +239,16 @@ export default function InboxClient({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action, mailbox: activeFolder, accountId: activeAccountId, uids: idsToProcess })
-        }).catch(e => console.error(`Failed to batch ${action}`, e));
+        }).then(async res => {
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || data.failed) {
+                setActionError(data.error || `Failed to ${action} some emails.`);
+                fetchFolder(activeFolder, activeAccountId, true);
+            }
+        }).catch(e => {
+            setActionError(e.message || `Failed to ${action} emails.`);
+            fetchFolder(activeFolder, activeAccountId, true);
+        });
     };
 
     const openReply = () => {

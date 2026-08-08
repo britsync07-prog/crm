@@ -3,6 +3,55 @@ import MailComposer from "nodemailer/lib/mail-composer";
 import { prisma } from "./db";
 import { appendEmailToSentFolder } from "./imap";
 
+type SmtpAccount = {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  encryption?: string | null;
+};
+
+function isSmtpDirectTls(encryption: string | null | undefined, port: number) {
+  const mode = (encryption || "").toUpperCase();
+  return port === 465 || mode === "SSL" || mode === "SSL/TLS";
+}
+
+function createSmtpTransport(account: SmtpAccount) {
+  const secure = isSmtpDirectTls(account.encryption, account.port);
+  return nodemailer.createTransport({
+    host: account.host,
+    port: account.port,
+    secure,
+    requireTLS: !secure && ["TLS", "STARTTLS"].includes((account.encryption || "").toUpperCase()),
+    auth: {
+      user: account.username,
+      pass: account.password,
+    },
+  });
+}
+
+function formatSmtpError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/authentication|invalid login|auth|credentials|username|password/i.test(message)) {
+    return "SMTP login failed. Check the mailbox username and password.";
+  }
+  if (/certificate|self signed|tls|starttls/i.test(message)) {
+    return "SMTP TLS connection failed. Check the host, port, and security mode.";
+  }
+  if (/timeout|ECONNREFUSED|ENOTFOUND|EAI_AGAIN/i.test(message)) {
+    return "SMTP server could not be reached. Check the SMTP host and port.";
+  }
+  return `SMTP connection failed: ${message}`;
+}
+
+export async function verifySmtpConnection(account: SmtpAccount) {
+  try {
+    await createSmtpTransport(account).verify();
+  } catch (error) {
+    throw new Error(formatSmtpError(error));
+  }
+}
+
 /**
  * Real SMTP Email Sender
  */
@@ -24,15 +73,7 @@ export async function sendRealEmail(config: {
     throw new Error(`Daily send limit reached (${account.sentToday}/${account.dailyLimit}) for ${account.email}`);
   }
 
-  const transporter = nodemailer.createTransport({
-    host: account.host,
-    port: account.port,
-    secure: account.encryption === "SSL", // true for 465, false for other ports
-    auth: {
-      user: account.username,
-      pass: account.password,
-    },
-  });
+  const transporter = createSmtpTransport(account);
 
   // Replace variables
   let finalBody = config.body;

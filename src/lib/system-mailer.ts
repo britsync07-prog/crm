@@ -1,8 +1,34 @@
 import nodemailer from "nodemailer";
+import { prisma } from "@/lib/db";
 
 type MailProfile = "transactional" | "newsletter";
+type ProfileConfig = {
+  host?: string | null;
+  port: number;
+  user?: string | null;
+  pass?: string | null;
+  from: string;
+  secureMode?: string | null;
+};
 
-function getProfileConfig(profile: MailProfile) {
+async function getDbProfileConfig(profile: MailProfile): Promise<ProfileConfig | null> {
+  const saved = await prisma.systemEmailProfile.findUnique({ where: { profile } });
+  if (!saved?.isEnabled) return null;
+
+  const fromEmail = saved.fromEmail || (profile === "newsletter" ? "info@britsyncai.com" : "noreply@britsyncai.com");
+  const fromName = saved.fromName || "BritCRM";
+
+  return {
+    host: saved.host,
+    port: saved.port,
+    user: saved.username,
+    pass: saved.password,
+    from: `${fromName} <${fromEmail}>`,
+    secureMode: saved.secureMode,
+  };
+}
+
+function getEnvProfileConfig(profile: MailProfile): ProfileConfig {
   const host = process.env.SYSTEM_SMTP_HOST;
   const password = process.env.SYSTEM_SMTP_PASSWORD;
 
@@ -18,24 +44,32 @@ function getProfileConfig(profile: MailProfile) {
 
   return {
     host,
-    port: parseInt(process.env.SYSTEM_SMTP_PORT_TRANSACTIONAL || "589", 10),
+    port: parseInt(process.env.SYSTEM_SMTP_PORT_TRANSACTIONAL || "587", 10),
     user: process.env.SYSTEM_SMTP_USER_TRANSACTIONAL,
     pass: password,
     from: process.env.SYSTEM_SMTP_FROM_TRANSACTIONAL || "BritCRM <noreply@britsyncai.com>",
   };
 }
 
-function isConfigured(profile: MailProfile): boolean {
-  const { host, user, pass } = getProfileConfig(profile);
+async function getProfileConfig(profile: MailProfile): Promise<ProfileConfig> {
+  return (await getDbProfileConfig(profile)) || getEnvProfileConfig(profile);
+}
+
+async function isConfigured(profile: MailProfile): Promise<boolean> {
+  const { host, user, pass } = await getProfileConfig(profile);
   return !!(host && user && pass);
 }
 
-function createTransport(profile: MailProfile) {
-  const { host, port, user, pass } = getProfileConfig(profile);
+async function createTransport(profile: MailProfile) {
+  const { host, port, user, pass, secureMode } = await getProfileConfig(profile);
+  const mode = (secureMode || "").toUpperCase();
+  const secure = port === 465 || mode === "SSL" || mode === "SSL/TLS";
+
   return nodemailer.createTransport({
     host: host!,
     port,
-    secure: port === 465,
+    secure,
+    requireTLS: !secure && (mode === "TLS" || mode === "STARTTLS"),
     auth: { user: user!, pass: pass! },
   });
 }
@@ -51,7 +85,7 @@ export async function sendSystemEmail({
   html: string;
   profile?: MailProfile;
 }) {
-  if (!isConfigured(profile)) {
+  if (!(await isConfigured(profile))) {
     console.log(`[SystemMailer] SMTP not configured for profile "${profile}". Would send email:
       To: ${to}
       Subject: ${subject}
@@ -59,8 +93,8 @@ export async function sendSystemEmail({
     return { sent: false, reason: "SMTP not configured" };
   }
 
-  const { from } = getProfileConfig(profile);
-  const transporter = createTransport(profile);
+  const { from } = await getProfileConfig(profile);
+  const transporter = await createTransport(profile);
 
   try {
     await transporter.sendMail({

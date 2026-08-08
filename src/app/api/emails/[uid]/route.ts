@@ -3,6 +3,18 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { fetchEmailBody, performEmailAction } from "@/lib/imap";
 
+async function getUserEmailAccount(userId: string, accountId: string | null) {
+    if (accountId) {
+        return prisma.emailAccount.findFirst({
+            where: { id: accountId, userId },
+        });
+    }
+
+    return prisma.emailAccount.findFirst({
+        where: { userId, imapHost: { not: null }, imapPort: { not: null }, isActive: true },
+    });
+}
+
 export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ uid: string }> }
@@ -17,17 +29,10 @@ export async function GET(
         const mailbox = searchParams.get("mailbox") || "INBOX";
         const accountId = searchParams.get("accountId");
 
-        const emailAccounts = await prisma.emailAccount.findMany({
-            where: { userId: session.id },
-        });
-
-        let activeImapAccount = emailAccounts.find(a => a.id === accountId);
-        if (!activeImapAccount) {
-            activeImapAccount = emailAccounts.find(a => a.imapHost && a.imapPort);
-        }
+        const activeImapAccount = await getUserEmailAccount(session.id, accountId);
 
         if (!activeImapAccount) {
-            return NextResponse.json({ error: "No IMAP account" }, { status: 404 });
+            return NextResponse.json({ error: "No connected IMAP account found." }, { status: 404 });
         }
 
         const email = await fetchEmailBody(activeImapAccount, mailbox, uid);
@@ -59,17 +64,10 @@ export async function PATCH(
             return NextResponse.json({ error: "Invalid action" }, { status: 400 });
         }
 
-        const emailAccounts = await prisma.emailAccount.findMany({
-            where: { userId: session.id },
-        });
-
-        let activeImapAccount = emailAccounts.find(a => a.id === accountId);
-        if (!activeImapAccount) {
-            activeImapAccount = emailAccounts.find(a => a.imapHost && a.imapPort);
-        }
+        const activeImapAccount = await getUserEmailAccount(session.id, accountId || null);
 
         if (!activeImapAccount) {
-            return NextResponse.json({ error: "No IMAP account" }, { status: 404 });
+            return NextResponse.json({ error: "No connected IMAP account found." }, { status: 404 });
         }
 
         const success = await performEmailAction(activeImapAccount, mailbox || "INBOX", uid, action);

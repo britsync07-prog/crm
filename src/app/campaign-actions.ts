@@ -4,7 +4,8 @@ import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { generateColdEmail } from "@/lib/ai-agents";
-import { sendRealEmail } from "@/lib/mailer";
+import { sendRealEmail, verifySmtpConnection } from "@/lib/mailer";
+import { verifyImapConnection } from "@/lib/imap";
 import { getSession } from "@/lib/auth";
 import { LEAD_STAGES, transitionLeadStage } from "@/lib/crm-lifecycle";
 
@@ -25,6 +26,25 @@ export async function addEmailAccount(
     const username = (formData.get("username") as string).trim();
     const password = (formData.get("password") as string).trim();
     const encryption = formData.get("encryption") as string;
+
+    if (!email || !host || !port || !imapHost || !imapPort || !username || !password) {
+      return { error: "All SMTP and IMAP fields are required.", success: false };
+    }
+
+    if (!Number.isFinite(port) || !Number.isFinite(imapPort)) {
+      return { error: "SMTP and IMAP ports must be valid numbers.", success: false };
+    }
+
+    const existingAccount = await prisma.emailAccount.findUnique({
+      where: { email },
+      select: { userId: true },
+    });
+    if (existingAccount && existingAccount.userId !== session.id) {
+      return { error: "This mailbox is already connected to another CRM user.", success: false };
+    }
+
+    await verifySmtpConnection({ host, port, username, password, encryption });
+    await verifyImapConnection({ imapHost, imapPort, username, password, encryption });
 
     await prisma.emailAccount.upsert({
       where: { email },

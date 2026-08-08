@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { fetchRecentEmails, performEmailAction } from "@/lib/imap";
+import { fetchRecentEmails } from "@/lib/imap";
 import { sendRealEmail } from "@/lib/mailer";
+
+async function getUserEmailAccount(userId: string, accountId: string | null) {
+    if (accountId) {
+        return prisma.emailAccount.findFirst({
+            where: { id: accountId, userId },
+        });
+    }
+
+    return prisma.emailAccount.findFirst({
+        where: { userId, imapHost: { not: null }, imapPort: { not: null }, isActive: true },
+    });
+}
 
 export async function GET(req: NextRequest) {
     try {
@@ -13,18 +25,10 @@ export async function GET(req: NextRequest) {
         const mailbox = searchParams.get("mailbox") || "INBOX";
         const accountId = searchParams.get("accountId");
 
-        const emailAccounts = await prisma.emailAccount.findMany({
-            where: { userId: session.id },
-        });
-
-        // Try to find the requested account, or fallback to the first active account with IMAP configured
-        let activeImapAccount = emailAccounts.find(a => a.id === accountId);
-        if (!activeImapAccount) {
-            activeImapAccount = emailAccounts.find(a => a.imapHost && a.imapPort);
-        }
+        const activeImapAccount = await getUserEmailAccount(session.id, accountId);
 
         if (!activeImapAccount || !activeImapAccount.imapHost) {
-            return NextResponse.json({ emails: [] });
+            return NextResponse.json({ error: "No connected IMAP account found." }, { status: 404 });
         }
 
         const emails = await fetchRecentEmails(activeImapAccount, mailbox);
@@ -46,17 +50,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        const emailAccounts = await prisma.emailAccount.findMany({
-            where: { userId: session.id },
-        });
-
-        let activeImapAccount = emailAccounts.find(a => a.id === accountId);
-        if (!activeImapAccount) {
-            activeImapAccount = emailAccounts.find(a => a.imapHost && a.imapPort);
-        }
+        const activeImapAccount = await getUserEmailAccount(session.id, accountId || null);
 
         if (!activeImapAccount) {
-            return NextResponse.json({ error: "No email account configured" }, { status: 404 });
+            return NextResponse.json({ error: "No connected email account found." }, { status: 404 });
         }
 
         await sendRealEmail({

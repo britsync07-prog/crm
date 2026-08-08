@@ -1,6 +1,79 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 
+type ImapAccount = {
+  imapHost?: string | null;
+  imapPort?: number | null;
+  username: string;
+  password: string;
+  encryption?: string | null;
+};
+
+function isDirectTls(encryption: string | null | undefined, port: number | null | undefined) {
+  const mode = (encryption || '').toUpperCase();
+  return port === 993 || mode === 'SSL' || mode === 'SSL/TLS';
+}
+
+function isStartTlsRequired(encryption: string | null | undefined, port: number | null | undefined) {
+  const mode = (encryption || '').toUpperCase();
+  return !isDirectTls(encryption, port) && (mode === 'TLS' || mode === 'STARTTLS');
+}
+
+function createImapClient(account: ImapAccount) {
+  if (!account.imapHost || !account.imapPort) {
+    throw new Error('IMAP host and port are required.');
+  }
+
+  const secure = isDirectTls(account.encryption, account.imapPort);
+
+  return new ImapFlow({
+    host: account.imapHost,
+    port: account.imapPort,
+    secure,
+    doSTARTTLS: secure ? undefined : isStartTlsRequired(account.encryption, account.imapPort),
+    auth: {
+      user: account.username,
+      pass: account.password,
+      loginMethod: 'LOGIN'
+    },
+    logger: false
+  });
+}
+
+function formatImapError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/authentication|login|invalid credentials|auth/i.test(message)) {
+    return 'IMAP login failed. Check the mailbox email address and password.';
+  }
+  if (/STARTTLS/i.test(message)) {
+    return 'IMAP STARTTLS is not available on this server/port. Use port 993 with SSL/TLS for this mailbox.';
+  }
+  if (/certificate|self signed|tls/i.test(message)) {
+    return 'IMAP TLS connection failed. Check the host, port, and security mode.';
+  }
+  if (/timeout|greeting|ECONNREFUSED|ENOTFOUND|EAI_AGAIN/i.test(message)) {
+    return 'IMAP server could not be reached. Check the IMAP host and port.';
+  }
+  return `IMAP connection failed: ${message}`;
+}
+
+export async function verifyImapConnection(account: ImapAccount) {
+  const client = createImapClient(account);
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock('INBOX');
+    lock.release();
+  } catch (error) {
+    throw new Error(formatImapError(error));
+  } finally {
+    try {
+      await client.logout();
+    } catch {
+      // Ignore logout errors after failed connection attempts.
+    }
+  }
+}
+
 async function resolveMailboxPath(client: ImapFlow, logicalName: string): Promise<string> {
   const upper = logicalName.toUpperCase();
   if (upper === 'INBOX') return 'INBOX';
@@ -49,18 +122,7 @@ async function resolveMailboxPath(client: ImapFlow, logicalName: string): Promis
 }
 
 export async function fetchRecentEmails(account: any, logicalMailboxPath: string = 'INBOX') {
-  if (!account.imapHost || !account.imapPort) return [];
-
-  const client = new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: account.encryption === 'SSL' || account.imapPort === 993,
-    auth: {
-      user: account.username,
-      pass: account.password
-    },
-    logger: false
-  });
+  const client = createImapClient(account);
 
   const emails: any[] = [];
 
@@ -124,6 +186,7 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
     }
   } catch (error) {
     console.error("IMAP Fetch Error:", error);
+    throw new Error(formatImapError(error));
   } finally {
     try {
       await client.logout();
@@ -136,18 +199,7 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
 }
 
 export async function fetchEmailBody(account: any, mailboxPath: string, uid: string) {
-  if (!account.imapHost || !account.imapPort) return null;
-
-  const client = new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: account.encryption === 'SSL' || account.imapPort === 993,
-    auth: {
-      user: account.username,
-      pass: account.password
-    },
-    logger: false
-  });
+  const client = createImapClient(account);
 
   try {
     await client.connect();
@@ -180,6 +232,7 @@ export async function fetchEmailBody(account: any, mailboxPath: string, uid: str
     }
   } catch (error) {
     console.error("IMAP Fetch Body Error:", error);
+    throw new Error(formatImapError(error));
   } finally {
     try {
       await client.logout();
@@ -189,18 +242,7 @@ export async function fetchEmailBody(account: any, mailboxPath: string, uid: str
 }
 
 export async function performEmailAction(account: any, mailboxPath: string, uid: string, action: 'archive' | 'trash' | 'spam' | 'read' | 'unread' | 'star' | 'unstar') {
-  if (!account.imapHost || !account.imapPort) return false;
-
-  const client = new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: account.encryption === 'SSL' || account.imapPort === 993,
-    auth: {
-      user: account.username,
-      pass: account.password
-    },
-    logger: false
-  });
+  const client = createImapClient(account);
 
   try {
     await client.connect();
@@ -231,7 +273,7 @@ export async function performEmailAction(account: any, mailboxPath: string, uid:
     }
   } catch (error) {
     console.error(`IMAP Action Error (${action}):`, error);
-    return false;
+    throw new Error(formatImapError(error));
   } finally {
     try {
       await client.logout();
@@ -240,18 +282,7 @@ export async function performEmailAction(account: any, mailboxPath: string, uid:
 }
 
 export async function appendEmailToSentFolder(account: any, rawMessage: Buffer | string) {
-  if (!account.imapHost || !account.imapPort) return false;
-
-  const client = new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: account.encryption === 'SSL' || account.imapPort === 993,
-    auth: {
-      user: account.username,
-      pass: account.password
-    },
-    logger: false
-  });
+  const client = createImapClient(account);
 
   try {
     await client.connect();
@@ -274,15 +305,9 @@ export async function performBatchEmailAction(
   uids: string[],
   action: 'archive' | 'trash' | 'spam' | 'read' | 'unread' | 'star' | 'unstar'
 ) {
-  if (!account.imapHost || !account.imapPort || uids.length === 0) return { success: 0, failed: 0 };
+  if (uids.length === 0) return { success: 0, failed: 0 };
 
-  const client = new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: account.encryption === 'SSL' || account.imapPort === 993,
-    auth: { user: account.username, pass: account.password },
-    logger: false
-  });
+  const client = createImapClient(account);
 
   let success = 0, failed = 0;
   const numericUids = uids.map(Number).filter(n => !isNaN(n));
@@ -334,7 +359,7 @@ export async function performBatchEmailAction(
     }
   } catch (error) {
     console.error(`IMAP Batch Action Error (${action}):`, error);
-    failed = uids.length - success;
+    throw new Error(formatImapError(error));
   } finally {
     try { await client.logout(); } catch { }
   }
@@ -346,18 +371,7 @@ export async function fetchRecentInboxReplyCandidates(
   account: any,
   since: Date
 ): Promise<Array<{ fromEmail: string; subject: string; date: Date }>> {
-  if (!account.imapHost || !account.imapPort) return [];
-
-  const client = new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: account.encryption === 'SSL' || account.imapPort === 993,
-    auth: {
-      user: account.username,
-      pass: account.password
-    },
-    logger: false
-  });
+  const client = createImapClient(account);
 
   const candidates: Array<{ fromEmail: string; subject: string; date: Date }> = [];
 
@@ -386,7 +400,7 @@ export async function fetchRecentInboxReplyCandidates(
       lock.release();
     }
   } catch (error) {
-    console.error("IMAP Reply Sync Error:", error);
+    console.error("IMAP Reply Sync Error:", formatImapError(error));
   } finally {
     try {
       await client.logout();

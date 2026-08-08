@@ -23,16 +23,21 @@ export default function AdminUsersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (q: string, p: number) => {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`/api/admin/users?query=${encodeURIComponent(q)}&page=${p}`);
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load users");
       setUsers(data.users ?? []);
       setTotal(data.total ?? 0);
       setTotalPages(data.totalPages ?? 1);
-    } catch {}
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load users");
+    }
     setLoading(false);
   }, []);
 
@@ -79,7 +84,9 @@ export default function AdminUsersPage() {
       </form>
 
       <div className="bg-white dark:bg-zinc-900 rounded-[24px] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden">
-        {loading ? (
+        {error ? (
+          <div className="py-20 text-center text-red-500 font-medium">{error}</div>
+        ) : loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-[#012169]" />
           </div>

@@ -7,6 +7,9 @@ import {
   LayoutDashboard,
   Users,
   Mail,
+  Settings,
+  Building2,
+  Activity,
   Menu,
   X,
   Shield,
@@ -17,6 +20,9 @@ import { cn } from "@/lib/utils";
 const menuItems = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
   { name: "Users", href: "/admin/users", icon: Users, matchPrefix: true },
+  { name: "Organizations", href: "/admin/organizations", icon: Building2, matchPrefix: true },
+  { name: "Operations", href: "/admin/operations", icon: Activity, matchPrefix: true },
+  { name: "System Email", href: "/admin/system-email", icon: Settings, matchPrefix: true },
   { name: "Newsletter", href: "/admin/newsletter", icon: Mail, matchPrefix: true },
 ];
 

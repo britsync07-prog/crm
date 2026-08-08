@@ -26,16 +26,21 @@ export default function TeamSettingsPage() {
   const [inviteResult, setInviteResult] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setLoadError(null);
     try {
       const res = await fetch("/api/organization/members");
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load team members");
       setMembers(data.members ?? []);
       setSeatLimit(data.seatLimit ?? 1);
       setPlan(data.plan ?? "free");
       setMyRole(data.myRole ?? null);
-    } catch { }
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Failed to load team members");
+    }
     setLoading(false);
   }, []);
 
@@ -81,10 +86,15 @@ export default function TeamSettingsPage() {
 
   async function handleRemove(id: string) {
     setRemoving(id);
+    setInviteResult(null);
     try {
-      await fetch(`/api/organization/members/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/organization/members/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to remove member");
       load();
-    } catch { }
+    } catch (err) {
+      setInviteResult(err instanceof Error ? err.message : "Failed to remove member");
+    }
     setRemoving(null);
   }
 
@@ -109,6 +119,12 @@ export default function TeamSettingsPage() {
           </div>
         </div>
       </div>
+
+      {loadError && (
+        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 text-sm font-bold text-red-600">
+          {loadError}
+        </div>
+      )}
 
       <div className="p-6 rounded-[24px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-sm">
         <div className="flex items-center justify-between mb-2">

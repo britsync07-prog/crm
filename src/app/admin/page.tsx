@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/admin-guard";
 import { getAdminStatsAction } from "./admin-actions";
-import { Shield, Users, Building2, Ban, AlertTriangle, LayoutDashboard } from "lucide-react";
+import Link from "next/link";
+import { Shield, Users, Building2, Ban, AlertTriangle, LayoutDashboard, Mail, Workflow, FileText, ArrowRight } from "lucide-react";
 
 export default async function AdminDashboardPage() {
   await requireAdmin();
@@ -9,6 +10,9 @@ export default async function AdminDashboardPage() {
   const cards = [
     { label: "Total Users", value: stats.totalUsers, icon: Users, color: "from-[#012169] to-blue-600" },
     { label: "Organizations", value: stats.totalOrgs, icon: Building2, color: "from-purple-600 to-purple-800" },
+    { label: "Mailboxes", value: stats.totalEmailAccounts, icon: Mail, color: "from-cyan-500 to-blue-700" },
+    { label: "Campaigns", value: stats.activeCampaigns, icon: Workflow, color: "from-emerald-500 to-teal-700" },
+    { label: "Forms", value: stats.totalForms, icon: FileText, color: "from-indigo-500 to-sky-700" },
     { label: "Active", value: stats.activeUsers, icon: Shield, color: "from-green-500 to-green-700" },
     { label: "Banned", value: stats.bannedUsers, icon: Ban, color: "from-[#c8102e] to-red-700" },
     { label: "Suspended", value: stats.suspendedUsers, icon: AlertTriangle, color: "from-amber-500 to-amber-700" },
@@ -28,7 +32,7 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {cards.map((card) => (
           <div key={card.label} className="p-5 rounded-[20px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-sm">
             <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.color} flex items-center justify-center mb-3`}>
@@ -37,6 +41,24 @@ export default async function AdminDashboardPage() {
             <p className="text-2xl font-black text-zinc-900 dark:text-zinc-50">{card.value}</p>
             <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400 mt-1">{card.label}</p>
           </div>
+        ))}
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        {[
+          { title: "Manage Users", href: "/admin/users", text: "Roles, status, passwords, and account access." },
+          { title: "Manage Organizations", href: "/admin/organizations", text: "Plans, seats, subscription state, and owners." },
+          { title: "Operations Health", href: "/admin/operations", text: "SMTP, Stripe, mailbox, workload, and activity checks." },
+        ].map((item) => (
+          <Link key={item.href} href={item.href} className="p-5 rounded-[20px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-sm hover:border-[#012169]/40 transition-colors group">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-black text-zinc-900 dark:text-zinc-50">{item.title}</p>
+                <p className="text-xs text-zinc-500 mt-1">{item.text}</p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-[#012169]" />
+            </div>
+          </Link>
         ))}
       </div>
 
@@ -90,6 +112,31 @@ export default async function AdminDashboardPage() {
                     {u.status}
                   </span>
                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-6 rounded-[24px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-sm lg:col-span-2">
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Recent Organizations</h2>
+            <Link href="/admin/organizations" className="text-[10px] font-black uppercase tracking-wider text-[#012169] hover:text-[#c8102e]">Manage</Link>
+          </div>
+          <div className="grid md:grid-cols-2 gap-3">
+            {stats.recentOrgs.map((org) => (
+              <div key={org.id} className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 truncate">{org.name}</p>
+                    <p className="text-xs text-zinc-400 truncate">{org.owner.name || org.owner.email}</p>
+                  </div>
+                  <span className="text-[9px] font-black uppercase px-2 py-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-500">
+                    {org.plan}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500 mt-3">
+                  {org.members.length} members · {org.seatLimit} seats · {org.subscriptionStatus}
+                </p>
               </div>
             ))}
           </div>

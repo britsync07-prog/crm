@@ -7,13 +7,17 @@ import { revalidatePath } from "next/cache";
 import { sendSystemEmail } from "@/lib/system-mailer";
 import { newsletterTemplate } from "@/lib/email-templates/newsletter";
 import { generateUnsubscribeSignature } from "@/lib/unsubscribe";
+import nodemailer from "nodemailer";
 
 export async function getAdminStatsAction() {
   await requireAdmin();
 
-  const [totalUsers, totalOrgs] = await Promise.all([
+  const [totalUsers, totalOrgs, totalEmailAccounts, activeCampaigns, totalForms] = await Promise.all([
     prisma.user.count(),
     prisma.organization.count(),
+    prisma.emailAccount.count(),
+    prisma.campaign.count({ where: { status: { in: ["Running", "ACTIVE", "Active"] } } }),
+    prisma.form.count(),
   ]);
 
   const [activeUsers, bannedUsers, suspendedUsers] = await Promise.all([
@@ -29,21 +33,310 @@ export async function getAdminStatsAction() {
     prisma.organization.count({ where: { plan: "enterprise" } }),
   ]);
 
-  const recentUsers = await prisma.user.findMany({
+  const [recentUsers, recentOrgs] = await Promise.all([
+    prisma.user.findMany({
     orderBy: { createdAt: "desc" },
     take: 10,
     select: { id: true, name: true, email: true, role: true, status: true, createdAt: true },
-  });
+    }),
+    prisma.organization.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      select: {
+        id: true,
+        name: true,
+        plan: true,
+        seatLimit: true,
+        subscriptionStatus: true,
+        owner: { select: { email: true, name: true } },
+        members: { select: { id: true } },
+      },
+    }),
+  ]);
 
   return {
     totalUsers,
     totalOrgs,
+    totalEmailAccounts,
+    activeCampaigns,
+    totalForms,
     activeUsers,
     bannedUsers,
     suspendedUsers,
     planDistribution: { free: freePlans, personal: personalPlans, business: businessPlans, enterprise: enterprisePlans },
     recentUsers,
+    recentOrgs,
   };
+}
+
+export async function getAdminOrganizationsAction(query = "", page = 1, pageSize = 20) {
+  await requireAdmin();
+
+  const where = query.trim()
+    ? {
+        OR: [
+          { name: { contains: query.trim() } },
+          { owner: { email: { contains: query.trim() } } },
+          { owner: { name: { contains: query.trim() } } },
+        ],
+      }
+    : {};
+
+  const [organizations, total] = await Promise.all([
+    prisma.organization.findMany({
+      where,
+      orderBy: { updatedAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        name: true,
+        plan: true,
+        seatLimit: true,
+        subscriptionStatus: true,
+        subscriptionEndDate: true,
+        stripeCustomerId: true,
+        stripeSubscriptionId: true,
+        createdAt: true,
+        updatedAt: true,
+        owner: { select: { id: true, name: true, email: true, status: true } },
+        members: {
+          select: { id: true, status: true, email: true, role: true },
+        },
+      },
+    }),
+    prisma.organization.count({ where }),
+  ]);
+
+  return { organizations, total, page, totalPages: Math.ceil(total / pageSize) };
+}
+
+export async function updateOrganizationAdminAction(
+  _prevState: { success: boolean; error: string | null },
+  formData: FormData
+): Promise<{ success: boolean; error: string | null }> {
+  const session = await requireAdmin();
+  const organizationId = String(formData.get("organizationId") || "");
+  const plan = String(formData.get("plan") || "");
+  const subscriptionStatus = String(formData.get("subscriptionStatus") || "");
+  const seatLimit = Number(formData.get("seatLimit"));
+
+  const allowedPlans = ["free", "personal", "business", "enterprise"];
+  const allowedStatuses = ["free", "active", "trialing", "past_due", "canceled", "unpaid"];
+
+  if (!organizationId) return { success: false, error: "Organization is required" };
+  if (!allowedPlans.includes(plan)) return { success: false, error: "Invalid plan" };
+  if (!allowedStatuses.includes(subscriptionStatus)) return { success: false, error: "Invalid subscription status" };
+  if (!Number.isInteger(seatLimit) || seatLimit < 1 || seatLimit > 1000) {
+    return { success: false, error: "Seat limit must be between 1 and 1000" };
+  }
+
+  await prisma.organization.update({
+    where: { id: organizationId },
+    data: { plan, subscriptionStatus, seatLimit },
+  });
+
+  await prisma.activityLog.create({
+    data: {
+      userId: session.id,
+      action: "ADMIN_UPDATE_ORGANIZATION",
+      details: `Updated organization ${organizationId}: ${plan}, ${subscriptionStatus}, ${seatLimit} seats`,
+    },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/organizations");
+  return { success: true, error: null };
+}
+
+export async function getAdminOperationsAction() {
+  await requireAdmin();
+
+  const [
+    users,
+    organizations,
+    emailAccounts,
+    incompleteMailboxes,
+    activeMailboxes,
+    campaigns,
+    runningCampaigns,
+    scrapeJobs,
+    pendingScrapeJobs,
+    forms,
+    submissions,
+    newsletters,
+    recentActivity,
+    systemEmailProfiles,
+  ] = await Promise.all([
+    prisma.user.count(),
+    prisma.organization.count(),
+    prisma.emailAccount.count(),
+    prisma.emailAccount.count({ where: { OR: [{ imapHost: null }, { imapPort: null }] } }),
+    prisma.emailAccount.count({ where: { isActive: true } }),
+    prisma.campaign.count(),
+    prisma.campaign.count({ where: { status: { in: ["Running", "ACTIVE", "Active"] } } }),
+    prisma.scrapeJob.count(),
+    prisma.scrapeJob.count({ where: { status: { in: ["Pending", "Running"] } } }),
+    prisma.form.count(),
+    prisma.formSubmission.count(),
+    prisma.newsletter.count(),
+    prisma.activityLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      include: { user: { select: { email: true, name: true } } },
+    }),
+    prisma.systemEmailProfile.findMany({ where: { profile: { in: ["transactional", "newsletter"] } } }),
+  ]);
+
+  const profileReady = (profile: "transactional" | "newsletter") => {
+    const saved = systemEmailProfiles.find((item) => item.profile === profile);
+    if (saved?.isEnabled && saved.host && saved.username && saved.password) return true;
+    return Boolean(
+      process.env.SYSTEM_SMTP_HOST &&
+      process.env.SYSTEM_SMTP_PASSWORD &&
+      (profile === "transactional" ? process.env.SYSTEM_SMTP_USER_TRANSACTIONAL : process.env.SYSTEM_SMTP_USER_NEWSLETTER)
+    );
+  };
+
+  return {
+    counts: {
+      users,
+      organizations,
+      emailAccounts,
+      incompleteMailboxes,
+      activeMailboxes,
+      campaigns,
+      runningCampaigns,
+      scrapeJobs,
+      pendingScrapeJobs,
+      forms,
+      submissions,
+      newsletters,
+    },
+    config: {
+      database: true,
+      transactionalEmail: profileReady("transactional"),
+      newsletterEmail: profileReady("newsletter"),
+      stripe: Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET),
+      jwt: Boolean(process.env.JWT_SECRET),
+      appUrl: process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_API_URL || null,
+    },
+    recentActivity,
+  };
+}
+
+export async function getSystemEmailProfilesAction() {
+  await requireAdmin();
+
+  const saved = await prisma.systemEmailProfile.findMany({
+    where: { profile: { in: ["transactional", "newsletter"] } },
+  });
+
+  const byProfile = new Map(saved.map((item) => [item.profile, item]));
+
+  return (["transactional", "newsletter"] as const).map((profile) => {
+    const item = byProfile.get(profile);
+    return {
+      profile,
+      host: item?.host || "",
+      port: item?.port || (profile === "transactional" ? Number(process.env.SYSTEM_SMTP_PORT_TRANSACTIONAL || 587) : Number(process.env.SYSTEM_SMTP_PORT_NEWSLETTER || 587)),
+      username: item?.username || "",
+      fromEmail: item?.fromEmail || "",
+      fromName: item?.fromName || "BritCRM",
+      secureMode: item?.secureMode || "STARTTLS",
+      isEnabled: item?.isEnabled || false,
+      hasPassword: Boolean(item?.password || process.env.SYSTEM_SMTP_PASSWORD),
+      envConfigured: Boolean(
+        process.env.SYSTEM_SMTP_HOST &&
+        process.env.SYSTEM_SMTP_PASSWORD &&
+        (profile === "transactional" ? process.env.SYSTEM_SMTP_USER_TRANSACTIONAL : process.env.SYSTEM_SMTP_USER_NEWSLETTER)
+      ),
+    };
+  });
+}
+
+export async function saveSystemEmailProfileAction(
+  _prevState: { success: boolean; error: string | null },
+  formData: FormData
+): Promise<{ success: boolean; error: string | null }> {
+  const session = await requireAdmin();
+  const profile = String(formData.get("profile") || "");
+  const host = String(formData.get("host") || "").trim();
+  const port = Number(formData.get("port"));
+  const username = String(formData.get("username") || "").trim();
+  const password = String(formData.get("password") || "");
+  const fromEmail = String(formData.get("fromEmail") || "").trim();
+  const fromName = String(formData.get("fromName") || "").trim();
+  const secureMode = String(formData.get("secureMode") || "STARTTLS");
+  const isEnabled = formData.get("isEnabled") === "on";
+
+  if (!["transactional", "newsletter"].includes(profile)) return { success: false, error: "Invalid profile" };
+  if (!host || !username || !fromEmail) return { success: false, error: "Host, username, and from email are required" };
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return { success: false, error: "Port must be valid" };
+  if (!["STARTTLS", "SSL/TLS", "NONE"].includes(secureMode)) return { success: false, error: "Invalid security mode" };
+
+  const existing = await prisma.systemEmailProfile.findUnique({ where: { profile } });
+  const passwordToSave = password || existing?.password || process.env.SYSTEM_SMTP_PASSWORD || "";
+  if (!passwordToSave) return { success: false, error: "Password is required the first time you save this profile" };
+
+  await prisma.systemEmailProfile.upsert({
+    where: { profile },
+    update: { host, port, username, password: passwordToSave, fromEmail, fromName, secureMode, isEnabled },
+    create: { profile, host, port, username, password: passwordToSave, fromEmail, fromName, secureMode, isEnabled },
+  });
+
+  await prisma.activityLog.create({
+    data: {
+      userId: session.id,
+      action: "ADMIN_UPDATE_SYSTEM_EMAIL",
+      details: `Updated ${profile} SMTP profile (${host}:${port})`,
+    },
+  });
+
+  revalidatePath("/admin/system-email");
+  revalidatePath("/admin/operations");
+  return { success: true, error: null };
+}
+
+export async function testSystemEmailProfileAction(
+  _prevState: { success: boolean; error: string | null },
+  formData: FormData
+): Promise<{ success: boolean; error: string | null }> {
+  await requireAdmin();
+  const profile = String(formData.get("profile") || "") as "transactional" | "newsletter";
+  const to = String(formData.get("to") || "").trim();
+
+  if (!["transactional", "newsletter"].includes(profile)) return { success: false, error: "Invalid profile" };
+  if (!to || !to.includes("@")) return { success: false, error: "Enter a valid test email address" };
+
+  const saved = await prisma.systemEmailProfile.findUnique({ where: { profile } });
+  if (!saved?.isEnabled || !saved.host || !saved.username || !saved.password) {
+    return { success: false, error: "Profile is not fully configured or enabled" };
+  }
+
+  const mode = saved.secureMode.toUpperCase();
+  const secure = saved.port === 465 || mode === "SSL" || mode === "SSL/TLS";
+  const transporter = nodemailer.createTransport({
+    host: saved.host,
+    port: saved.port,
+    secure,
+    requireTLS: !secure && mode === "STARTTLS",
+    auth: { user: saved.username, pass: saved.password },
+  });
+
+  try {
+    await transporter.verify();
+    await sendSystemEmail({
+      to,
+      subject: `BritCRM ${profile} SMTP test`,
+      html: `<p>This is a BritCRM ${profile} SMTP test email.</p>`,
+      profile,
+    });
+    return { success: true, error: null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "SMTP test failed";
+    return { success: false, error: message };
+  }
 }
 
 export async function searchUsersAction(query: string, page = 1, pageSize = 20) {
