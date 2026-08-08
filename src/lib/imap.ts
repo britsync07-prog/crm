@@ -41,7 +41,14 @@ function createImapClient(account: ImapAccount) {
 }
 
 function formatImapError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
+  const err = error as any;
+  const detail = [err?.response, err?.responseText, err?.serverResponseCode, err?.code]
+    .filter(Boolean)
+    .join(" ");
+  const message = `${error instanceof Error ? error.message : String(error)} ${detail}`.trim();
+  if (/CONTACTADMIN|login not permitted/i.test(message)) {
+    return 'IMAP login is not permitted for this mailbox. Check that IMAP access is enabled for the account or contact the mail provider.';
+  }
   if (/authentication|login|invalid credentials|auth/i.test(message)) {
     return 'IMAP login failed. Check the mailbox email address and password.';
   }

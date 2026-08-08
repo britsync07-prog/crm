@@ -410,7 +410,10 @@ export async function testSystemEmailProfileAction(
     });
     return { success: true, error: null };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "SMTP test failed";
+    const raw = error instanceof Error ? error.message : "SMTP test failed";
+    const message = /From domain .*not verified/i.test(raw)
+      ? "SMTP rejected the From address because its domain is not verified for this account. Use a verified From Email in this profile."
+      : raw;
     return { success: false, error: message };
   }
 }

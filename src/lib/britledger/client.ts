@@ -18,6 +18,34 @@ function derivePassword(userId: string): string {
   return crypto.createHmac("sha256", secret).update(userId).digest("hex");
 }
 
+function ledgerAliasEmail(userId: string): string {
+  return `${userId}@britcrm.local`;
+}
+
+function isDuplicateAccountError(err: any): boolean {
+  const status = err?.response?.status;
+  const data = err?.response?.data;
+  const text = typeof data === "string" ? data : JSON.stringify(data || {});
+  return status === 409 || /already exists|duplicate key|users_email_key/i.test(text);
+}
+
+async function loginUser(email: string, password: string): Promise<string> {
+  const res = await axios.post(`${BASE_URL}/auth/login`, { email, password });
+  return res.data.access_token;
+}
+
+async function registerUser(userId: string, email: string, password: string): Promise<string> {
+  const emailPrefix = email.split("@")[0];
+  const registerRes = await axios.post(`${BASE_URL}/auth/register`, {
+    id: userId,
+    email,
+    password,
+    first_name: emailPrefix,
+    last_name: "User",
+  });
+  return registerRes.data.data.access_token;
+}
+
 async function loginGlobal(): Promise<string> {
   if (!GLOBAL_EMAIL || !GLOBAL_PASSWORD) {
     throw new Error("Missing global BritLedger credentials (BRITLEDGER_EMAIL or BRITLEDGER_PASSWORD).");
@@ -32,26 +60,28 @@ async function loginGlobal(): Promise<string> {
 async function loginOrRegisterUser(userId: string, email: string): Promise<string> {
   const password = derivePassword(userId);
   try {
-    const res = await axios.post(`${BASE_URL}/auth/login`, {
-      email,
-      password,
-    });
-    return res.data.access_token;
+    return await loginUser(email, password);
   } catch (err: any) {
     if (err?.response?.status === 401 || err?.response?.status === 404) {
       try {
-        const emailPrefix = email.split("@")[0];
-        const registerRes = await axios.post(`${BASE_URL}/auth/register`, {
-          id: userId,
-          email,
-          password,
-          first_name: emailPrefix,
-          last_name: "User",
-        });
-        return registerRes.data.data.access_token;
+        return await registerUser(userId, email, password);
       } catch (regErr: any) {
-        console.error(`[BritLedger client] Auto-registration failed for user ${userId} (${email}):`, regErr?.response?.data || regErr.message);
-        throw regErr;
+        if (!isDuplicateAccountError(regErr)) {
+          console.error(`[BritLedger client] Auto-registration failed for user ${userId} (${email}):`, regErr?.response?.data || regErr.message);
+          throw regErr;
+        }
+
+        const aliasEmail = ledgerAliasEmail(userId);
+        try {
+          return await loginUser(aliasEmail, password);
+        } catch {
+          try {
+            return await registerUser(userId, aliasEmail, password);
+          } catch (aliasErr: any) {
+            console.error(`[BritLedger client] Alias registration failed for CRM user ${userId}:`, aliasErr?.response?.data || aliasErr.message);
+            throw aliasErr;
+          }
+        }
       }
     }
     console.error(`[BritLedger client] Login failed for user ${userId} (${email}):`, err?.response?.data || err.message);

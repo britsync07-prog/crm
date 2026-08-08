@@ -143,6 +143,10 @@ export async function sendSystemEmail({
     return { sent: true };
   } catch (err) {
     console.error("[SystemMailer] Error sending system email:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    if (/From domain .*not verified/i.test(message)) {
+      return { sent: false, reason: "SMTP From domain is not verified for this account" };
+    }
     return { sent: false, error: err };
   }
 }
