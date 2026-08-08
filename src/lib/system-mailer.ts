@@ -11,8 +11,44 @@ type ProfileConfig = {
   secureMode?: string | null;
 };
 
+type SystemEmailProfileRow = {
+  profile: string;
+  host: string | null;
+  port: number;
+  username: string | null;
+  password: string | null;
+  fromEmail: string | null;
+  fromName: string | null;
+  secureMode: string;
+  isEnabled: boolean | number;
+};
+
+async function ensureSystemEmailProfileTable() {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "SystemEmailProfile" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "profile" TEXT NOT NULL UNIQUE,
+      "host" TEXT,
+      "port" INTEGER NOT NULL DEFAULT 587,
+      "username" TEXT,
+      "password" TEXT,
+      "fromEmail" TEXT,
+      "fromName" TEXT,
+      "secureMode" TEXT NOT NULL DEFAULT 'STARTTLS',
+      "isEnabled" BOOLEAN NOT NULL DEFAULT false,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
 async function getDbProfileConfig(profile: MailProfile): Promise<ProfileConfig | null> {
-  const saved = await prisma.systemEmailProfile.findUnique({ where: { profile } });
+  await ensureSystemEmailProfileTable();
+  const rows = await prisma.$queryRawUnsafe<SystemEmailProfileRow[]>(
+    `SELECT * FROM "SystemEmailProfile" WHERE "profile" = ? LIMIT 1`,
+    profile
+  );
+  const saved = rows[0];
   if (!saved?.isEnabled) return null;
 
   const fromEmail = saved.fromEmail || (profile === "newsletter" ? "info@britsyncai.com" : "noreply@britsyncai.com");

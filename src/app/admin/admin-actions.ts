@@ -8,6 +8,48 @@ import { sendSystemEmail } from "@/lib/system-mailer";
 import { newsletterTemplate } from "@/lib/email-templates/newsletter";
 import { generateUnsubscribeSignature } from "@/lib/unsubscribe";
 import nodemailer from "nodemailer";
+import crypto from "crypto";
+
+type SystemEmailProfileRow = {
+  id: string;
+  profile: string;
+  host: string | null;
+  port: number;
+  username: string | null;
+  password: string | null;
+  fromEmail: string | null;
+  fromName: string | null;
+  secureMode: string;
+  isEnabled: boolean | number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+};
+
+async function ensureSystemEmailProfileTable() {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "SystemEmailProfile" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "profile" TEXT NOT NULL UNIQUE,
+      "host" TEXT,
+      "port" INTEGER NOT NULL DEFAULT 587,
+      "username" TEXT,
+      "password" TEXT,
+      "fromEmail" TEXT,
+      "fromName" TEXT,
+      "secureMode" TEXT NOT NULL DEFAULT 'STARTTLS',
+      "isEnabled" BOOLEAN NOT NULL DEFAULT false,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+async function getSystemEmailProfileRows() {
+  await ensureSystemEmailProfileTable();
+  return prisma.$queryRawUnsafe<SystemEmailProfileRow[]>(
+    `SELECT * FROM "SystemEmailProfile" WHERE "profile" IN ('transactional', 'newsletter')`
+  );
+}
 
 export async function getAdminStatsAction() {
   await requireAdmin();
@@ -185,7 +227,7 @@ export async function getAdminOperationsAction() {
       take: 20,
       include: { user: { select: { email: true, name: true } } },
     }),
-    prisma.systemEmailProfile.findMany({ where: { profile: { in: ["transactional", "newsletter"] } } }),
+    getSystemEmailProfileRows(),
   ]);
 
   const profileReady = (profile: "transactional" | "newsletter") => {
@@ -228,9 +270,7 @@ export async function getAdminOperationsAction() {
 export async function getSystemEmailProfilesAction() {
   await requireAdmin();
 
-  const saved = await prisma.systemEmailProfile.findMany({
-    where: { profile: { in: ["transactional", "newsletter"] } },
-  });
+  const saved = await getSystemEmailProfileRows();
 
   const byProfile = new Map(saved.map((item) => [item.profile, item]));
 
@@ -244,7 +284,7 @@ export async function getSystemEmailProfilesAction() {
       fromEmail: item?.fromEmail || "",
       fromName: item?.fromName || "BritCRM",
       secureMode: item?.secureMode || "STARTTLS",
-      isEnabled: item?.isEnabled || false,
+      isEnabled: Boolean(item?.isEnabled),
       hasPassword: Boolean(item?.password || process.env.SYSTEM_SMTP_PASSWORD),
       envConfigured: Boolean(
         process.env.SYSTEM_SMTP_HOST &&
@@ -275,15 +315,46 @@ export async function saveSystemEmailProfileAction(
   if (!Number.isInteger(port) || port < 1 || port > 65535) return { success: false, error: "Port must be valid" };
   if (!["STARTTLS", "SSL/TLS", "NONE"].includes(secureMode)) return { success: false, error: "Invalid security mode" };
 
-  const existing = await prisma.systemEmailProfile.findUnique({ where: { profile } });
+  await ensureSystemEmailProfileTable();
+  const existingRows = await prisma.$queryRawUnsafe<SystemEmailProfileRow[]>(
+    `SELECT * FROM "SystemEmailProfile" WHERE "profile" = ? LIMIT 1`,
+    profile
+  );
+  const existing = existingRows[0];
   const passwordToSave = password || existing?.password || process.env.SYSTEM_SMTP_PASSWORD || "";
   if (!passwordToSave) return { success: false, error: "Password is required the first time you save this profile" };
 
-  await prisma.systemEmailProfile.upsert({
-    where: { profile },
-    update: { host, port, username, password: passwordToSave, fromEmail, fromName, secureMode, isEnabled },
-    create: { profile, host, port, username, password: passwordToSave, fromEmail, fromName, secureMode, isEnabled },
-  });
+  if (existing) {
+    await prisma.$executeRawUnsafe(
+      `UPDATE "SystemEmailProfile"
+       SET "host" = ?, "port" = ?, "username" = ?, "password" = ?, "fromEmail" = ?, "fromName" = ?, "secureMode" = ?, "isEnabled" = ?, "updatedAt" = CURRENT_TIMESTAMP
+       WHERE "profile" = ?`,
+      host,
+      port,
+      username,
+      passwordToSave,
+      fromEmail,
+      fromName,
+      secureMode,
+      isEnabled ? 1 : 0,
+      profile
+    );
+  } else {
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "SystemEmailProfile" ("id", "profile", "host", "port", "username", "password", "fromEmail", "fromName", "secureMode", "isEnabled", "createdAt", "updatedAt")
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      crypto.randomUUID(),
+      profile,
+      host,
+      port,
+      username,
+      passwordToSave,
+      fromEmail,
+      fromName,
+      secureMode,
+      isEnabled ? 1 : 0
+    );
+  }
 
   await prisma.activityLog.create({
     data: {
@@ -309,7 +380,12 @@ export async function testSystemEmailProfileAction(
   if (!["transactional", "newsletter"].includes(profile)) return { success: false, error: "Invalid profile" };
   if (!to || !to.includes("@")) return { success: false, error: "Enter a valid test email address" };
 
-  const saved = await prisma.systemEmailProfile.findUnique({ where: { profile } });
+  await ensureSystemEmailProfileTable();
+  const rows = await prisma.$queryRawUnsafe<SystemEmailProfileRow[]>(
+    `SELECT * FROM "SystemEmailProfile" WHERE "profile" = ? LIMIT 1`,
+    profile
+  );
+  const saved = rows[0];
   if (!saved?.isEnabled || !saved.host || !saved.username || !saved.password) {
     return { success: false, error: "Profile is not fully configured or enabled" };
   }
