@@ -97,7 +97,7 @@ export async function verifyImapConnection(account: ImapAccount) {
     throw new Error(formatImapError(error));
   } finally {
     try {
-      await client.logout();
+      if (isConnectionOpen(client)) await client.logout();
     } catch {
       // Ignore logout errors after failed connection attempts.
     }
@@ -240,7 +240,6 @@ export async function fetchEmailBody(account: any, mailboxPath: string, uid: str
       lock = await client.getMailboxLock(actualMailboxPath);
     } catch {
       console.warn(`Mailbox ${actualMailboxPath} not found`);
-      await client.logout();
       return null;
     }
 
