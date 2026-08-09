@@ -2,12 +2,21 @@ import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 
 type ImapAccount = {
+  id?: string;
+  email?: string;
   imapHost?: string | null;
   imapPort?: number | null;
   username: string;
   password: string;
   encryption?: string | null;
 };
+
+const imapIssueLogState = new Map<string, number>();
+const IMAP_ISSUE_LOG_INTERVAL_MS = 15 * 60 * 1000;
+
+function isConnectionOpen(client: ImapFlow) {
+  return (client as any).usable || (client as any).authenticated || (client as any).state > 0;
+}
 
 function isDirectTls(encryption: string | null | undefined, port: number | null | undefined) {
   const mode = (encryption || '').toUpperCase();
@@ -62,6 +71,16 @@ function formatImapError(error: unknown) {
     return 'IMAP server could not be reached. Check the IMAP host and port.';
   }
   return `IMAP connection failed: ${message}`;
+}
+
+function logImapIssue(scope: string, account: ImapAccount, error: unknown) {
+  const message = formatImapError(error);
+  const key = `${scope}:${account.id || account.email || account.username}:${message}`;
+  const now = Date.now();
+  const last = imapIssueLogState.get(key) || 0;
+  if (now - last < IMAP_ISSUE_LOG_INTERVAL_MS) return;
+  imapIssueLogState.set(key, now);
+  console.error(`${scope}: ${message}`);
 }
 
 export async function verifyImapConnection(account: ImapAccount) {
@@ -136,13 +155,14 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
   try {
     await client.connect();
 
-    const actualMailboxPath = await resolveMailboxPath(client, logicalMailboxPath);
+    const isStarredFolder = logicalMailboxPath.toUpperCase() === 'STARRED';
+    const actualMailboxPath = isStarredFolder ? 'INBOX' : await resolveMailboxPath(client, logicalMailboxPath);
 
     let lock;
     try {
       lock = await client.getMailboxLock(actualMailboxPath);
     } catch {
-      console.warn(`Mailbox ${actualMailboxPath} not found, falling back to INBOX`);
+      if (!isStarredFolder) console.warn(`Mailbox ${actualMailboxPath} not found, falling back to INBOX`);
       lock = await client.getMailboxLock('INBOX');
     }
 
@@ -154,7 +174,7 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
       const fetchedMessages = [];
 
       // If it's the STARRED folder, we need to search for flagged messages across INBOX (or actual folder)
-      if (logicalMailboxPath === 'STARRED') {
+      if (isStarredFolder) {
         const searchResult = await client.search({ flagged: true });
         if (searchResult && searchResult.length > 0) {
           // Get the last 50 starred messages
@@ -196,7 +216,7 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
     throw new Error(formatImapError(error));
   } finally {
     try {
-      await client.logout();
+      if (isConnectionOpen(client)) await client.logout();
     } catch {
       // Ignore logout errors
     }
@@ -242,8 +262,8 @@ export async function fetchEmailBody(account: any, mailboxPath: string, uid: str
     throw new Error(formatImapError(error));
   } finally {
     try {
-      await client.logout();
-    } catch { console.warn('IMAP logout error (fetch body)'); }
+      if (isConnectionOpen(client)) await client.logout();
+    } catch { }
   }
   return null;
 }
@@ -283,8 +303,8 @@ export async function performEmailAction(account: any, mailboxPath: string, uid:
     throw new Error(formatImapError(error));
   } finally {
     try {
-      await client.logout();
-    } catch { console.warn('IMAP logout error (action)'); }
+      if (isConnectionOpen(client)) await client.logout();
+    } catch { }
   }
 }
 
@@ -301,8 +321,8 @@ export async function appendEmailToSentFolder(account: any, rawMessage: Buffer |
     return false;
   } finally {
     try {
-      await client.logout();
-    } catch { console.warn('IMAP logout error (append sent)'); }
+      if (isConnectionOpen(client)) await client.logout();
+    } catch { }
   }
 }
 
@@ -368,7 +388,7 @@ export async function performBatchEmailAction(
     console.error(`IMAP Batch Action Error (${action}):`, error);
     throw new Error(formatImapError(error));
   } finally {
-    try { await client.logout(); } catch { }
+    try { if (isConnectionOpen(client)) await client.logout(); } catch { }
   }
 
   return { success, failed };
@@ -407,11 +427,11 @@ export async function fetchRecentInboxReplyCandidates(
       lock.release();
     }
   } catch (error) {
-    console.error("IMAP Reply Sync Error:", formatImapError(error));
+    logImapIssue("IMAP Reply Sync Error", account, error);
   } finally {
     try {
-      await client.logout();
-    } catch { console.warn('IMAP logout error (reply sync)'); }
+      if (isConnectionOpen(client)) await client.logout();
+    } catch { }
   }
 
   return candidates;

@@ -12,7 +12,8 @@ async function getUserEmailAccount(userId: string, accountId: string | null) {
     }
 
     return prisma.emailAccount.findFirst({
-        where: { userId, imapHost: { not: null }, imapPort: { not: null }, isActive: true },
+      where: { userId, imapHost: { not: null }, imapPort: { not: null }, isActive: true },
+      orderBy: { id: "desc" },
     });
 }
 

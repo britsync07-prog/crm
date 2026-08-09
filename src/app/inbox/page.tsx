@@ -17,13 +17,14 @@ export default async function UnifiedInboxPage() {
 
   const emailAccounts = await prisma.emailAccount.findMany({
     where: { userId },
+    orderBy: [{ isActive: "desc" }, { id: "desc" }],
     select: { id: true, email: true, isActive: true, imapHost: true, imapPort: true }
   });
 
   // Fetch real emails from the first account configured with IMAP
   let threads: any[] = [];
   let initialError: string | null = null;
-  const activeImapAccount = emailAccounts.find(a => a.imapHost && a.imapPort);
+  const activeImapAccount = emailAccounts.find(a => a.isActive && a.imapHost && a.imapPort);
 
   if (activeImapAccount) {
     // Pass the full account dynamically later, but for SSR we just take the first active one
@@ -37,5 +38,12 @@ export default async function UnifiedInboxPage() {
     }
   }
 
-  return <InboxClient initialEmails={threads} emailAccounts={emailAccounts} initialError={initialError} />;
+  return (
+    <InboxClient
+      initialEmails={threads}
+      emailAccounts={emailAccounts}
+      initialActiveAccountId={activeImapAccount?.id}
+      initialError={initialError}
+    />
+  );
 }
