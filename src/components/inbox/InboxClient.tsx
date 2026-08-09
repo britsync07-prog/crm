@@ -28,6 +28,21 @@ interface FullEmail extends EmailItem {
     text: string;
 }
 
+async function readApiJson(res: Response) {
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+        return res.json();
+    }
+    const text = await res.text();
+    const titleMatch = /<title>(.*?)<\/title>/i.exec(text);
+    const message = titleMatch?.[1] || text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
+    throw new Error(message || `Request failed with HTTP ${res.status}`);
+}
+
+function withAccountId(path: string, accountId: string) {
+    return accountId ? `${path}&accountId=${encodeURIComponent(accountId)}` : path;
+}
+
 export default function InboxClient({
     initialEmails,
     emailAccounts,
@@ -109,8 +124,8 @@ export default function InboxClient({
         if (!silent) setLoading(true);
         setActionError(null);
         try {
-            const res = await fetch(`/api/emails?mailbox=${encodeURIComponent(folder)}&accountId=${accountId}`);
-            const data = await res.json();
+            const res = await fetch(withAccountId(`/api/emails?mailbox=${encodeURIComponent(folder)}`, accountId));
+            const data = await readApiJson(res);
             if (!res.ok) {
                 setActionError(data.error || "Failed to load emails.");
                 setEmails([]);
@@ -142,8 +157,8 @@ export default function InboxClient({
         }
 
         try {
-            const res = await fetch(`/api/emails/${email.id}?mailbox=${encodeURIComponent(activeFolder)}&accountId=${activeAccountId}`);
-            const data = await res.json();
+            const res = await fetch(withAccountId(`/api/emails/${email.id}?mailbox=${encodeURIComponent(activeFolder)}`, activeAccountId));
+            const data = await readApiJson(res);
             if (res.ok && data.email) {
                 setSelectedEmail({ ...email, ...data.email, isRead: true });
             } else {
@@ -188,7 +203,7 @@ export default function InboxClient({
                 body: JSON.stringify({ action, mailbox: activeFolder, accountId: activeAccountId })
             });
             if (!res.ok) {
-                const d = await res.json().catch(() => ({}));
+                const d = await readApiJson(res).catch(() => ({}));
                 setActionError(d.error || `Failed to ${action} email.`);
             }
         } catch (e: any) {
@@ -209,7 +224,7 @@ export default function InboxClient({
             body: JSON.stringify({ action: newStarred ? 'star' : 'unstar', mailbox: activeFolder, accountId: activeAccountId })
         }).then(async res => {
             if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
+                const data = await readApiJson(res).catch(() => ({}));
                 setActionError(data.error || "Failed to update star.");
                 setEmails(prev => prev.map(m => m.id === emailId ? { ...m, isStarred: !newStarred } : m));
                 if (selectedEmail?.id === emailId) {
@@ -240,7 +255,7 @@ export default function InboxClient({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action, mailbox: activeFolder, accountId: activeAccountId, uids: idsToProcess })
         }).then(async res => {
-            const data = await res.json().catch(() => ({}));
+            const data = await readApiJson(res).catch(() => ({}));
             if (!res.ok || data.failed) {
                 setActionError(data.error || `Failed to ${action} some emails.`);
                 fetchFolder(activeFolder, activeAccountId, true);
@@ -282,7 +297,7 @@ export default function InboxClient({
                     body: composeBody
                 })
             });
-            const data = await res.json().catch(() => ({}));
+            const data = await readApiJson(res).catch(() => ({}));
             if (res.ok) {
                 setSendStatus({ ok: true, message: "Message sent" });
                 setTimeout(() => {

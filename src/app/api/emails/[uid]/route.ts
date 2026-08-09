@@ -28,7 +28,7 @@ export async function GET(
 
         const { searchParams } = new URL(req.url);
         const mailbox = searchParams.get("mailbox") || "INBOX";
-        const accountId = searchParams.get("accountId");
+        const accountId = searchParams.get("accountId")?.trim() || null;
 
         const activeImapAccount = await getUserEmailAccount(session.id, accountId);
 

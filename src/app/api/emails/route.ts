@@ -17,6 +17,25 @@ async function getUserEmailAccount(userId: string, accountId: string | null) {
     });
 }
 
+async function fetchFirstWorkingInbox(userId: string, mailbox: string) {
+    const accounts = await prisma.emailAccount.findMany({
+        where: { userId, imapHost: { not: null }, imapPort: { not: null }, isActive: true },
+        orderBy: { id: "desc" },
+    });
+    let firstError: Error | null = null;
+
+    for (const account of accounts) {
+        try {
+            return { emails: await fetchRecentEmails(account, mailbox), account };
+        } catch (error: any) {
+            if (!firstError) firstError = error instanceof Error ? error : new Error(String(error));
+        }
+    }
+
+    if (firstError) throw firstError;
+    return { emails: [], account: null };
+}
+
 export async function GET(req: NextRequest) {
     try {
         const session = await getSession();
@@ -24,7 +43,15 @@ export async function GET(req: NextRequest) {
 
         const { searchParams } = new URL(req.url);
         const mailbox = searchParams.get("mailbox") || "INBOX";
-        const accountId = searchParams.get("accountId");
+        const accountId = searchParams.get("accountId")?.trim() || null;
+
+        if (!accountId) {
+            const { emails, account } = await fetchFirstWorkingInbox(session.id, mailbox);
+            if (!account) {
+                return NextResponse.json({ error: "No connected IMAP account found." }, { status: 404 });
+            }
+            return NextResponse.json({ emails, accountId: account.id });
+        }
 
         const activeImapAccount = await getUserEmailAccount(session.id, accountId);
 

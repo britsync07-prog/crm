@@ -1,5 +1,7 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
+import tls from 'tls';
+import net from 'net';
 
 type ImapAccount = {
   id?: string;
@@ -49,13 +51,178 @@ function createImapClient(account: ImapAccount) {
   });
 }
 
+function escapeImapString(value: string) {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function waitForSocketData(socket: net.Socket, done: (buffer: Buffer) => boolean, timeoutMs = 30000): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('IMAP server response timed out.'));
+    }, timeoutMs);
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      socket.off('data', onData);
+      socket.off('error', onError);
+    };
+    const onError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+    const onData = (chunk: Buffer) => {
+      chunks.push(chunk);
+      const buffer = Buffer.concat(chunks);
+      if (done(buffer)) {
+        cleanup();
+        resolve(buffer);
+      }
+    };
+
+    socket.on('data', onData);
+    socket.on('error', onError);
+  });
+}
+
+async function createRawSocket(account: ImapAccount): Promise<net.Socket> {
+  const secure = isDirectTls(account.encryption, account.imapPort);
+  const options = {
+    host: account.imapHost!,
+    port: account.imapPort!,
+  };
+
+  const socket = secure ? tls.connect({ ...options, servername: account.imapHost || undefined }) : net.connect(options);
+  await new Promise<void>((resolve, reject) => {
+    const onReady = () => {
+      cleanup();
+      resolve();
+    };
+    const onError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+    const cleanup = () => {
+      socket.off(secure ? 'secureConnect' : 'connect', onReady);
+      socket.off('error', onError);
+    };
+    socket.once(secure ? 'secureConnect' : 'connect', onReady);
+    socket.once('error', onError);
+  });
+  await waitForSocketData(socket, (buffer) => buffer.toString('utf8').includes('\r\n'));
+  return socket;
+}
+
+async function rawCommand(socket: net.Socket, tag: string, command: string) {
+  socket.write(`${tag} ${command}\r\n`);
+  const buffer = await waitForSocketData(socket, (data) => {
+    const text = data.toString('latin1');
+    return text.includes(`${tag} OK`) || text.includes(`${tag} NO`) || text.includes(`${tag} BAD`);
+  });
+  const text = buffer.toString('latin1');
+  if (text.includes(`${tag} NO`) || text.includes(`${tag} BAD`)) {
+    throw new Error(text.split(/\r?\n/).find((line) => line.startsWith(tag)) || 'IMAP command failed.');
+  }
+  return buffer;
+}
+
+function extractFirstLiteral(buffer: Buffer): Buffer | null {
+  const marker = Buffer.from('}\r\n', 'latin1');
+  const text = buffer.toString('latin1');
+  const match = /\{(\d+)\}\r\n/.exec(text);
+  if (!match || match.index < 0) return null;
+  const literalStart = buffer.indexOf(marker, match.index, 'latin1') + marker.length;
+  const length = Number(match[1]);
+  if (!Number.isFinite(length) || literalStart < marker.length || literalStart + length > buffer.length) return null;
+  return buffer.subarray(literalStart, literalStart + length);
+}
+
+function parseFlags(buffer: Buffer): Set<string> {
+  const text = buffer.toString('latin1');
+  const match = /FLAGS \(([^)]*)\)/i.exec(text);
+  return new Set((match?.[1] || '').split(/\s+/).filter(Boolean));
+}
+
+async function withRawImap<T>(account: ImapAccount, fn: (socket: net.Socket) => Promise<T>): Promise<T> {
+  if (!account.imapHost || !account.imapPort) throw new Error('IMAP host and port are required.');
+  const socket = await createRawSocket(account);
+  try {
+    await rawCommand(socket, 'a1', `LOGIN "${escapeImapString(account.username)}" "${escapeImapString(account.password)}"`);
+    return await fn(socket);
+  } finally {
+    try {
+      socket.write('zz LOGOUT\r\n');
+    } catch {
+      // Ignore closed sockets.
+    }
+    socket.destroy();
+  }
+}
+
+async function rawFetchRecentEmails(account: ImapAccount, logicalMailboxPath: string) {
+  return withRawImap(account, async (socket) => {
+    const isStarredFolder = logicalMailboxPath.toUpperCase() === 'STARRED';
+    await rawCommand(socket, 'a2', 'SELECT "INBOX"');
+    const searchBuffer = await rawCommand(socket, 'a3', 'UID SEARCH ALL');
+    const searchText = searchBuffer.toString('latin1');
+    const searchLine = searchText.split(/\r?\n/).find((line) => line.startsWith('* SEARCH')) || '';
+    const uids = searchLine.replace('* SEARCH', '').trim().split(/\s+/).map(Number).filter((uid) => Number.isFinite(uid));
+    const recentUids = uids.slice(-50);
+    const emails: any[] = [];
+
+    for (let index = 0; index < recentUids.length; index += 1) {
+      const uid = recentUids[index];
+      const fetchBuffer = await rawCommand(socket, `a${index + 4}`, `UID FETCH ${uid} (FLAGS BODY.PEEK[])`);
+      const source = extractFirstLiteral(fetchBuffer);
+      if (!source) continue;
+      const flags = parseFlags(fetchBuffer);
+      if (isStarredFolder && !flags.has('\\Flagged')) continue;
+      const parsed = await simpleParser(source);
+      emails.push({
+        id: String(uid),
+        from: parsed.from?.text || "Unknown Sender",
+        subject: parsed.subject || "No Subject",
+        snippet: parsed.text ? parsed.text.replace(/\s+/g, ' ').substring(0, 120) + '...' : "No content preview available.",
+        date: parsed.date ? parsed.date.toLocaleDateString() + ' ' + parsed.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Unknown Date",
+        sentiment: "Neutral",
+        aiSummary: "Auto-synced via IMAP protocol.",
+        isRead: flags.has('\\Seen'),
+        isStarred: flags.has('\\Flagged'),
+        mailbox: logicalMailboxPath
+      });
+    }
+
+    return emails.reverse();
+  });
+}
+
+async function rawFetchEmailBody(account: ImapAccount, mailboxPath: string, uid: string) {
+  return withRawImap(account, async (socket) => {
+    await rawCommand(socket, 'a2', `SELECT "${escapeImapString(mailboxPath.toUpperCase() === 'STARRED' ? 'INBOX' : mailboxPath)}"`);
+    const fetchBuffer = await rawCommand(socket, 'a3', `UID FETCH ${Number(uid)} (BODY.PEEK[])`);
+    const source = extractFirstLiteral(fetchBuffer);
+    if (!source) return null;
+    const parsed = await simpleParser(source);
+    return {
+      id: uid,
+      from: parsed.from?.text || "Unknown Sender",
+      to: (Array.isArray(parsed.to) ? parsed.to.map((t: any) => t.text).join(', ') : (parsed.to as any)?.text) || "Unknown",
+      subject: parsed.subject || "No Subject",
+      date: parsed.date ? parsed.date.toLocaleString() : "Unknown Date",
+      html: parsed.html || parsed.textAsHtml || `<p>${parsed.text || 'No content'}</p>`,
+      text: parsed.text || ""
+    };
+  });
+}
+
 function formatImapError(error: unknown) {
   const err = error as any;
   const detail = [err?.response, err?.responseText, err?.serverResponseCode, err?.code]
     .filter(Boolean)
     .join(" ");
   const message = `${error instanceof Error ? error.message : String(error)} ${detail}`.trim();
-  if (/CONTACTADMIN|login not permitted/i.test(message)) {
+  if (/CONTACTADMIN|login (?:is )?not permitted/i.test(message)) {
     return 'IMAP login is not permitted for this mailbox. Check that IMAP access is enabled for the account or contact the mail provider.';
   }
   if (/authentication|login|invalid credentials|auth/i.test(message)) {
@@ -74,7 +241,7 @@ function formatImapError(error: unknown) {
 }
 
 function isProviderBlockedLogin(error: unknown) {
-  return /CONTACTADMIN|login not permitted/i.test(formatImapError(error));
+  return /CONTACTADMIN|login (?:is )?not permitted/i.test(formatImapError(error));
 }
 
 function logImapIssue(scope: string, account: ImapAccount, error: unknown) {
@@ -196,6 +363,10 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
         }
       }
 
+      if (fetchedMessages.length === 0 && totalMessages > 0) {
+        return await rawFetchRecentEmails(account, logicalMailboxPath);
+      }
+
       for (const message of fetchedMessages) {
         if (!message.source) continue;
         const parsed = await simpleParser(message.source);
@@ -244,7 +415,17 @@ export async function fetchEmailBody(account: any, mailboxPath: string, uid: str
     }
 
     try {
-      const message = await client.fetchOne(uid, { source: true }, { uid: true });
+      let message;
+      try {
+        message = await client.fetchOne(uid, { source: true }, { uid: true });
+      } catch (fetchError) {
+        const fallback = await rawFetchEmailBody(account, mailboxPath, uid);
+        if (fallback) return fallback;
+        throw fetchError;
+      }
+      if (!message) {
+        return await rawFetchEmailBody(account, mailboxPath, uid);
+      }
       if (message && message.source) {
         const parsed = await simpleParser(message.source);
         return {

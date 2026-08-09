@@ -21,13 +21,29 @@ export default async function UnifiedInboxPage() {
     select: { id: true, email: true, isActive: true, imapHost: true, imapPort: true }
   });
 
-  // Fetch real emails from the first account configured with IMAP
   let threads: any[] = [];
   let initialError: string | null = null;
-  const activeImapAccount = emailAccounts.find(a => a.isActive && a.imapHost && a.imapPort);
+  let activeImapAccount = emailAccounts.find(a => a.isActive && a.imapHost && a.imapPort);
 
-  if (activeImapAccount) {
-    // Pass the full account dynamically later, but for SSR we just take the first active one
+  for (const account of emailAccounts.filter(a => a.isActive && a.imapHost && a.imapPort)) {
+    const fullAccount = await prisma.emailAccount.findUnique({ where: { id: account.id } });
+    if (!fullAccount) continue;
+
+    try {
+      threads = await fetchRecentEmails(fullAccount, "INBOX");
+      activeImapAccount = account;
+      initialError = null;
+      break;
+    } catch (error) {
+      if (!initialError) {
+        initialError = error instanceof Error ? error.message : "Failed to load mailbox.";
+      }
+    }
+  }
+
+  if (!activeImapAccount) {
+    initialError = "No connected IMAP account found.";
+  } else if (threads.length === 0 && !initialError) {
     const fullAccount = await prisma.emailAccount.findUnique({ where: { id: activeImapAccount.id } });
     if (fullAccount) {
       try {
