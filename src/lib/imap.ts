@@ -73,6 +73,10 @@ function formatImapError(error: unknown) {
   return `IMAP connection failed: ${message}`;
 }
 
+function isProviderBlockedLogin(error: unknown) {
+  return /CONTACTADMIN|login not permitted/i.test(formatImapError(error));
+}
+
 function logImapIssue(scope: string, account: ImapAccount, error: unknown) {
   const message = formatImapError(error);
   const key = `${scope}:${account.id || account.email || account.username}:${message}`;
@@ -102,7 +106,7 @@ export async function verifyImapConnection(account: ImapAccount) {
 
 async function resolveMailboxPath(client: ImapFlow, logicalName: string): Promise<string> {
   const upper = logicalName.toUpperCase();
-  if (upper === 'INBOX') return 'INBOX';
+  if (upper === 'INBOX' || upper === 'STARRED') return 'INBOX';
 
   try {
     const list = await client.list();
@@ -427,7 +431,9 @@ export async function fetchRecentInboxReplyCandidates(
       lock.release();
     }
   } catch (error) {
-    logImapIssue("IMAP Reply Sync Error", account, error);
+    if (!isProviderBlockedLogin(error)) {
+      logImapIssue("IMAP Reply Sync Error", account, error);
+    }
   } finally {
     try {
       if (isConnectionOpen(client)) await client.logout();
