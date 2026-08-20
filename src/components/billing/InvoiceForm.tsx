@@ -31,6 +31,7 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
   const [taxRate, setTaxRate] = useState(20);
   const [discount, setDiscount] = useState(0);
   const [advancePayment, setAdvancePayment] = useState(0);
+  const [paid, setPaid] = useState(false);
   const [notes, setNotes] = useState("");
   const [currency, setCurrency] = useState("GBP");
 
@@ -42,7 +43,7 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
   const subtotal = calculateSubtotal(items);
   const tax = calculateTax(subtotal, taxRate);
   const total = calculateTotal(subtotal, tax, discount);
-  const normalizedAdvancePayment = type === "invoice" ? Math.min(Math.max(advancePayment, 0), total) : 0;
+  const normalizedAdvancePayment = type === "invoice" ? (paid ? total : Math.min(Math.max(advancePayment, 0), total)) : 0;
   const balanceDue = Math.max(0, total - normalizedAdvancePayment);
 
   function updateItem(index: number, field: keyof InvoiceItem, value: string | number) {
@@ -99,6 +100,7 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
       subtotal,
       tax,
       advance_payment: normalizedAdvancePayment,
+      ...(type === "invoice" ? { status: paid ? "PAID" : "DRAFT" } : {}),
       currency,
       items: items
         .filter((i) => i.description)
@@ -178,6 +180,27 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
             className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-bold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#012169]"
           />
         </div>
+        {type === "invoice" && (
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Payment Status</label>
+            <div className="grid grid-cols-2 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 p-1">
+              <button
+                type="button"
+                onClick={() => setPaid(false)}
+                className={`rounded-lg px-3 py-2 text-xs font-black uppercase tracking-widest transition-colors ${!paid ? "bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"}`}
+              >
+                Unpaid
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaid(true)}
+                className={`rounded-lg px-3 py-2 text-xs font-black uppercase tracking-widest transition-colors ${paid ? "bg-green-600 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"}`}
+              >
+                Paid
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -274,9 +297,10 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
                 min="0"
                 max={total}
                 step="0.01"
-                value={advancePayment}
+                value={paid ? total : advancePayment}
+                disabled={paid}
                 onChange={(e) => setAdvancePayment(Math.max(0, Number(e.target.value) || 0))}
-                className="w-28 px-3 py-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 text-sm font-bold text-right focus:outline-none focus:ring-2 focus:ring-[#012169]"
+                className="w-28 px-3 py-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 text-sm font-bold text-right focus:outline-none focus:ring-2 focus:ring-[#012169] disabled:opacity-60"
               />
             </div>
           )}
@@ -284,7 +308,7 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
             <span className="font-black uppercase tracking-wider">Total</span>
             <span className="font-black text-[#012169] dark:text-blue-300">{formatCurrency(total, currency)}</span>
           </div>
-          {type === "invoice" && normalizedAdvancePayment > 0 && (
+          {type === "invoice" && (
             <div className="pt-3 border-t border-zinc-200 dark:border-white/10 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="font-bold text-zinc-500">Advance Paid</span>

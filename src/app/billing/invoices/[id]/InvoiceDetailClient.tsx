@@ -92,7 +92,7 @@ export default function InvoiceDetailClient({ invoice, client, id }: ClientProps
 
   const invStatus = normalizeStatus(invoice.status);
   const canSend = invStatus === "Draft";
-  const canRecordPayment = invStatus === "Sent" || invStatus === "Overdue" || invStatus === "Partial";
+  const canRecordPayment = (invStatus === "Draft" || invStatus === "Sent" || invStatus === "Overdue" || invStatus === "Partial") && balanceDue > 0;
   const canCancel = invStatus === "Draft" || invStatus === "Sent" || invStatus === "Overdue" || invStatus === "Partial";
 
   return (
@@ -142,6 +142,9 @@ export default function InvoiceDetailClient({ invoice, client, id }: ClientProps
               <div className="sm:text-right">
                 <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Amount</p>
                 <p className="text-3xl font-black text-zinc-900 dark:text-white mt-1">{formatCurrency(invoice.total_amount, invoice.currency)}</p>
+                <p className="text-xs font-black uppercase tracking-widest text-[#012169] dark:text-blue-300 mt-1">
+                  Balance due {formatCurrency(balanceDue, invoice.currency)}
+                </p>
               </div>
             </div>
             <div className="grid gap-6 sm:grid-cols-3">
@@ -195,18 +198,14 @@ export default function InvoiceDetailClient({ invoice, client, id }: ClientProps
                     <td colSpan={3} className="px-8 py-4 text-right font-black text-zinc-900 dark:text-white uppercase">Total</td>
                     <td className="px-8 py-4 text-right font-black text-[#012169] dark:text-blue-300 text-lg">{formatCurrency(invoice.total_amount, invoice.currency)}</td>
                   </tr>
-                  {advancePayment > 0 && (
-                    <>
-                      <tr>
-                        <td colSpan={3} className="px-8 py-2 text-right font-bold text-zinc-500">Advance Paid</td>
-                        <td className="px-8 py-2 text-right font-black text-green-600">-{formatCurrency(advancePayment, invoice.currency)}</td>
-                      </tr>
-                      <tr>
-                        <td colSpan={3} className="px-8 py-4 text-right font-black text-zinc-900 dark:text-white uppercase">Balance Due</td>
-                        <td className="px-8 py-4 text-right font-black text-[#012169] dark:text-blue-300 text-lg">{formatCurrency(balanceDue, invoice.currency)}</td>
-                      </tr>
-                    </>
-                  )}
+                  <tr>
+                    <td colSpan={3} className="px-8 py-2 text-right font-bold text-zinc-500">Advance Paid</td>
+                    <td className="px-8 py-2 text-right font-black text-green-600">-{formatCurrency(advancePayment, invoice.currency)}</td>
+                  </tr>
+                  <tr>
+                    <td colSpan={3} className="px-8 py-4 text-right font-black text-zinc-900 dark:text-white uppercase">Balance Due</td>
+                    <td className="px-8 py-4 text-right font-black text-[#012169] dark:text-blue-300 text-lg">{formatCurrency(balanceDue, invoice.currency)}</td>
+                  </tr>
                 </tfoot>
               </table>
               </div>

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cancelInvoice, createInvoice, recordPayment, sendInvoice } from "@/lib/britledger/invoices";
+import { cancelInvoice, createInvoice, getInvoice, sendInvoice, updateInvoice } from "@/lib/britledger/invoices";
 import { createClient, listClients } from "@/lib/britledger/clients";
 import { convertQuotationToInvoice, createQuotation, sendQuotation } from "@/lib/britledger/quotations";
 import { createPaymentSession } from "@/lib/britledger/payments";
@@ -20,10 +20,22 @@ export async function listClientsAction(params?: { page?: number; page_size?: nu
 
 export async function createInvoiceAction(data: InvoiceCreate) {
   try {
+    const totalAmount = Number(data.total_amount || 0);
+    const requestedStatus = data.status;
+    const advancePayment = requestedStatus === "PAID" || requestedStatus === "Paid"
+      ? totalAmount
+      : Math.min(Math.max(Number(data.advance_payment || 0), 0), totalAmount);
     const res = await createInvoice({
       ...data,
-      advance_payment: Math.min(Math.max(Number(data.advance_payment || 0), 0), Number(data.total_amount || 0)),
+      advance_payment: advancePayment,
     });
+    if (res.data?.id) {
+      const synced = await updateInvoice(res.data.id, {
+        advance_payment: advancePayment,
+        ...(requestedStatus ? { status: requestedStatus } : {}),
+      });
+      res.data = synced.data;
+    }
     invalidateCache("/invoices");
     revalidatePath("/billing");
     revalidatePath("/billing/invoices");
@@ -92,9 +104,16 @@ export async function createQuotationAction(data: QuotationCreate) {
 
 export async function recordPaymentAction(id: string, data: PaymentCreate) {
   try {
-    const res = await recordPayment(id, {
-      ...data,
-      amount: Math.max(Number(data.amount || 0), 0),
+    const invoiceRes = await getInvoice(id);
+    const invoice = invoiceRes.data;
+    const totalAmount = Number(invoice.total_amount || 0);
+    const currentAdvance = Math.min(Math.max(Number(invoice.advance_payment || 0), 0), totalAmount);
+    const paymentAmount = Math.max(Number(data.amount || 0), 0);
+    const nextAdvance = Math.min(currentAdvance + paymentAmount, totalAmount);
+    const nextStatus = nextAdvance >= totalAmount ? "PAID" : nextAdvance > 0 ? "PARTIAL" : invoice.status;
+    const res = await updateInvoice(id, {
+      advance_payment: nextAdvance,
+      status: nextStatus,
     });
     invalidateCache("/invoices");
     revalidatePath(`/billing/invoices/${id}`);

@@ -52,6 +52,7 @@ export interface InvoiceCreate {
   currency?: string;
   items?: InvoiceItem[];
   notes?: string;
+  status?: InvoiceStatus;
 }
 
 export interface InvoiceUpdate {

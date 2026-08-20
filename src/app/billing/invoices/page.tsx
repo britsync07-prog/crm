@@ -91,7 +91,12 @@ export default async function InvoiceList(props: Props) {
                   </Link>
                 </td>
                 <td className="px-8 py-5 font-bold text-zinc-700 dark:text-zinc-300">{clientMap[inv.client_id] || inv.client_id}</td>
-                <td className="px-8 py-5 font-black text-zinc-900 dark:text-white">{formatCurrency(inv.total_amount, inv.currency)}</td>
+                <td className="px-8 py-5">
+                  <div className="font-black text-zinc-900 dark:text-white">{formatCurrency(inv.total_amount, inv.currency)}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                    Due {formatCurrency(Math.max(Number(inv.total_amount || 0) - Number(inv.advance_payment || 0), 0), inv.currency)}
+                  </div>
+                </td>
                 <td className="px-8 py-5 font-bold text-zinc-500">{formatDate(inv.issue_date)}</td>
                 <td className="px-8 py-5 font-bold text-zinc-500">{formatDate(inv.due_date)}</td>
                 <td className="px-8 py-5 text-right"><StatusBadge status={inv.status} /></td>
