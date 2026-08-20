@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Mail, Users, CreditCard } from "lucide-react";
+import { Mail, Users, CreditCard, WalletCards } from "lucide-react";
 
 export default function SettingsTabs() {
   const pathname = usePathname();
@@ -11,10 +11,11 @@ export default function SettingsTabs() {
     { name: "Mailboxes", href: "/settings/email", icon: Mail },
     { name: "Team Hub", href: "/settings/team", icon: Users },
     { name: "Subscription", href: "/settings/billing", icon: CreditCard },
+    { name: "Payments", href: "/settings/payments", icon: WalletCards },
   ];
 
   return (
-    <div className="flex border-b border-zinc-200 dark:border-zinc-800 gap-8 pb-4">
+    <div className="flex overflow-x-auto border-b border-zinc-200 dark:border-zinc-800 gap-8 pb-4">
       {tabs.map((tab) => {
         const isActive = pathname === tab.href;
         return (

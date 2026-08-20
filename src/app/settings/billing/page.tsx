@@ -2,7 +2,8 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { CreditCard, CheckCircle2, Loader2, ExternalLink, Sparkles } from "lucide-react";
+import { CreditCard, CheckCircle2, Loader2, ExternalLink } from "lucide-react";
+import type { PublicPricingPlan } from "@/lib/pricing";
 
 const PLAN_INFO: Record<string, { name: string; price: string; seats: number }> = {
   free: { name: "Free", price: "$0", seats: 1 },
@@ -17,11 +18,16 @@ function BillingSettings() {
   const [status, setStatus] = useState<string>("free");
   const [endDate, setEndDate] = useState<string | null>(null);
   const [plan, setPlan] = useState<string>("free");
-  const [activeMembers, setActiveMembers] = useState(0);
+  const [plans, setPlans] = useState<PublicPricingPlan[]>([]);
   const success = searchParams.get("success");
   const canceled = searchParams.get("canceled");
 
   useEffect(() => {
+    fetch("/api/pricing")
+      .then((r) => r.json())
+      .then((data) => setPlans(data.plans || []))
+      .catch(() => setPlans([]));
+
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((data) => {
@@ -66,7 +72,15 @@ function BillingSettings() {
   }
 
   const isActive = status === "active" || status === "trialing";
-  const currentPlan = PLAN_INFO[plan] || PLAN_INFO.free;
+  const dynamicCurrentPlan = plans.find((item) => item.slug === plan);
+  const currentPlan = dynamicCurrentPlan
+    ? {
+        name: dynamicCurrentPlan.name,
+        price: dynamicCurrentPlan.monthlyPriceCents === null ? "Custom" : `$${Math.round(dynamicCurrentPlan.monthlyPriceCents / 100)}`,
+        seats: dynamicCurrentPlan.seatLimit ?? -1,
+      }
+    : PLAN_INFO[plan] || PLAN_INFO.free;
+  const upgradePlans = plans.length ? plans : [];
 
   return (
     <div className="space-y-12 sm:space-y-16 max-w-7xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
@@ -95,9 +109,9 @@ function BillingSettings() {
       </div>
 
       <div className="max-w-xl">
-        <div className="p-10 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-sm">
+          <div className="p-6 sm:p-10 rounded-[28px] sm:rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-sm">
           <div className="space-y-8">
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col gap-6 sm:flex-row sm:justify-between sm:items-start">
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
                   <h2 className="text-2xl font-black tracking-tight">{currentPlan.name}</h2>
@@ -113,7 +127,7 @@ function BillingSettings() {
                 </div>
                 <p className="text-zinc-500 font-medium text-sm">
                   {isActive
-                    ? `${currentPlan.seats > 0 ? `${currentPlan.seats} seats` : "Custom seats"} — all features included.`
+                    ? `${currentPlan.seats > 0 ? `${currentPlan.seats} seats` : "Custom seats"} - all features included.`
                     : plan === "free"
                     ? "Free plan with 1 seat. Upgrade to unlock more."
                     : "Your subscription has ended."}
@@ -171,64 +185,49 @@ function BillingSettings() {
         <div className="space-y-8">
           <h2 className="text-2xl font-black tracking-tight">Upgrade your plan</h2>
           <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                slug: "personal",
-                name: "Personal",
-                price: "$79",
-                seats: "2 seats",
-                desc: "For small teams getting started",
-                features: ["All features", "2 team members", "Basic activity log"],
-                best: false,
-              },
-              {
-                slug: "business",
-                name: "Business",
-                price: "$149",
-                seats: "5 seats",
-                desc: "For growing teams scaling up",
-                features: ["All features", "5 team members", "Activity dashboard"],
-                best: true,
-              },
-              {
-                slug: "enterprise",
-                name: "Enterprise",
-                price: "Custom",
-                seats: "Unlimited seats",
-                desc: "For large organizations",
-                features: ["Everything", "Custom seats", "Dedicated support"],
-                best: false,
-              },
-            ].map((p) => (
+            {upgradePlans.map((p) => {
+              const price = p.discountedMonthlyPriceCents !== p.monthlyPriceCents && p.discountedMonthlyPriceCents !== null
+                ? `$${Math.round(p.discountedMonthlyPriceCents / 100)}`
+                : p.monthlyPriceCents === null
+                ? "Custom"
+                : `$${Math.round(p.monthlyPriceCents / 100)}`;
+              return (
               <div
                 key={p.slug}
                 className={`p-8 rounded-[24px] border-2 ${
-                  p.best
+                  p.isPopular
                     ? "bg-[#012169] text-white border-[#012169]"
                     : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-white/10"
                 } shadow-sm flex flex-col`}
               >
                 <div className="space-y-4 flex-1">
                   <div className="flex items-center justify-between">
-                    <h3 className={`text-xl font-black ${p.best ? "text-white" : ""}`}>{p.name}</h3>
-                    {p.best && (
+                    <h3 className={`text-xl font-black ${p.isPopular ? "text-white" : ""}`}>{p.name}</h3>
+                    {p.isPopular && (
                       <span className="text-[8px] font-black uppercase tracking-[0.3em] bg-white/20 px-3 py-1 rounded-full">
                         Best Value
                       </span>
                     )}
                   </div>
                   <div className="flex items-end gap-1">
-                    <span className={`text-4xl font-black ${p.best ? "text-white" : ""}`}>{p.price}</span>
-                    {p.price !== "Custom" && (
-                      <span className={`font-bold mb-1 text-xs ${p.best ? "text-blue-200" : "text-zinc-400"}`}>/mo</span>
+                    <span className={`text-4xl font-black ${p.isPopular ? "text-white" : ""}`}>{price}</span>
+                    {price !== "Custom" && (
+                      <span className={`font-bold mb-1 text-xs ${p.isPopular ? "text-blue-200" : "text-zinc-400"}`}>/mo</span>
                     )}
                   </div>
-                  <p className={`text-sm font-medium ${p.best ? "text-blue-200" : "text-zinc-500"}`}>{p.seats}</p>
+                  {p.activeOffer && (
+                    <p className={`text-xs font-black uppercase tracking-wider ${p.isPopular ? "text-blue-100" : "text-[#c8102e]"}`}>
+                      {p.activeOffer.discountPercent}% off this month
+                    </p>
+                  )}
+                  <p className={`text-sm font-medium ${p.isPopular ? "text-blue-200" : "text-zinc-500"}`}>
+                    {p.seatLimit ? `${p.seatLimit} seats` : "Unlimited seats"}
+                  </p>
                   <div className="h-px bg-zinc-200/20" />
                   <ul className="space-y-3">
                     {p.features.map((f) => (
-                      <li key={f} className={`flex items-center gap-2 text-sm font-bold ${p.best ? "text-white" : "text-zinc-600"}`}>
-                        <CheckCircle2 className={`w-4 h-4 shrink-0 ${p.best ? "text-white" : "text-[#012169]"}`} /> {f}
+                      <li key={f} className={`flex items-center gap-2 text-sm font-bold ${p.isPopular ? "text-white" : "text-zinc-600"}`}>
+                        <CheckCircle2 className={`w-4 h-4 shrink-0 ${p.isPopular ? "text-white" : "text-[#012169]"}`} /> {f}
                       </li>
                     ))}
                   </ul>
@@ -243,15 +242,15 @@ function BillingSettings() {
                   }}
                   disabled={loading}
                   className={`w-full mt-8 py-4 rounded-[16px] font-black uppercase tracking-[0.2em] text-[10px] transition-all disabled:opacity-50 ${
-                    p.best
+                    p.isPopular
                       ? "bg-white text-[#012169] hover:scale-[1.02]"
                       : "bg-[#012169] text-white hover:bg-[#012169]/90"
                   }`}
                 >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : p.slug === "enterprise" ? "Contact Sales" : "Upgrade"}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : p.slug === "enterprise" ? "Contact Sales" : "Upgrade"}
                 </button>
               </div>
-            ))}
+            )})}
           </div>
         </div>
       )}

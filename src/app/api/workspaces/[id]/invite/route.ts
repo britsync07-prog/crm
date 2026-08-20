@@ -43,6 +43,6 @@ export async function POST(
         return NextResponse.json(invite);
     } catch (error: any) {
         console.error("POST /api/workspaces/[id]/invite error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

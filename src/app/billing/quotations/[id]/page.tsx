@@ -4,6 +4,8 @@ import { getQuotation } from "@/lib/britledger/quotations";
 import { getClient } from "@/lib/britledger/clients";
 import QuotationDetailClient from "./QuotationDetailClient";
 
+export const dynamic = "force-dynamic";
+
 interface Props {
   params: Promise<{ id: string }>;
 }
@@ -26,12 +28,12 @@ export default async function QuotationDetailPage(props: Props) {
       }
     }
 
-  } catch (e: any) {
-    const errorMsg = e?.response?.data?.message || e?.message || "Failed to load quotation";
+  } catch (e) {
+    if (process.env.NODE_ENV === "development") console.error("[QuotationDetail] Failed to load quotation:", e);
     return (
       <div className="text-center py-32 space-y-4">
         <AlertTriangle className="w-10 h-10 mx-auto text-amber-500" />
-        <p className="text-zinc-500 font-medium italic">{errorMsg}</p>
+        <p className="text-zinc-500 font-medium italic">Failed to load quotation.</p>
         <Link href="/billing/quotations" className="text-[10px] font-black uppercase text-[#012169] tracking-[0.2em]">← Back to Quotations</Link>
       </div>
     );

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Mail, Users, CreditCard } from "lucide-react";
+import { Mail, Users, CreditCard, WalletCards } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function SettingsTabBar() {
@@ -23,6 +23,11 @@ export default function SettingsTabBar() {
       name: "Subscription",
       href: "/settings/billing",
       icon: CreditCard,
+    },
+    {
+      name: "Payments",
+      href: "/settings/payments",
+      icon: WalletCards,
     },
   ];
 

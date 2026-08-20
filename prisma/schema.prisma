@@ -694,3 +694,35 @@ model SystemEmailProfile {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
+
+model PricingPlan {
+  id                String   @id @default(cuid())
+  slug              String   @unique
+  name              String
+  description       String   @default("")
+  monthlyPriceCents Int?
+  seatLimit         Int?
+  featuresJson      String   @default("[]")
+  stripePriceId     String?
+  isActive          Boolean  @default(true)
+  isPopular         Boolean  @default(false)
+  sortOrder         Int      @default(0)
+  trialDays         Int      @default(14)
+  ctaLabel          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model PricingOffer {
+  id                String   @id @default(cuid())
+  title             String
+  description       String   @default("")
+  discountPercent   Int
+  couponCode        String?
+  startsAt          DateTime
+  endsAt            DateTime
+  isActive          Boolean  @default(true)
+  appliesToPlanSlug String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}

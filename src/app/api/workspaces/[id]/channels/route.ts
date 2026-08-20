@@ -46,6 +46,6 @@ export async function POST(
         return NextResponse.json(channel);
     } catch (error: any) {
         console.error("POST /api/workspaces/[id]/channels error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

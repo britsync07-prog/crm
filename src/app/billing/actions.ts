@@ -5,6 +5,7 @@ import { cancelInvoice, createInvoice, recordPayment, sendInvoice } from "@/lib/
 import { createClient, listClients } from "@/lib/britledger/clients";
 import { convertQuotationToInvoice, createQuotation, sendQuotation } from "@/lib/britledger/quotations";
 import { createPaymentSession } from "@/lib/britledger/payments";
+import { updatePaymentSettings } from "@/lib/britledger/payments";
 import { invalidateCache } from "@/lib/britledger/client";
 import type { InvoiceCreate, PaymentCreate, ClientCreate, QuotationCreate, SendInvoiceRequest, PaymentSessionCreate } from "@/lib/britledger/types";
 
@@ -19,7 +20,10 @@ export async function listClientsAction(params?: { page?: number; page_size?: nu
 
 export async function createInvoiceAction(data: InvoiceCreate) {
   try {
-    const res = await createInvoice(data);
+    const res = await createInvoice({
+      ...data,
+      advance_payment: Math.min(Math.max(Number(data.advance_payment || 0), 0), Number(data.total_amount || 0)),
+    });
     invalidateCache("/invoices");
     revalidatePath("/billing");
     revalidatePath("/billing/invoices");
@@ -88,7 +92,10 @@ export async function createQuotationAction(data: QuotationCreate) {
 
 export async function recordPaymentAction(id: string, data: PaymentCreate) {
   try {
-    const res = await recordPayment(id, data);
+    const res = await recordPayment(id, {
+      ...data,
+      amount: Math.max(Number(data.amount || 0), 0),
+    });
     invalidateCache("/invoices");
     revalidatePath(`/billing/invoices/${id}`);
     revalidatePath("/billing/invoices");
@@ -118,5 +125,16 @@ export async function createPaymentSessionAction(data: PaymentSessionCreate) {
     return { success: true, data: res };
   } catch (err: any) {
     return { success: false, error: err?.response?.data?.message || err?.response?.data?.detail || err?.message || "Failed to create payment session" };
+  }
+}
+
+export async function updatePaymentSettingsAction(data: Partial<import("@/lib/britledger/types").PaymentSettings>) {
+  try {
+    const res = await updatePaymentSettings(data);
+    revalidatePath("/settings/payments");
+    revalidatePath("/billing");
+    return { success: true, data: res };
+  } catch (err: any) {
+    return { success: false, error: err?.response?.data?.message || err?.response?.data?.detail || err?.message || "Failed to update payment settings" };
   }
 }

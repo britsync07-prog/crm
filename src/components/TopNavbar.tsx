@@ -9,11 +9,12 @@ export default function TopNavbar({ session }: { session: any }) {
   const pathname = usePathname();
 
   // Define marketing/public route prefixes
-  const isMarketingRoute = 
-    pathname === "/landing" || 
-    pathname === "/login" || 
-    pathname === "/signup" || 
-    pathname.startsWith("/f/") || 
+  const isMarketingRoute =
+    pathname === "/landing" ||
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/pricing" ||
+    pathname.startsWith("/f/") ||
     pathname.startsWith("/meet/") || 
     pathname.startsWith("/features/") || 
     pathname.startsWith("/solutions/") || 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { canAccessTask } from "@/lib/task-access";
 
 export async function POST(
   _request: Request,
@@ -16,6 +17,10 @@ export async function POST(
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) {
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  }
+
+  if (!(await canAccessTask(id, session.id))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   await prisma.task.update({

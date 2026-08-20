@@ -6,6 +6,8 @@ import { formatCurrency, formatDate } from "@/lib/britledger/utils";
 import { FileSignature, Plus, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 interface Props {
   searchParams: Promise<{
     status?: string;
@@ -50,21 +52,22 @@ export default async function QuotationList(props: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-black uppercase italic tracking-tight">Quotations</h2>
           <p className="text-zinc-500 text-sm mt-1">{total} quotation{total !== 1 ? "s" : ""}</p>
         </div>
         <Link
           href="/billing/quotations/new"
-          className="flex items-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-black px-6 py-3 text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-black px-5 py-3 text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
         >
           <Plus className="w-4 h-4" /> New Quotation
         </Link>
       </div>
 
-      <div className="overflow-hidden rounded-[32px] border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-950 shadow-sm">
-        <table className="w-full text-left text-sm">
+      <div className="overflow-hidden rounded-[24px] sm:rounded-[32px] border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-950 shadow-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[860px] text-left text-sm">
           <thead className="border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5 text-zinc-500">
             <tr>
               <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest">Reference</th>
@@ -100,6 +103,7 @@ export default async function QuotationList(props: Props) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

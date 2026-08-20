@@ -12,6 +12,16 @@ export async function GET(
 
         const { id: workspaceId } = await params;
 
+        const workspace = await prisma.workspace.findUnique({
+            where: { id: workspaceId },
+            include: { users: { where: { userId: session.id } } }
+        });
+
+        if (!workspace) return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+        if (workspace.ownerId !== session.id && workspace.users.length === 0) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+
         const roles = await prisma.workspaceRole.findMany({
             where: { workspaceId },
             orderBy: { createdAt: "asc" }
@@ -20,7 +30,7 @@ export async function GET(
         return NextResponse.json(roles);
     } catch (error: any) {
         console.error("GET /api/workspaces/[id]/roles error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
 
@@ -67,6 +77,6 @@ export async function POST(
         return NextResponse.json(role);
     } catch (error: any) {
         console.error("POST /api/workspaces/[id]/roles error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

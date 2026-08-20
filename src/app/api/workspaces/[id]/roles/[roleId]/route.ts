@@ -32,6 +32,15 @@ export async function PATCH(
             return new NextResponse("Forbidden", { status: 403 });
         }
 
+        const role = await prisma.workspaceRole.findFirst({
+            where: { id: roleId, workspaceId },
+            select: { id: true },
+        });
+
+        if (!role) {
+            return new NextResponse("Role not found", { status: 404 });
+        }
+
         // Role Edit Payload
         const body = await request.json();
         const { name, color, allowedChannelIds } = body;
@@ -43,8 +52,17 @@ export async function PATCH(
 
         // Prisma 7 M:N relation setting requires set: [{id: ...}]
         if (Array.isArray(allowedChannelIds)) {
+            const uniqueChannelIds = Array.from(new Set(allowedChannelIds.filter((id: unknown) => typeof id === "string")));
+            const matchingChannels = await prisma.channel.count({
+                where: { id: { in: uniqueChannelIds }, workspaceId },
+            });
+
+            if (matchingChannels !== uniqueChannelIds.length) {
+                return new NextResponse("One or more channels do not belong to this workspace", { status: 400 });
+            }
+
             updateData.allowedChannels = {
-                set: allowedChannelIds.map((id: string) => ({ id }))
+                set: uniqueChannelIds.map((id) => ({ id }))
             };
         }
 
@@ -90,6 +108,15 @@ export async function DELETE(
 
         if (!isAdmin) {
             return new NextResponse("Forbidden", { status: 403 });
+        }
+
+        const role = await prisma.workspaceRole.findFirst({
+            where: { id: roleId, workspaceId },
+            select: { id: true },
+        });
+
+        if (!role) {
+            return new NextResponse("Role not found", { status: 404 });
         }
 
         await prisma.workspaceRole.delete({

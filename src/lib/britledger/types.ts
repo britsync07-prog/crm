@@ -13,7 +13,7 @@ export interface BritPaginatedResponse<T> {
   total_pages: number;
 }
 
-export type InvoiceStatus = "Draft" | "Sent" | "Paid" | "Overdue" | "Cancelled";
+export type InvoiceStatus = "Draft" | "Sent" | "Paid" | "Partial" | "Overdue" | "Cancelled" | "DRAFT" | "SENT" | "PAID" | "PARTIAL" | "OVERDUE" | "CANCELLED";
 
 export interface InvoiceItem {
   description: string;
@@ -34,6 +34,7 @@ export interface Invoice {
   total_amount: number;
   tax_amount: number;
   subtotal_amount: number;
+  advance_payment?: number;
   currency: string;
   items?: InvoiceItem[];
   notes?: string;
@@ -47,6 +48,7 @@ export interface InvoiceCreate {
   total_amount: number;
   subtotal?: number;
   tax?: number;
+  advance_payment?: number;
   currency?: string;
   items?: InvoiceItem[];
   notes?: string;
@@ -60,6 +62,7 @@ export interface InvoiceUpdate {
   total_amount?: number;
   subtotal?: number;
   tax?: number;
+  advance_payment?: number;
   currency?: string;
   items?: InvoiceItem[];
   notes?: string;
@@ -70,10 +73,15 @@ export interface SendInvoiceRequest {
   to_email: string;
   subject?: string;
   personal_message?: string;
+  include_payment_link?: boolean;
+  status?: InvoiceStatus;
 }
 
 export interface PaymentCreate {
   amount: number;
+  currency?: string;
+  payment_method?: string;
+  notes?: string;
 }
 
 export interface Client {

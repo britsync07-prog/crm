@@ -16,7 +16,6 @@ interface InvoiceFormProps {
 
 export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) {
   const [clientId, setClientId] = useState("");
-  const [clientName, setClientName] = useState("");
   const [docNumber, setDocNumber] = useState(
     type === "invoice" ? generateInvoiceNumber() : generateQuotationNumber()
   );
@@ -30,6 +29,8 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
     { description: "", quantity: 1, rate: 0, amount: 0 },
   ]);
   const [taxRate, setTaxRate] = useState(20);
+  const [discount, setDiscount] = useState(0);
+  const [advancePayment, setAdvancePayment] = useState(0);
   const [notes, setNotes] = useState("");
   const [currency, setCurrency] = useState("GBP");
 
@@ -40,7 +41,9 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
 
   const subtotal = calculateSubtotal(items);
   const tax = calculateTax(subtotal, taxRate);
-  const total = calculateTotal(subtotal, tax);
+  const total = calculateTotal(subtotal, tax, discount);
+  const normalizedAdvancePayment = type === "invoice" ? Math.min(Math.max(advancePayment, 0), total) : 0;
+  const balanceDue = Math.max(0, total - normalizedAdvancePayment);
 
   function updateItem(index: number, field: keyof InvoiceItem, value: string | number) {
     const updated = items.map((item, i) => {
@@ -71,7 +74,6 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
       const res = await createClientAction({ name: newClientName, email: newClientEmail || undefined });
       if (res.success && res.data?.id) {
         setClientId(res.data.id);
-        setClientName(res.data.name ?? newClientName);
         setShowNewClient(false);
         setNewClientName("");
         setNewClientEmail("");
@@ -96,8 +98,19 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
       total_amount: total,
       subtotal,
       tax,
+      advance_payment: normalizedAdvancePayment,
       currency,
-      items: items.filter((i) => i.description),
+      items: items
+        .filter((i) => i.description)
+        .map((item) => ({
+          description: item.description,
+          quantity: item.quantity,
+          rate: item.rate ?? 0,
+          unit_price: item.rate ?? 0,
+          amount: item.amount ?? item.quantity * (item.rate ?? 0),
+          total: item.amount ?? item.quantity * (item.rate ?? 0),
+          tax_rate: taxRate,
+        })),
       notes: notes || undefined,
     };
     await onSave(payload);
@@ -110,7 +123,7 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
           <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Client</label>
           <ClientSelect
             value={clientId}
-            onChange={(id, name) => { setClientId(id); setClientName(name); }}
+            onChange={(id) => setClientId(id)}
             onAddNew={() => setShowNewClient(true)}
           />
         </div>
@@ -169,8 +182,9 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
 
       <div className="space-y-2">
         <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Line Items</label>
-        <div className="overflow-hidden rounded-[32px] border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-950">
-          <table className="w-full text-sm">
+        <div className="overflow-hidden rounded-[24px] sm:rounded-[32px] border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-950">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-sm">
             <thead className="border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5">
               <tr>
                 <th className="px-6 py-3 text-left font-black text-[10px] uppercase tracking-widest text-zinc-500">Description</th>
@@ -222,6 +236,7 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
               ))}
             </tbody>
           </table>
+          </div>
           <button type="button" onClick={addItem} className="w-full px-6 py-3 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#012169] hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors border-t border-zinc-100 dark:border-white/5">
             <Plus className="w-3 h-3" /> Add Line Item
           </button>
@@ -229,7 +244,7 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
       </div>
 
       <div className="flex justify-end">
-        <div className="w-72 space-y-3 p-6 rounded-[32px] bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10">
+        <div className="w-full sm:w-80 space-y-3 p-5 sm:p-6 rounded-[24px] sm:rounded-[32px] bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10">
           <div className="flex justify-between text-sm">
             <span className="font-bold text-zinc-500">Subtotal</span>
             <span className="font-black text-zinc-900 dark:text-white">{formatCurrency(subtotal, currency)}</span>
@@ -238,10 +253,49 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
             <span className="font-bold text-zinc-500">VAT ({taxRate}%)</span>
             <span className="font-black text-zinc-900 dark:text-white">{formatCurrency(tax, currency)}</span>
           </div>
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <label className="font-bold text-zinc-500" htmlFor="invoice-discount">Discount</label>
+            <input
+              id="invoice-discount"
+              type="number"
+              min="0"
+              step="0.01"
+              value={discount}
+              onChange={(e) => setDiscount(Math.max(0, Number(e.target.value) || 0))}
+              className="w-28 px-3 py-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 text-sm font-bold text-right focus:outline-none focus:ring-2 focus:ring-[#012169]"
+            />
+          </div>
+          {type === "invoice" && (
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <label className="font-bold text-zinc-500" htmlFor="invoice-advance">Advance Paid</label>
+              <input
+                id="invoice-advance"
+                type="number"
+                min="0"
+                max={total}
+                step="0.01"
+                value={advancePayment}
+                onChange={(e) => setAdvancePayment(Math.max(0, Number(e.target.value) || 0))}
+                className="w-28 px-3 py-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 text-sm font-bold text-right focus:outline-none focus:ring-2 focus:ring-[#012169]"
+              />
+            </div>
+          )}
           <div className="pt-3 border-t border-zinc-200 dark:border-white/10 flex justify-between text-base">
             <span className="font-black uppercase tracking-wider">Total</span>
             <span className="font-black text-[#012169] dark:text-blue-300">{formatCurrency(total, currency)}</span>
           </div>
+          {type === "invoice" && normalizedAdvancePayment > 0 && (
+            <div className="pt-3 border-t border-zinc-200 dark:border-white/10 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="font-bold text-zinc-500">Advance Paid</span>
+                <span className="font-black text-green-600">-{formatCurrency(normalizedAdvancePayment, currency)}</span>
+              </div>
+              <div className="flex justify-between text-base">
+                <span className="font-black uppercase tracking-wider">Balance Due</span>
+                <span className="font-black text-[#012169] dark:text-blue-300">{formatCurrency(balanceDue, currency)}</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -259,7 +313,7 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
         <button
           type="submit"
           disabled={!clientId || saving}
-          className="flex items-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-black px-8 py-3 text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl disabled:opacity-40"
+          className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-black px-8 py-3 text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl disabled:opacity-40"
         >
           {saving ? (
             <span className="flex items-center gap-2">

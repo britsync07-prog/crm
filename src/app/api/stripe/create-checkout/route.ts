@@ -2,11 +2,7 @@ import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-
-const PLAN_CONFIG: Record<string, { name: string; amount: number; seats: number }> = {
-  personal: { name: "Personal", amount: 7900, seats: 2 },
-  business: { name: "Business", amount: 14900, seats: 5 },
-};
+import { getCheckoutPlanConfig } from "@/lib/pricing";
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -62,7 +58,7 @@ export async function POST(req: Request) {
   }
 
   const { plan = "business" } = await req.json().catch(() => ({ plan: "business" }));
-  const config = PLAN_CONFIG[plan as string];
+  const config = await getCheckoutPlanConfig(plan as string);
   if (!config) {
     return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
   }
@@ -70,18 +66,36 @@ export async function POST(req: Request) {
   const org = member.organization;
 
   try {
+    const discounts = config.activeOffer
+      ? [{
+          coupon: (await stripe.coupons.create({
+            percent_off: config.activeOffer.discountPercent,
+            duration: "repeating",
+            duration_in_months: 1,
+            name: config.activeOffer.title,
+          })).id,
+        }]
+      : undefined;
+
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "subscription",
       payment_method_types: ["card"],
-      line_items: [{
-        price_data: {
-          currency: "usd",
-          product_data: { name: config.name, description: `${config.seats} seats - ${config.name} Plan` },
-          unit_amount: config.amount,
-          recurring: { interval: "month" },
+      line_items: [
+        {
+          ...(config.stripePriceId
+            ? { price: config.stripePriceId }
+            : {
+                price_data: {
+                  currency: "usd",
+                  product_data: { name: config.name, description: `${config.seats} seats - ${config.name} Plan` },
+                  unit_amount: config.amount,
+                  recurring: { interval: "month" },
+                },
+              }),
+          quantity: 1,
         },
-        quantity: 1,
-      }],
+      ],
+      discounts,
       customer_email: org.stripeCustomerId
         ? undefined
         : (user.email ?? undefined),
@@ -89,8 +103,14 @@ export async function POST(req: Request) {
       success_url: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/settings/billing?success=true`,
       cancel_url: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/settings/billing?canceled=true`,
       subscription_data: {
-        trial_period_days: 14,
-        metadata: { organizationId: org.id, plan: plan, seats: config.seats },
+        trial_period_days: config.trialDays > 0 ? config.trialDays : undefined,
+        metadata: {
+          organizationId: org.id,
+          plan,
+          seats: config.seats,
+          offerId: config.activeOffer?.id || "",
+          discountPercent: config.activeOffer?.discountPercent || "",
+        },
       },
     });
 

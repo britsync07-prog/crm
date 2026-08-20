@@ -7,6 +7,7 @@ import { runLeadScoringAgent, analyzeSentimentReal, runCustomerSummaryAgent, run
 import { triggerAutomation } from "@/lib/automation-engine";
 import { getSession } from "@/lib/auth";
 import { LEAD_STAGES, type LeadStage, ensureCustomerFromLead, transitionLeadStage } from "@/lib/crm-lifecycle";
+import { canAccessTask } from "@/lib/task-access";
 
 export async function createCustomer(formData: FormData) {
   const session = await getSession();
@@ -198,6 +199,10 @@ export async function toggleTaskStatus(taskId: string, currentStatus: string) {
   if (!session) throw new Error("Unauthorized");
 
   const newStatus = currentStatus === "Done" || currentStatus === "Completed" ? "Todo" : "Done";
+
+  if (!(await canAccessTask(taskId, session.id))) {
+    throw new Error("Forbidden");
+  }
 
   const task = await prisma.task.update({
     where: { id: taskId },

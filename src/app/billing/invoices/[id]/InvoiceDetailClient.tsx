@@ -17,9 +17,11 @@ interface ClientProps {
 
 export default function InvoiceDetailClient({ invoice, client, id }: ClientProps) {
   const router = useRouter();
+  const advancePayment = Math.max(Number(invoice.advance_payment || 0), 0);
+  const balanceDue = Math.max(Number(invoice.total_amount || 0) - advancePayment, 0);
   const [showPay, setShowPay] = useState(false);
   const [showSend, setShowSend] = useState(false);
-  const [payAmount, setPayAmount] = useState(invoice.total_amount);
+  const [payAmount, setPayAmount] = useState(balanceDue || invoice.total_amount);
   const [sendEmail, setSendEmail] = useState(client?.email || "");
   const [sendSubject, setSendSubject] = useState(`Invoice ${invoice.invoice_number}`);
   const [sendMessage, setSendMessage] = useState("");
@@ -31,7 +33,7 @@ export default function InvoiceDetailClient({ invoice, client, id }: ClientProps
     setActionLoading(true);
     setActionError(null);
     try {
-      const res = await recordPaymentAction(id, { amount: payAmount });
+      const res = await recordPaymentAction(id, { amount: payAmount, currency: invoice.currency });
       if (res.success) {
         setNotice("Payment recorded");
         setShowPay(false);
@@ -54,6 +56,8 @@ export default function InvoiceDetailClient({ invoice, client, id }: ClientProps
         to_email: sendEmail,
         subject: sendSubject || undefined,
         personal_message: sendMessage || undefined,
+        include_payment_link: invStatus !== "Paid",
+        status: invStatus === "Paid" ? "PAID" : "SENT",
       });
       if (res.success) {
         setNotice("Invoice sent");
@@ -88,20 +92,20 @@ export default function InvoiceDetailClient({ invoice, client, id }: ClientProps
 
   const invStatus = normalizeStatus(invoice.status);
   const canSend = invStatus === "Draft";
-  const canRecordPayment = invStatus === "Sent" || invStatus === "Overdue";
-  const canCancel = invStatus === "Draft" || invStatus === "Sent" || invStatus === "Overdue";
+  const canRecordPayment = invStatus === "Sent" || invStatus === "Overdue" || invStatus === "Partial";
+  const canCancel = invStatus === "Draft" || invStatus === "Sent" || invStatus === "Overdue" || invStatus === "Partial";
 
   return (
     <>
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-4 mb-2">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-3 mb-2">
             <h2 className="text-2xl font-black uppercase italic tracking-tight">#{invoice.invoice_number}</h2>
             <StatusBadge status={invoice.status} />
           </div>
           <p className="text-zinc-500 font-medium">{client?.name || invoice.client_id}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {canSend && (
             <button onClick={() => setShowSend(true)} disabled={actionLoading} className="flex items-center gap-2 rounded-xl bg-[#012169] text-white px-5 py-3 text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg disabled:opacity-40">
               <Send className="w-3.5 h-3.5" /> Send
@@ -127,20 +131,20 @@ export default function InvoiceDetailClient({ invoice, client, id }: ClientProps
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-zinc-950 rounded-[32px] border border-zinc-200 dark:border-white/10 shadow-sm p-8 space-y-6">
-            <div className="grid grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-zinc-950 rounded-[24px] sm:rounded-[32px] border border-zinc-200 dark:border-white/10 shadow-sm p-5 sm:p-8 space-y-6">
+            <div className="grid gap-6 sm:grid-cols-2">
               <div>
                 <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Client</p>
                 <p className="font-black text-zinc-900 dark:text-white mt-1">{client?.name || invoice.client_id}</p>
                 {client?.email && <p className="text-sm text-zinc-500 mt-0.5">{client.email}</p>}
                 {client?.company_name && <p className="text-sm text-zinc-500 mt-0.5">{client.company_name}</p>}
               </div>
-              <div className="text-right">
+              <div className="sm:text-right">
                 <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Amount</p>
                 <p className="text-3xl font-black text-zinc-900 dark:text-white mt-1">{formatCurrency(invoice.total_amount, invoice.currency)}</p>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid gap-6 sm:grid-cols-3">
               <div>
                 <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Issue Date</p>
                 <p className="font-bold text-zinc-900 dark:text-white mt-1">{formatDate(invoice.issue_date)}</p>
@@ -157,8 +161,9 @@ export default function InvoiceDetailClient({ invoice, client, id }: ClientProps
           </div>
 
           {(invoice.items && invoice.items.length > 0) && (
-            <div className="bg-white dark:bg-zinc-950 rounded-[32px] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="bg-white dark:bg-zinc-950 rounded-[24px] sm:rounded-[32px] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[680px] text-sm">
                 <thead className="border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5">
                   <tr>
                     <th className="px-8 py-4 text-left font-black text-[10px] uppercase tracking-widest text-zinc-500">Description</th>
@@ -190,8 +195,21 @@ export default function InvoiceDetailClient({ invoice, client, id }: ClientProps
                     <td colSpan={3} className="px-8 py-4 text-right font-black text-zinc-900 dark:text-white uppercase">Total</td>
                     <td className="px-8 py-4 text-right font-black text-[#012169] dark:text-blue-300 text-lg">{formatCurrency(invoice.total_amount, invoice.currency)}</td>
                   </tr>
+                  {advancePayment > 0 && (
+                    <>
+                      <tr>
+                        <td colSpan={3} className="px-8 py-2 text-right font-bold text-zinc-500">Advance Paid</td>
+                        <td className="px-8 py-2 text-right font-black text-green-600">-{formatCurrency(advancePayment, invoice.currency)}</td>
+                      </tr>
+                      <tr>
+                        <td colSpan={3} className="px-8 py-4 text-right font-black text-zinc-900 dark:text-white uppercase">Balance Due</td>
+                        <td className="px-8 py-4 text-right font-black text-[#012169] dark:text-blue-300 text-lg">{formatCurrency(balanceDue, invoice.currency)}</td>
+                      </tr>
+                    </>
+                  )}
                 </tfoot>
               </table>
+              </div>
             </div>
           )}
 
@@ -251,7 +269,8 @@ export default function InvoiceDetailClient({ invoice, client, id }: ClientProps
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Amount</label>
-            <input type="number" value={payAmount} onChange={(e) => setPayAmount(Number(e.target.value))} step="0.01" className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#012169]" />
+            <input type="number" value={payAmount} onChange={(e) => setPayAmount(Number(e.target.value))} min="0" max={balanceDue || invoice.total_amount} step="0.01" className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#012169]" />
+            <p className="text-xs font-bold text-zinc-500">Balance due: {formatCurrency(balanceDue, invoice.currency)}</p>
           </div>
           <button onClick={handleRecordPayment} disabled={!payAmount || actionLoading} className="w-full rounded-xl bg-green-600 text-white py-3 text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-40">
             {actionLoading ? "Recording..." : "Record Payment"}

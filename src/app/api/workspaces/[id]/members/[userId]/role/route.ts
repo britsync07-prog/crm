@@ -55,7 +55,10 @@ export async function PATCH(
 
         return NextResponse.json(updatedMembership);
     } catch (error: any) {
+        if (error.code === "P2025") {
+            return NextResponse.json({ error: "User is not a member of this workspace" }, { status: 404 });
+        }
         console.error("PATCH /api/workspaces/[id]/members/[userId]/role error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

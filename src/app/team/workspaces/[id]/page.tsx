@@ -50,7 +50,8 @@ export default async function WorkspacePage({ params }: Props) {
 
     if (!workspace) notFound();
 
-    const isMember = (workspace as any).users.some((m: any) => m.userId === session.id);
+    const currentMember = (workspace as any).users.find((m: any) => m.userId === session.id);
+    const isMember = Boolean(currentMember);
     const isOwner = workspace.ownerId === session.id;
     if (!isMember && !isOwner) redirect("/team/workspaces");
 
@@ -61,7 +62,19 @@ export default async function WorkspacePage({ params }: Props) {
         (workspace as any).channels.push(defaultChannel);
     }
 
-    const defaultChannelId = (workspace as any).channels[0]?.id || "";
+    const isAdmin = isOwner || currentMember?.role === "ADMIN";
+    const currentRoleIds = new Set(
+        currentMember?.user?.customRoles
+            ?.filter((ur: any) => ur.role?.workspaceId === workspace.id)
+            ?.map((ur: any) => ur.role.id) || []
+    );
+    const visibleChannels = (workspace as any).channels.filter((channel: any) => (
+        !channel.isPrivate ||
+        isAdmin ||
+        channel.allowedRoles?.some((role: any) => currentRoleIds.has(role.id))
+    ));
+
+    const defaultChannelId = visibleChannels[0]?.id || "";
 
     const initialMessages = defaultChannelId ? await prisma.workspaceMessage.findMany({
         where: { channelId: defaultChannelId },
@@ -97,7 +110,7 @@ export default async function WorkspacePage({ params }: Props) {
                 workspaceId={workspace.id}
                 workspaceName={workspace.name}
                 workspaceDescription={(workspace as any).description}
-                channels={(workspace as any).channels.map((c: any) => ({
+                channels={visibleChannels.map((c: any) => ({
                     id: c.id,
                     name: c.name,
                     isPrivate: c.isPrivate,
@@ -112,7 +125,7 @@ export default async function WorkspacePage({ params }: Props) {
                 members={memberData}
                 customRoles={(workspace as any).roles}
                 isOwner={isOwner}
-                isAdmin={isOwner || (workspace as any).users.some((u: any) => u.userId === session.id && u.role === "ADMIN")}
+                isAdmin={isAdmin}
             />
         </div>
     );

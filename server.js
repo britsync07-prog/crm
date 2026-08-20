@@ -66,6 +66,43 @@ const reminderIntervalMs = Math.max(30, Number(process.env.REMINDER_WORKER_SECON
 const autoReminderEnabled = process.env.AUTO_REMINDER_WORKER !== "false";
 const outreachReplyIntervalMs = Math.max(60, Number(process.env.OUTREACH_REPLY_WORKER_SECONDS || 180)) * 1000;
 const autoOutreachReplyEnabled = process.env.AUTO_OUTREACH_REPLY_WORKER !== "false";
+const internalRequestHeaders = process.env.INTERNAL_CRON_SECRET
+    ? { "x-internal-cron-secret": process.env.INTERNAL_CRON_SECRET }
+    : process.env.GLOBAL_API_KEY
+        ? { "x-api-key": process.env.GLOBAL_API_KEY }
+        : {};
+const allowedSocketOrigins = (process.env.SOCKET_ALLOWED_ORIGINS || process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_API_URL || `http://localhost:${port}`)
+    .split(",")
+    .map(origin => origin.trim())
+    .filter(Boolean);
+
+function parseCookieHeader(cookieHeader) {
+    return String(cookieHeader || "")
+        .split(";")
+        .map(part => part.trim())
+        .filter(Boolean)
+        .reduce((cookies, part) => {
+            const eq = part.indexOf("=");
+            if (eq === -1) return cookies;
+            cookies[decodeURIComponent(part.slice(0, eq))] = decodeURIComponent(part.slice(eq + 1));
+            return cookies;
+        }, {});
+}
+
+async function verifySocketSession(socket) {
+    const sessionToken = parseCookieHeader(socket.handshake.headers.cookie).session;
+    if (!sessionToken || !process.env.JWT_SECRET) return null;
+
+    try {
+        const { jwtVerify } = await import("jose");
+        const key = new TextEncoder().encode(process.env.JWT_SECRET);
+        const { payload } = await jwtVerify(sessionToken, key, { algorithms: ["HS256"] });
+        if (!payload?.id || !payload?.email) return null;
+        return payload;
+    } catch {
+        return null;
+    }
+}
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -90,22 +127,49 @@ app.prepare().then(() => {
 
     const io = new Server(httpServer, {
         cors: {
-            origin: "*",
+            origin: allowedSocketOrigins,
             methods: ["GET", "POST"],
         },
     });
 
-    io.on("connection", (socket) => {
+    io.on("connection", async (socket) => {
+        const session = await verifySocketSession(socket);
+        if (!session) {
+            socket.emit("auth:error", { message: "Authentication required." });
+            socket.disconnect(true);
+            return;
+        }
+
+        socket.data.session = session;
         console.log("[Socket.IO] Client connected:", socket.id);
 
         // --- Join a workspace room ---
-        socket.on("join-workspace", async ({ workspaceId, userId, userName }) => {
+        socket.on("join-workspace", async ({ workspaceId, userName }) => {
+            const userId = socket.data.session.id;
+            if (!workspaceId || !userId) {
+                socket.emit("presence:error", { message: "Workspace and user are required." });
+                return;
+            }
+
+            const workspace = await prisma.workspace.findUnique({
+                where: { id: workspaceId },
+                select: {
+                    ownerId: true,
+                    users: { where: { userId }, select: { id: true } },
+                },
+            });
+
+            if (!workspace || (workspace.ownerId !== userId && workspace.users.length === 0)) {
+                socket.emit("presence:error", { message: "Not authorized for this workspace." });
+                return;
+            }
+
             socket.join(`workspace:${workspaceId}`);
 
             if (!onlineUsers.has(workspaceId)) {
                 onlineUsers.set(workspaceId, new Map());
             }
-            onlineUsers.get(workspaceId).set(socket.id, { userId, name: userName });
+            onlineUsers.get(workspaceId).set(socket.id, { userId, name: userName || socket.data.session.email });
 
             // Broadcast updated presence list to entire workspace room
             const presence = Array.from(onlineUsers.get(workspaceId).values());
@@ -125,8 +189,59 @@ app.prepare().then(() => {
         });
 
         // --- Join/Leave a specific channel ---
-        socket.on("join-channel", ({ channelId }) => {
-            socket.join(`channel:${channelId}`);
+        socket.on("join-channel", async ({ channelId }) => {
+            const userId = socket.data.session.id;
+            if (!channelId || !userId) return;
+
+            try {
+                const channel = await prisma.channel.findUnique({
+                    where: { id: channelId },
+                    select: {
+                        isPrivate: true,
+                        workspaceId: true,
+                        allowedRoles: { select: { id: true } },
+                        workspace: {
+                            select: {
+                                ownerId: true,
+                                users: { where: { userId }, select: { id: true, role: true } },
+                            },
+                        },
+                    },
+                });
+
+                if (!channel) {
+                    socket.emit("chat:error", { message: "Channel not found." });
+                    return;
+                }
+
+                const membership = channel.workspace.users[0];
+                const isOwner = channel.workspace.ownerId === userId;
+                const isAdmin = isOwner || membership?.role === "ADMIN";
+
+                if (!isOwner && !membership) {
+                    socket.emit("chat:error", { message: "Not authorized for this channel." });
+                    return;
+                }
+
+                if (channel.isPrivate && !isAdmin) {
+                    const userRoles = await prisma.workspaceUserRole.findMany({
+                        where: { userId, role: { workspaceId: channel.workspaceId } },
+                        select: { roleId: true },
+                    });
+                    const userRoleIds = new Set(userRoles.map((role) => role.roleId));
+                    const hasAllowedRole = channel.allowedRoles.some((role) => userRoleIds.has(role.id));
+
+                    if (!hasAllowedRole) {
+                        socket.emit("chat:error", { message: "Not authorized for this channel." });
+                        return;
+                    }
+                }
+
+                socket.join(`channel:${channelId}`);
+            } catch (err) {
+                console.error("[Socket.IO] Error joining channel:", err);
+                socket.emit("chat:error", { message: "Failed to join channel." });
+            }
         });
 
         socket.on("leave-channel", ({ channelId }) => {
@@ -134,10 +249,54 @@ app.prepare().then(() => {
         });
 
         // --- Real-time chat message ---
-        socket.on("chat:message", async ({ workspaceId, channelId, userId, content }) => {
+        socket.on("chat:message", async ({ workspaceId, channelId, content }) => {
+            const userId = socket.data.session.id;
             if (!channelId || !userId || !content?.trim()) return;
 
             try {
+                const channel = await prisma.channel.findUnique({
+                    where: { id: channelId },
+                    select: {
+                        workspaceId: true,
+                        isPrivate: true,
+                        allowedRoles: { select: { id: true } },
+                        workspace: {
+                            select: {
+                                ownerId: true,
+                                users: { where: { userId }, select: { id: true, role: true } },
+                            },
+                        },
+                    },
+                });
+
+                if (!channel || channel.workspaceId !== workspaceId) {
+                    socket.emit("chat:error", { message: "Channel not found." });
+                    return;
+                }
+
+                const membership = channel.workspace.users[0];
+                const isOwner = channel.workspace.ownerId === userId;
+                const isAdmin = isOwner || membership?.role === "ADMIN";
+                const canPost = isOwner || Boolean(membership);
+                if (!canPost) {
+                    socket.emit("chat:error", { message: "Not authorized to post in this workspace." });
+                    return;
+                }
+
+                if (channel.isPrivate && !isAdmin) {
+                    const userRoles = await prisma.workspaceUserRole.findMany({
+                        where: { userId, role: { workspaceId: channel.workspaceId } },
+                        select: { roleId: true },
+                    });
+                    const userRoleIds = new Set(userRoles.map((role) => role.roleId));
+                    const hasAllowedRole = channel.allowedRoles.some((role) => userRoleIds.has(role.id));
+
+                    if (!hasAllowedRole) {
+                        socket.emit("chat:error", { message: "Not authorized to post in this channel." });
+                        return;
+                    }
+                }
+
                 // Persist the message
                 const saved = await prisma.workspaceMessage.create({
                     data: { channelId, userId, content: content.trim() },
@@ -201,9 +360,9 @@ app.prepare().then(() => {
 
                 const runReminderTick = async () => {
                     try {
-                        let res = await fetch(reminderUrl);
+                        let res = await fetch(reminderUrl, { headers: internalRequestHeaders });
                         if (res.status === 404) {
-                            res = await fetch(reminderFallbackUrl);
+                            res = await fetch(reminderFallbackUrl, { headers: internalRequestHeaders });
                         }
                         if (!res.ok) {
                             console.warn(`[ReminderWorker] Trigger failed: ${res.status}`);
@@ -225,9 +384,9 @@ app.prepare().then(() => {
 
                 const runOutreachReplyTick = async () => {
                     try {
-                        let res = await fetch(outreachReplyUrl);
+                        let res = await fetch(outreachReplyUrl, { headers: internalRequestHeaders });
                         if (res.status === 404) {
-                            res = await fetch(outreachReplyFallbackUrl);
+                            res = await fetch(outreachReplyFallbackUrl, { headers: internalRequestHeaders });
                         }
                         if (!res.ok) {
                             console.warn(`[OutreachReplyWorker] Trigger failed: ${res.status}`);

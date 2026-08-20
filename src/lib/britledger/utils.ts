@@ -1,5 +1,6 @@
 export function formatCurrency(amount: number, currency = "GBP"): string {
-  return new Intl.NumberFormat("en-GB", {
+  const locale = currency === "USD" ? "en-US" : currency === "EUR" ? "en-IE" : "en-GB";
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
     minimumFractionDigits: 2,
@@ -33,8 +34,8 @@ export function calculateTax(subtotal: number, taxRate: number): number {
   return subtotal * (taxRate / 100);
 }
 
-export function calculateTotal(subtotal: number, tax: number): number {
-  return subtotal + tax;
+export function calculateTotal(subtotal: number, tax: number, discount = 0): number {
+  return Math.max(0, subtotal + tax - discount);
 }
 
 export function normalizeStatus(status: string): string {

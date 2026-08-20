@@ -9,6 +9,7 @@ import { newsletterTemplate } from "@/lib/email-templates/newsletter";
 import { generateUnsubscribeSignature } from "@/lib/unsubscribe";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
+import { ensurePricingTables, getPricingOffers, getPricingPlans } from "@/lib/pricing";
 
 type SystemEmailProfileRow = {
   id: string;
@@ -624,4 +625,173 @@ export async function getNewsletterHistoryAction() {
   });
 
   return newsletters;
+}
+
+export async function getAdminPricingAction() {
+  await requireAdmin();
+  const [plans, offers] = await Promise.all([getPricingPlans(), getPricingOffers()]);
+  return { plans, offers };
+}
+
+export async function savePricingPlanAction(
+  _prevState: { success: boolean; error: string | null },
+  formData: FormData
+): Promise<{ success: boolean; error: string | null }> {
+  const session = await requireAdmin();
+  const id = String(formData.get("id") || "");
+  const slug = String(formData.get("slug") || "").trim().toLowerCase();
+  const name = String(formData.get("name") || "").trim();
+  const description = String(formData.get("description") || "").trim();
+  const monthlyPriceRaw = String(formData.get("monthlyPrice") || "").trim();
+  const seatLimitRaw = String(formData.get("seatLimit") || "").trim();
+  const sortOrder = Number(formData.get("sortOrder") || 0);
+  const trialDays = Number(formData.get("trialDays") || 0);
+  const features = String(formData.get("features") || "")
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const isActive = formData.get("isActive") === "on";
+  const isPopular = formData.get("isPopular") === "on";
+  const ctaLabel = String(formData.get("ctaLabel") || "").trim() || null;
+  const stripePriceId = String(formData.get("stripePriceId") || "").trim() || null;
+
+  if (!slug || !/^[a-z0-9-]+$/.test(slug)) return { success: false, error: "Plan slug must use lowercase letters, numbers, and dashes" };
+  if (!name) return { success: false, error: "Plan name is required" };
+  if (!Number.isInteger(trialDays) || trialDays < 0 || trialDays > 365) return { success: false, error: "Trial days must be between 0 and 365" };
+  if (!Number.isInteger(sortOrder) || sortOrder < 0 || sortOrder > 9999) return { success: false, error: "Sort order must be between 0 and 9999" };
+
+  const monthlyPriceCents = monthlyPriceRaw.toLowerCase() === "custom" || monthlyPriceRaw === ""
+    ? null
+    : Math.round(Number(monthlyPriceRaw) * 100);
+  if (monthlyPriceCents !== null && (!Number.isInteger(monthlyPriceCents) || monthlyPriceCents < 0)) {
+    return { success: false, error: "Monthly price must be a valid amount or Custom" };
+  }
+
+  const seatLimit = seatLimitRaw.toLowerCase() === "unlimited" || seatLimitRaw === ""
+    ? null
+    : Number(seatLimitRaw);
+  if (seatLimit !== null && (!Number.isInteger(seatLimit) || seatLimit < 1 || seatLimit > 10000)) {
+    return { success: false, error: "Seat limit must be a whole number or Unlimited" };
+  }
+
+  await ensurePricingTables();
+
+  if (id) {
+    await prisma.$executeRawUnsafe(
+      `UPDATE "PricingPlan"
+       SET "slug" = ?, "name" = ?, "description" = ?, "monthlyPriceCents" = ?, "seatLimit" = ?, "featuresJson" = ?,
+           "stripePriceId" = ?, "isActive" = ?, "isPopular" = ?, "sortOrder" = ?, "trialDays" = ?, "ctaLabel" = ?, "updatedAt" = CURRENT_TIMESTAMP
+       WHERE "id" = ?`,
+      slug,
+      name,
+      description,
+      monthlyPriceCents,
+      seatLimit,
+      JSON.stringify(features),
+      stripePriceId,
+      isActive ? 1 : 0,
+      isPopular ? 1 : 0,
+      sortOrder,
+      trialDays,
+      ctaLabel,
+      id
+    );
+  } else {
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "PricingPlan"
+       ("id", "slug", "name", "description", "monthlyPriceCents", "seatLimit", "featuresJson", "stripePriceId", "isActive", "isPopular", "sortOrder", "trialDays", "ctaLabel", "createdAt", "updatedAt")
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      crypto.randomUUID(),
+      slug,
+      name,
+      description,
+      monthlyPriceCents,
+      seatLimit,
+      JSON.stringify(features),
+      stripePriceId,
+      isActive ? 1 : 0,
+      isPopular ? 1 : 0,
+      sortOrder,
+      trialDays,
+      ctaLabel
+    );
+  }
+
+  await prisma.activityLog.create({
+    data: { userId: session.id, action: "ADMIN_UPDATE_PRICING_PLAN", details: `Updated pricing plan ${slug}` },
+  });
+
+  revalidatePath("/admin/pricing");
+  revalidatePath("/pricing");
+  revalidatePath("/settings/billing");
+  return { success: true, error: null };
+}
+
+export async function savePricingOfferAction(
+  _prevState: { success: boolean; error: string | null },
+  formData: FormData
+): Promise<{ success: boolean; error: string | null }> {
+  const session = await requireAdmin();
+  const id = String(formData.get("id") || "");
+  const title = String(formData.get("title") || "").trim();
+  const description = String(formData.get("description") || "").trim();
+  const discountPercent = Number(formData.get("discountPercent") || 0);
+  const couponCode = String(formData.get("couponCode") || "").trim() || null;
+  const startsAtRaw = String(formData.get("startsAt") || "");
+  const endsAtRaw = String(formData.get("endsAt") || "");
+  const appliesToPlanSlug = String(formData.get("appliesToPlanSlug") || "").trim() || null;
+  const isActive = formData.get("isActive") === "on";
+  const startsAt = new Date(startsAtRaw);
+  const endsAt = new Date(endsAtRaw);
+
+  if (!title) return { success: false, error: "Offer title is required" };
+  if (!Number.isInteger(discountPercent) || discountPercent < 1 || discountPercent > 95) {
+    return { success: false, error: "Discount must be between 1% and 95%" };
+  }
+  if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) return { success: false, error: "Offer dates are required" };
+  if (startsAt >= endsAt) return { success: false, error: "Offer end date must be after start date" };
+
+  await ensurePricingTables();
+
+  if (id) {
+    await prisma.$executeRawUnsafe(
+      `UPDATE "PricingOffer"
+       SET "title" = ?, "description" = ?, "discountPercent" = ?, "couponCode" = ?, "startsAt" = ?, "endsAt" = ?,
+           "isActive" = ?, "appliesToPlanSlug" = ?, "updatedAt" = CURRENT_TIMESTAMP
+       WHERE "id" = ?`,
+      title,
+      description,
+      discountPercent,
+      couponCode,
+      startsAt.toISOString(),
+      endsAt.toISOString(),
+      isActive ? 1 : 0,
+      appliesToPlanSlug,
+      id
+    );
+  } else {
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "PricingOffer"
+       ("id", "title", "description", "discountPercent", "couponCode", "startsAt", "endsAt", "isActive", "appliesToPlanSlug", "createdAt", "updatedAt")
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      crypto.randomUUID(),
+      title,
+      description,
+      discountPercent,
+      couponCode,
+      startsAt.toISOString(),
+      endsAt.toISOString(),
+      isActive ? 1 : 0,
+      appliesToPlanSlug
+    );
+  }
+
+  await prisma.activityLog.create({
+    data: { userId: session.id, action: "ADMIN_UPDATE_PRICING_OFFER", details: `Updated offer ${title}` },
+  });
+
+  revalidatePath("/admin/pricing");
+  revalidatePath("/pricing");
+  revalidatePath("/settings/billing");
+  return { success: true, error: null };
 }

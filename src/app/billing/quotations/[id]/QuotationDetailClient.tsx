@@ -61,15 +61,15 @@ export default function QuotationDetailClient({ quotation, client, id }: ClientP
 
   return (
     <>
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-4 mb-2">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-3 mb-2">
             <h2 className="text-2xl font-black uppercase italic tracking-tight">#{quotation.quotation_number}</h2>
             <StatusBadge status={currentStatus} />
           </div>
           <p className="text-zinc-500 font-medium">{client?.name || quotation.client_id}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {canSend && (
             <button onClick={handleSend} disabled={sending} className="flex items-center gap-2 rounded-xl bg-[#012169] text-white px-5 py-3 text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg disabled:opacity-40">
               <Send className="w-3.5 h-3.5" /> {sending ? "Sending..." : "Send to Client"}
@@ -95,20 +95,20 @@ export default function QuotationDetailClient({ quotation, client, id }: ClientP
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-zinc-950 rounded-[32px] border border-zinc-200 dark:border-white/10 shadow-sm p-8 space-y-6">
-            <div className="grid grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-zinc-950 rounded-[24px] sm:rounded-[32px] border border-zinc-200 dark:border-white/10 shadow-sm p-5 sm:p-8 space-y-6">
+            <div className="grid gap-6 sm:grid-cols-2">
               <div>
                 <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Client</p>
                 <p className="font-black text-zinc-900 dark:text-white mt-1">{client?.name || quotation.client_id}</p>
                 {client?.email && <p className="text-sm text-zinc-500 mt-0.5">{client.email}</p>}
                 {client?.company_name && <p className="text-sm text-zinc-500 mt-0.5">{client.company_name}</p>}
               </div>
-              <div className="text-right">
+              <div className="sm:text-right">
                 <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Amount</p>
                 <p className="text-3xl font-black text-zinc-900 dark:text-white mt-1">{formatCurrency(quotation.total_amount, quotation.currency)}</p>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid gap-6 sm:grid-cols-3">
               <div>
                 <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Issue Date</p>
                 <p className="font-bold text-zinc-900 dark:text-white mt-1">{formatDate(quotation.issue_date)}</p>
@@ -125,8 +125,9 @@ export default function QuotationDetailClient({ quotation, client, id }: ClientP
           </div>
 
           {(quotation.items && quotation.items.length > 0) && (
-            <div className="bg-white dark:bg-zinc-950 rounded-[32px] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="bg-white dark:bg-zinc-950 rounded-[24px] sm:rounded-[32px] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[680px] text-sm">
                 <thead className="border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5">
                   <tr>
                     <th className="px-8 py-4 text-left font-black text-[10px] uppercase tracking-widest text-zinc-500">Description</th>
@@ -160,6 +161,7 @@ export default function QuotationDetailClient({ quotation, client, id }: ClientP
                   </tr>
                 </tfoot>
               </table>
+              </div>
             </div>
           )}
 

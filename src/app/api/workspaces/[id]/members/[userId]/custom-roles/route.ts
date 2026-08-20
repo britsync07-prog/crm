@@ -38,6 +38,24 @@ export async function POST(
             return NextResponse.json({ error: "Only admins can assign roles" }, { status: 403 });
         }
 
+        const role = await prisma.workspaceRole.findFirst({
+            where: { id: roleId, workspaceId },
+            select: { id: true },
+        });
+
+        if (!role) {
+            return NextResponse.json({ error: "Role not found in this workspace" }, { status: 404 });
+        }
+
+        const targetMembership = await prisma.workspaceUser.findUnique({
+            where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+            select: { id: true },
+        });
+
+        if (workspace.ownerId !== targetUserId && !targetMembership) {
+            return NextResponse.json({ error: "User is not a member of this workspace" }, { status: 404 });
+        }
+
         const assignment = await prisma.workspaceUserRole.create({
             data: {
                 userId: targetUserId,
@@ -49,7 +67,7 @@ export async function POST(
     } catch (error: any) {
         if (error.code === 'P2002') return NextResponse.json({ error: "User already has this role" }, { status: 400 });
         console.error("POST /api/workspaces/[id]/members/[userId]/custom-roles error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
 
@@ -90,9 +108,18 @@ export async function DELETE(
         }
 
         // Ensure the role actually belongs to this workspace
-        const role = await prisma.workspaceRole.findUnique({ where: { id: roleId } });
-        if (!role || role.workspaceId !== workspaceId) {
+        const role = await prisma.workspaceRole.findFirst({ where: { id: roleId, workspaceId } });
+        if (!role) {
             return NextResponse.json({ error: "Role not found in this workspace" }, { status: 404 });
+        }
+
+        const targetMembership = await prisma.workspaceUser.findUnique({
+            where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+            select: { id: true },
+        });
+
+        if (workspace.ownerId !== targetUserId && !targetMembership) {
+            return NextResponse.json({ error: "User is not a member of this workspace" }, { status: 404 });
         }
 
         await prisma.workspaceUserRole.delete({
@@ -108,6 +135,6 @@ export async function DELETE(
     } catch (error: any) {
         if (error.code === 'P2025') return NextResponse.json({ error: "User does not have this role" }, { status: 404 });
         console.error("DELETE /api/workspaces/[id]/members/[userId]/custom-roles error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

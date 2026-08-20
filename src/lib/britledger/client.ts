@@ -14,7 +14,10 @@ interface TokenEntry {
 const tokenCache = new Map<string, TokenEntry>();
 
 function derivePassword(userId: string): string {
-  const secret = process.env.JWT_SECRET || "default_hmac_secret_key_123";
+  const secret = process.env.BRITLEDGER_PASSWORD_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("BRITLEDGER_PASSWORD_SECRET or JWT_SECRET environment variable is required.");
+  }
   return crypto.createHmac("sha256", secret).update(userId).digest("hex");
 }
 
@@ -127,7 +130,9 @@ api.interceptors.request.use(async (config) => {
     }
     config.headers.Authorization = `Bearer ${token}`;
   } catch (err: any) {
-    console.error("[BritLedger client] Request interceptor error:", err.message);
+    if (err?.message !== "BritLedger requests require an authenticated CRM session.") {
+      console.error("[BritLedger client] Request interceptor error:", err.message);
+    }
     return Promise.reject(err);
   }
   return config;

@@ -33,6 +33,15 @@ export async function PATCH(
             return new NextResponse("Forbidden", { status: 403 });
         }
 
+        const channel = await prisma.channel.findFirst({
+            where: { id: channelId, workspaceId },
+            select: { id: true },
+        });
+
+        if (!channel) {
+            return new NextResponse("Channel not found", { status: 404 });
+        }
+
         const body = await request.json();
         const { name, isPrivate } = body;
 

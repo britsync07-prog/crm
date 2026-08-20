@@ -10,6 +10,8 @@ import { formatCurrency, formatDate } from "@/lib/britledger/utils";
 import { TrendingUp, Clock, AlertCircle, Users, ArrowUpRight, FileText, AlertTriangle, ReceiptText, Landmark, WalletCards, BadgePoundSterling } from "lucide-react";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 function normalizeRevenue(data: Partial<RevenueReport> | null): RevenueReport {
   return {
     total_invoiced: data?.total_invoiced ?? 0,
@@ -211,8 +213,9 @@ export default async function BillingDashboard() {
             <Link href="/billing/invoices" className="text-[10px] font-black uppercase text-[#012169] tracking-[0.2em]">View All →</Link>
           </div>
 
-          <div className="overflow-hidden rounded-[32px] border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-950 shadow-sm">
-            <table className="w-full text-left text-sm">
+          <div className="overflow-hidden rounded-[24px] sm:rounded-[32px] border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-950 shadow-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[680px] text-left text-sm">
               <thead className="border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5 text-zinc-500">
                 <tr>
                   <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest">Reference</th>
@@ -244,6 +247,7 @@ export default async function BillingDashboard() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
 
