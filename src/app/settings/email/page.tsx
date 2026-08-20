@@ -55,8 +55,8 @@ export default async function EmailSettingsPage() {
                   
                   <div className="flex items-center justify-between sm:justify-end gap-10 w-full sm:w-auto border-t sm:border-t-0 border-zinc-100 dark:border-zinc-800 pt-6 sm:pt-0">
                     <div className="space-y-1">
-                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest leading-none">TRAFFIC LIMIT</p>
-                      <p className="text-sm font-black tabular-nums text-zinc-900 dark:text-zinc-50">{acc.sentToday} / {acc.dailyLimit}</p>
+                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest leading-none">SENT TODAY</p>
+                      <p className="text-sm font-black tabular-nums text-zinc-900 dark:text-zinc-50">{acc.sentToday}</p>
                     </div>
                     <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 px-4 py-2 rounded-xl shadow-sm border border-zinc-100 dark:border-zinc-800">
                       <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">{acc.isActive ? 'Active' : 'Offline'}</span>

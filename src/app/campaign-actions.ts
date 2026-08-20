@@ -124,6 +124,14 @@ export async function createCampaign(formData: FormData) {
   const industry = formData.get("industry") as string;
   const offer = formData.get("offer") as string;
 
+  const emailAccount = await prisma.emailAccount.findFirst({
+    where: { id: emailAccountId, userId: session.id, isActive: true },
+    select: { id: true },
+  });
+  if (!emailAccount) {
+    throw new Error("Select an active sender account connected to your user.");
+  }
+
   const { subject, body } = await generateColdEmail({
     audience,
     industry,
@@ -142,7 +150,7 @@ export async function createCampaign(formData: FormData) {
     },
   });
 
-  const leads = await prisma.lead.findMany({ where: { userId: session.id }, take: 10 });
+  const leads = await prisma.lead.findMany({ where: { userId: session.id } });
   await prisma.campaignLead.createMany({
     data: leads.map(l => ({
       campaignId: campaign.id,
@@ -156,10 +164,12 @@ export async function createCampaign(formData: FormData) {
 }
 
 export async function simulateEmailSending(campaignId: string) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+
   const pendingLeads = await prisma.campaignLead.findMany({
-    where: { campaignId, status: "Pending" },
+    where: { campaignId, status: "Pending", campaign: { userId: session.id } },
     include: { lead: true, campaign: true },
-    take: 5,
   });
 
   for (const cLead of pendingLeads) {

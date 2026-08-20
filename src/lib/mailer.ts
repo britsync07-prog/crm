@@ -69,10 +69,6 @@ export async function sendRealEmail(config: {
 
   if (!account) throw new Error("Email account not found");
 
-  if (account.sentToday >= account.dailyLimit) {
-    throw new Error(`Daily send limit reached (${account.sentToday}/${account.dailyLimit}) for ${account.email}`);
-  }
-
   const transporter = createSmtpTransport(account);
 
   // Replace variables
@@ -102,7 +98,7 @@ export async function sendRealEmail(config: {
     console.error("Failed to append sent message to IMAP Sent folder", err);
   }
 
-  // Update daily stats
+  // Track send volume for reporting only. This is not used as a send quota.
   await prisma.emailAccount.update({
     where: { id: account.id },
     data: { sentToday: { increment: 1 } },

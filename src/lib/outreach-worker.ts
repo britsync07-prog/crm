@@ -205,8 +205,8 @@ async function processCampaign(campaignId: string, userId: string, smtpAccountId
     });
 
     for (const recipient of pending) {
-      const selection = pickAvailableSmtpAccount(smtpAccountIds, senderIndex);
-      if (!selection.accountId) {
+      let selection = pickAvailableSmtpAccount(smtpAccountIds, senderIndex);
+      while (!selection.accountId) {
         const wakeupAt = getEarliestRestWakeup(smtpAccountIds);
         const waitMs = wakeupAt ? Math.max(5000, wakeupAt - Date.now()) : SMTP_REST_MS;
         const wakeupIso = new Date(Date.now() + waitMs).toISOString();
@@ -214,7 +214,7 @@ async function processCampaign(campaignId: string, userId: string, smtpAccountId
           `[OutreachWorker] All selected SMTP accounts are resting. Campaign ${campaignId} waiting until ${wakeupIso}`
         );
         await sleep(waitMs);
-        continue;
+        selection = pickAvailableSmtpAccount(smtpAccountIds, senderIndex);
       }
       const accountId = selection.accountId;
       senderIndex = selection.nextIndex;
