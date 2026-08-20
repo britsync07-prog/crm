@@ -53,6 +53,12 @@ export default async function ClientList(props: Props) {
         <AlertTriangle className="w-10 h-10 mx-auto text-amber-500" />
         <p className="text-zinc-500 font-medium italic">Could not load clients.</p>
         <p className="text-[10px] text-zinc-400 font-bold">BritLedger may be unavailable. Try again later.</p>
+        <Link
+          href="/billing/clients/new"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-black px-5 py-3 text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
+        >
+          <Plus className="w-4 h-4" /> New Client
+        </Link>
       </div>
     );
   }

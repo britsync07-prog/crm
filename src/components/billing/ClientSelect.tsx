@@ -9,16 +9,18 @@ interface ClientSelectProps {
   value: string;
   onChange: (clientId: string, clientName: string) => void;
   onAddNew: () => void;
+  selectedLabel?: string;
 }
 
-export default function ClientSelect({ value, onChange, onAddNew }: ClientSelectProps) {
+export default function ClientSelect({ value, onChange, onAddNew, selectedLabel }: ClientSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
-  const selectedName = clients.find((c) => c.id === value)?.name || "";
+  const selectedName = clients.find((c) => c.id === value)?.name || selectedLabel || "";
 
   useEffect(() => {
     async function load() {
@@ -27,10 +29,15 @@ export default function ClientSelect({ value, onChange, onAddNew }: ClientSelect
         const res = await listClientsAction({ page: 1, page_size: 50, search: search || undefined });
         if (res.success && res.data) {
           setClients(res.data);
+          setLoadError("");
         } else {
+          setLoadError(res.error || "Could not load clients.");
           console.error('Failed to load clients:', res.error);
         }
-      } catch (err) { console.error('Failed to load clients:', err); }
+      } catch (err) {
+        setLoadError(err instanceof Error ? err.message : "Could not load clients.");
+        console.error('Failed to load clients:', err);
+      }
       setLoading(false);
     }
     const timer = setTimeout(load, 200);
@@ -52,7 +59,7 @@ export default function ClientSelect({ value, onChange, onAddNew }: ClientSelect
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-bold text-zinc-900 dark:text-white"
       >
-        {value ? selectedName || "Loading..." : "Select a client"}
+        {value ? selectedName || "Selected client" : "Select a client"}
         <ChevronDown className="w-4 h-4 text-zinc-400" />
       </button>
 
@@ -76,7 +83,12 @@ export default function ClientSelect({ value, onChange, onAddNew }: ClientSelect
               <div className="p-4 text-center text-xs font-bold text-zinc-400 uppercase tracking-widest">Loading...</div>
             )}
             {!loading && clients.length === 0 && (
-              <div className="p-4 text-center text-xs font-bold text-zinc-400 uppercase tracking-widest">No clients found</div>
+              <div className="p-4 text-center space-y-2">
+                <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                  {loadError ? "Could not load clients" : "No clients found"}
+                </p>
+                {loadError && <p className="text-[11px] font-medium text-amber-600 normal-case tracking-normal">{loadError}</p>}
+              </div>
             )}
             {clients.map((client) => (
               <button

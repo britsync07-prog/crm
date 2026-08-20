@@ -57,7 +57,7 @@ export default function NewClientPage() {
             <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Name *</label>
             <input value={name} onChange={(e) => setName(e.target.value)} required className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-bold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#012169]" placeholder="John Doe" />
           </div>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Email</label>
               <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#012169]" placeholder="john@company.com" />

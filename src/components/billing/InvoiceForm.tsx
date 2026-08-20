@@ -16,6 +16,7 @@ interface InvoiceFormProps {
 
 export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) {
   const [clientId, setClientId] = useState("");
+  const [clientName, setClientName] = useState("");
   const [docNumber, setDocNumber] = useState(
     type === "invoice" ? generateInvoiceNumber() : generateQuotationNumber()
   );
@@ -26,9 +27,8 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
     return d.toISOString().split("T")[0];
   });
   const [items, setItems] = useState<InvoiceItem[]>([
-    { description: "", quantity: 1, rate: 0, amount: 0 },
+    { description: "", quantity: 1, rate: 0, amount: 0, tax_rate: 20 },
   ]);
-  const [taxRate, setTaxRate] = useState(20);
   const [discount, setDiscount] = useState(0);
   const [advancePayment, setAdvancePayment] = useState(0);
   const [paid, setPaid] = useState(false);
@@ -41,7 +41,10 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
   const [creatingClient, setCreatingClient] = useState(false);
 
   const subtotal = calculateSubtotal(items);
-  const tax = calculateTax(subtotal, taxRate);
+  const tax = items.reduce((sum, item) => {
+    const lineAmount = item.amount ?? item.quantity * (item.rate ?? item.unit_price ?? 0);
+    return sum + calculateTax(lineAmount, item.tax_rate ?? 0);
+  }, 0);
   const total = calculateTotal(subtotal, tax, discount);
   const normalizedAdvancePayment = type === "invoice" ? (paid ? total : Math.min(Math.max(advancePayment, 0), total)) : 0;
   const balanceDue = Math.max(0, total - normalizedAdvancePayment);
@@ -50,9 +53,11 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
     const updated = items.map((item, i) => {
       if (i !== index) return item;
       const next = { ...item, [field]: value };
-      if (field === "quantity" || field === "rate") {
+      if (field === "quantity" || field === "rate" || field === "unit_price") {
         const qty = field === "quantity" ? Number(value) : item.quantity;
-        const rate = field === "rate" ? Number(value) : (item.rate ?? 0);
+        const rate = field === "rate" || field === "unit_price" ? Number(value) : (item.rate ?? item.unit_price ?? 0);
+        next.rate = rate;
+        next.unit_price = rate;
         next.amount = qty * rate;
       }
       return next;
@@ -61,7 +66,7 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
   }
 
   function addItem() {
-    setItems([...items, { description: "", quantity: 1, rate: 0, amount: 0 }]);
+    setItems([...items, { description: "", quantity: 1, rate: 0, amount: 0, tax_rate: 20 }]);
   }
 
   function removeItem(index: number) {
@@ -75,6 +80,7 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
       const res = await createClientAction({ name: newClientName, email: newClientEmail || undefined });
       if (res.success && res.data?.id) {
         setClientId(res.data.id);
+        setClientName(res.data.name || newClientName);
         setShowNewClient(false);
         setNewClientName("");
         setNewClientEmail("");
@@ -98,7 +104,7 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
       issue_date: issueDate,
       total_amount: total,
       subtotal,
-      tax,
+          tax,
       advance_payment: normalizedAdvancePayment,
       ...(type === "invoice" ? { status: paid ? "PAID" : "DRAFT" } : {}),
       currency,
@@ -111,7 +117,7 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
           unit_price: item.rate ?? 0,
           amount: item.amount ?? item.quantity * (item.rate ?? 0),
           total: item.amount ?? item.quantity * (item.rate ?? 0),
-          tax_rate: taxRate,
+          tax_rate: item.tax_rate ?? 0,
         })),
       notes: notes || undefined,
     };
@@ -125,7 +131,11 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
           <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Client</label>
           <ClientSelect
             value={clientId}
-            onChange={(id) => setClientId(id)}
+            selectedLabel={clientName}
+            onChange={(id, name) => {
+              setClientId(id);
+              setClientName(name);
+            }}
             onAddNew={() => setShowNewClient(true)}
           />
         </div>
@@ -171,15 +181,6 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
             <option value="EUR">EUR (€)</option>
           </select>
         </div>
-        <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Tax Rate (%)</label>
-          <input
-            type="number"
-            value={taxRate}
-            onChange={(e) => setTaxRate(Number(e.target.value))}
-            className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-bold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#012169]"
-          />
-        </div>
         {type === "invoice" && (
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Payment Status</label>
@@ -205,14 +206,76 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
 
       <div className="space-y-2">
         <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Line Items</label>
+        <div className="space-y-3 md:hidden">
+          {items.map((item, i) => (
+            <div key={i} className="rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-950 p-4 space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Service or Product</label>
+                <input
+                  value={item.description}
+                  onChange={(e) => updateItem(i, "description", e.target.value)}
+                  placeholder="e.g. Website design"
+                  className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-bold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#012169]"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Qty</label>
+                  <input
+                    type="number"
+                    value={item.quantity}
+                    onChange={(e) => updateItem(i, "quantity", Number(e.target.value))}
+                    min="1"
+                    className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-bold text-right"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Unit Cost</label>
+                  <input
+                    type="number"
+                    value={item.rate}
+                    onChange={(e) => updateItem(i, "rate", Number(e.target.value))}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-bold text-right"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">VAT %</label>
+                  <input
+                    type="number"
+                    value={item.tax_rate ?? 0}
+                    onChange={(e) => updateItem(i, "tax_rate", Number(e.target.value))}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-bold text-right"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between border-t border-zinc-100 dark:border-white/5 pt-3">
+                <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Line Total</span>
+                <div className="flex items-center gap-3">
+                  <span className="font-black text-zinc-900 dark:text-white">{formatCurrency(item.amount ?? 0, currency)}</span>
+                  <button type="button" onClick={() => removeItem(i)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-zinc-400 hover:text-red-500 transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          <button type="button" onClick={addItem} className="w-full px-6 py-3 flex items-center justify-center gap-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#012169] bg-blue-50 dark:bg-blue-950/20">
+            <Plus className="w-3 h-3" /> Add Line Item
+          </button>
+        </div>
         <div className="overflow-hidden rounded-[24px] sm:rounded-[32px] border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-950">
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
             <thead className="border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5">
               <tr>
                 <th className="px-6 py-3 text-left font-black text-[10px] uppercase tracking-widest text-zinc-500">Description</th>
                 <th className="px-6 py-3 text-right font-black text-[10px] uppercase tracking-widest text-zinc-500">Qty</th>
-                <th className="px-6 py-3 text-right font-black text-[10px] uppercase tracking-widest text-zinc-500">Rate</th>
+                <th className="px-6 py-3 text-right font-black text-[10px] uppercase tracking-widest text-zinc-500">Unit Cost</th>
+                <th className="px-6 py-3 text-right font-black text-[10px] uppercase tracking-widest text-zinc-500">VAT %</th>
                 <th className="px-6 py-3 text-right font-black text-[10px] uppercase tracking-widest text-zinc-500">Amount</th>
                 <th className="px-6 py-3 w-10"></th>
               </tr>
@@ -224,7 +287,7 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
                     <input
                       value={item.description}
                       onChange={(e) => updateItem(i, "description", e.target.value)}
-                      placeholder="Service or product..."
+                      placeholder="e.g. Website design"
                       className="w-full px-3 py-2 rounded-lg bg-transparent text-sm font-bold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#012169]"
                     />
                   </td>
@@ -247,6 +310,16 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
                       className="w-24 px-3 py-2 rounded-lg bg-transparent text-sm font-bold text-zinc-900 dark:text-white text-right focus:outline-none focus:ring-2 focus:ring-[#012169]"
                     />
                   </td>
+                  <td className="px-6 py-2">
+                    <input
+                      type="number"
+                      value={item.tax_rate ?? 0}
+                      onChange={(e) => updateItem(i, "tax_rate", Number(e.target.value))}
+                      min="0"
+                      step="0.01"
+                      className="w-20 px-3 py-2 rounded-lg bg-transparent text-sm font-bold text-zinc-900 dark:text-white text-right focus:outline-none focus:ring-2 focus:ring-[#012169]"
+                    />
+                  </td>
                   <td className="px-6 py-2 text-right font-black text-zinc-900 dark:text-white">
                       {formatCurrency(item.amount ?? 0, currency)}
                   </td>
@@ -260,7 +333,7 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
             </tbody>
           </table>
           </div>
-          <button type="button" onClick={addItem} className="w-full px-6 py-3 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#012169] hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors border-t border-zinc-100 dark:border-white/5">
+          <button type="button" onClick={addItem} className="hidden md:flex w-full px-6 py-3 items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#012169] hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors border-t border-zinc-100 dark:border-white/5">
             <Plus className="w-3 h-3" /> Add Line Item
           </button>
         </div>
@@ -273,7 +346,7 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
             <span className="font-black text-zinc-900 dark:text-white">{formatCurrency(subtotal, currency)}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="font-bold text-zinc-500">VAT ({taxRate}%)</span>
+            <span className="font-bold text-zinc-500">VAT</span>
             <span className="font-black text-zinc-900 dark:text-white">{formatCurrency(tax, currency)}</span>
           </div>
           <div className="flex items-center justify-between gap-3 text-sm">
