@@ -14,6 +14,7 @@
     "imap:check": "tsx scripts/check-imap.ts",
     "inbox:check": "tsx scripts/check-saved-inbox.ts",
     "inbox:body": "tsx scripts/check-saved-body.ts",
+    "mcp": "tsx src/mcp/server.ts",
     "postinstall": "prisma generate",
     "setup:livekit": "mkdir -p livekit && cd livekit && wget -qO- https://github.com/livekit/livekit/releases/download/v1.9.12/livekit_1.9.12_linux_amd64.tar.gz | tar -xz livekit-server"
   },
@@ -21,6 +22,7 @@
     "@google/generative-ai": "^0.24.1",
     "@livekit/components-react": "^2.9.20",
     "@livekit/components-styles": "^1.2.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@prisma/adapter-better-sqlite3": "^7.4.2",
     "@prisma/client": "^7.4.2",
     "@types/sanitize-html": "^2.16.1",

@@ -113,6 +113,19 @@ async function ensureToken(userId?: string, email?: string): Promise<string> {
   return token;
 }
 
+async function getBritLedgerSession(): Promise<{ id: string; email: string; role?: string } | null> {
+  const session = await getSession().catch(() => null);
+  if (session?.id && session?.email) return session;
+
+  const mcpUserId = process.env.BRITCRM_MCP_USER_ID?.trim();
+  const mcpEmail = process.env.BRITCRM_MCP_USER_EMAIL?.trim().toLowerCase();
+  if (mcpUserId && mcpEmail) {
+    return { id: mcpUserId, email: mcpEmail, role: "MCP" };
+  }
+
+  return null;
+}
+
 const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 30000,
@@ -121,7 +134,7 @@ const api: AxiosInstance = axios.create({
 
 api.interceptors.request.use(async (config) => {
   try {
-    const session = await getSession().catch(() => null);
+    const session = await getBritLedgerSession();
     let token: string;
     if (session && session.id && session.email) {
       token = await ensureToken(session.id, session.email);
@@ -142,7 +155,7 @@ api.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
     if (error.response?.status === 401) {
-      const session = await getSession().catch(() => null);
+      const session = await getBritLedgerSession();
       const cacheKey = session?.id || "global";
       tokenCache.delete(cacheKey);
       
@@ -191,7 +204,7 @@ function setCache(key: string, data: unknown): void {
 }
 
 export async function britGet<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
-  const session = await getSession().catch(() => null);
+  const session = await getBritLedgerSession();
   const userPrefix = session?.id ? `${session.id}:` : "global:";
   const cacheKey = userPrefix + endpoint + JSON.stringify(params ?? {});
   const cached = getCached<T>(cacheKey);

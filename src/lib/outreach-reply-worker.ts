@@ -9,11 +9,12 @@ function normalizeSubject(subject: string) {
     .trim();
 }
 
-export async function runOutreachReplySync() {
+export async function runOutreachReplySync(options?: { userId?: string }) {
   const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
   const accounts = await prisma.emailAccount.findMany({
     where: {
+      ...(options?.userId ? { userId: options.userId } : {}),
       isActive: true,
       imapHost: { not: null },
       imapPort: { not: null },
