@@ -53,6 +53,14 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
     const updated = items.map((item, i) => {
       if (i !== index) return item;
       const next = { ...item, [field]: value };
+      if (field === "amount") {
+        const amount = Number(value) || 0;
+        const qty = Number(item.quantity) || 1;
+        const rate = qty > 0 ? amount / qty : 0;
+        next.amount = amount;
+        next.rate = rate;
+        next.unit_price = rate;
+      }
       if (field === "quantity" || field === "rate" || field === "unit_price") {
         const qty = field === "quantity" ? Number(value) : item.quantity;
         const rate = field === "rate" || field === "unit_price" ? Number(value) : (item.rate ?? item.unit_price ?? 0);
@@ -206,6 +214,9 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
 
       <div className="space-y-2">
         <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Line Items</label>
+        <p className="text-xs font-bold text-zinc-500">
+          Enter either Unit Cost or Line Amount. The other value will update automatically.
+        </p>
         <div className="space-y-3 md:hidden">
           {items.map((item, i) => (
             <div key={i} className="rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-950 p-4 space-y-4">
@@ -252,10 +263,20 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
                   />
                 </div>
               </div>
-              <div className="flex items-center justify-between border-t border-zinc-100 dark:border-white/5 pt-3">
-                <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Line Total</span>
-                <div className="flex items-center gap-3">
-                  <span className="font-black text-zinc-900 dark:text-white">{formatCurrency(item.amount ?? 0, currency)}</span>
+              <div className="grid grid-cols-[1fr_auto] gap-3 border-t border-zinc-100 dark:border-white/5 pt-3">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Line Amount / Total</label>
+                  <input
+                    type="number"
+                    value={item.amount ?? 0}
+                    onChange={(e) => updateItem(i, "amount", Number(e.target.value))}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-black text-right text-zinc-900 dark:text-white"
+                  />
+                  <p className="text-[10px] font-bold text-zinc-400">{formatCurrency(item.amount ?? 0, currency)}</p>
+                </div>
+                <div className="flex items-end">
                   <button type="button" onClick={() => removeItem(i)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-zinc-400 hover:text-red-500 transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -269,14 +290,14 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
         </div>
         <div className="overflow-hidden rounded-[24px] sm:rounded-[32px] border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-950">
           <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[720px] text-sm">
+          <table className="w-full min-w-[820px] text-sm">
             <thead className="border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5">
               <tr>
                 <th className="px-6 py-3 text-left font-black text-[10px] uppercase tracking-widest text-zinc-500">Description</th>
                 <th className="px-6 py-3 text-right font-black text-[10px] uppercase tracking-widest text-zinc-500">Qty</th>
                 <th className="px-6 py-3 text-right font-black text-[10px] uppercase tracking-widest text-zinc-500">Unit Cost</th>
                 <th className="px-6 py-3 text-right font-black text-[10px] uppercase tracking-widest text-zinc-500">VAT %</th>
-                <th className="px-6 py-3 text-right font-black text-[10px] uppercase tracking-widest text-zinc-500">Amount</th>
+                <th className="px-6 py-3 text-right font-black text-[10px] uppercase tracking-widest text-zinc-500">Line Amount</th>
                 <th className="px-6 py-3 w-10"></th>
               </tr>
             </thead>
@@ -320,8 +341,15 @@ export default function InvoiceForm({ type, onSave, saving }: InvoiceFormProps) 
                       className="w-20 px-3 py-2 rounded-lg bg-transparent text-sm font-bold text-zinc-900 dark:text-white text-right focus:outline-none focus:ring-2 focus:ring-[#012169]"
                     />
                   </td>
-                  <td className="px-6 py-2 text-right font-black text-zinc-900 dark:text-white">
-                      {formatCurrency(item.amount ?? 0, currency)}
+                  <td className="px-6 py-2">
+                    <input
+                      type="number"
+                      value={item.amount ?? 0}
+                      onChange={(e) => updateItem(i, "amount", Number(e.target.value))}
+                      min="0"
+                      step="0.01"
+                      className="w-28 px-3 py-2 rounded-lg bg-transparent text-sm font-black text-zinc-900 dark:text-white text-right focus:outline-none focus:ring-2 focus:ring-[#012169]"
+                    />
                   </td>
                   <td className="px-6 py-2">
                     <button type="button" onClick={() => removeItem(i)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-zinc-400 hover:text-red-500 transition-colors">
