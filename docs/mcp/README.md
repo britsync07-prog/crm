@@ -1,157 +1,483 @@
-# BritCRM MCP Server Plan
+# BritCRM MCP Agent Guide
 
 ## Purpose
 
-Build a first-party MCP server that lets approved AI agents operate BritCRM through safe, typed tools instead of browser clicks. The MCP server should expose business actions for inbox, leads, outreach, forms, calendar, billing, and admin/pricing while preserving the same user ownership rules already used by the Next.js app.
+This is the live operating guide for the unified BritCRM MCP server. AI agents should read this document first through `britcrm://docs/index`, then use the page-specific docs and tools below to safely inspect, create, update, send, and manage CRM data.
 
-## Architecture
+The server is implemented in `src/mcp/server.ts` and exposes one MCP server named `britcrm`. It uses stdio transport and registers resources plus tools for Mail, Leads, Outreach, Forms, Calendar, Billing, and Admin/Pricing.
 
-- Runtime: Node.js/TypeScript MCP server inside this repo.
-- Data layer: reuse `prisma` from `src/lib/db`.
-- Auth context: every MCP call must run with an explicit `userId`, `role`, and optional `organizationId`.
-- Tool design: tools perform business operations; resources expose read-only snapshots and docs.
-- Transport: start with stdio for local agents, then add HTTP/SSE only when remote agents need access.
-- Auditing: every write tool should record who invoked it, what changed, and the request id.
+## Run Configuration
 
-## Proposed Folder Structure
-
-```text
-src/mcp/
-  server.ts
-  context.ts
-  auth.ts
-  audit.ts
-  schemas/
-  tools/
-    mail.ts
-    leads.ts
-    outreach.ts
-    forms.ts
-    calendar.ts
-    billing.ts
-    admin.ts
-  resources/
-    docs.ts
-    snapshots.ts
-```
-
-## Core MCP Resources
-
-- `britcrm://docs/index`: links to all MCP docs.
-- `britcrm://docs/mail`: mail and unified inbox instructions.
-- `britcrm://docs/leads`: lead management instructions.
-- `britcrm://docs/outreach`: campaign and follow-up instructions.
-- `britcrm://docs/forms`: form creation and submission instructions.
-- `britcrm://docs/calendar`: calendar, availability, and meeting booking instructions.
-- `britcrm://docs/billing`: invoice, quote, client, and balance instructions.
-- `britcrm://docs/admin`: pricing, discounts, trials, users, and operational controls.
-- `britcrm://snapshot/user`: current user's account, role, connected mailboxes, and key counts.
-
-## Local Run Command
+Start the server from the CRM project root:
 
 ```bash
-BRITCRM_MCP_USER_EMAIL=user@example.com npm run mcp
+cd D:\job\crm
+npm run mcp
 ```
 
-Use either `BRITCRM_MCP_USER_ID` or `BRITCRM_MCP_USER_EMAIL`. Tools that touch CRM data fail closed when neither value is present.
+MCP clients should configure it like this:
 
-## Implemented Tools
+```json
+{
+  "mcpServers": {
+    "britcrm": {
+      "command": "npm",
+      "args": ["run", "mcp", "--silent"],
+      "cwd": "D:\\job\\crm",
+      "env": {
+        "JWT_SECRET": "use-the-crm-secret",
+        "DATABASE_URL": "file:./prisma/dev.db",
+        "BRITCRM_MCP_USER_EMAIL": "admin@example.com"
+      }
+    }
+  }
+}
+```
 
-Mail tools are implemented inside the unified server:
+Use either `BRITCRM_MCP_USER_ID` or `BRITCRM_MCP_USER_EMAIL`. If both are supplied, they must resolve to the same active CRM user. Tools fail closed when no active user context exists.
 
-- `mail.list_accounts`
-- `mail.search_messages`
-- `mail.read_message`
-- `mail.draft_reply`
-- `mail.send_email`
-- `mail.batch_action`
+Billing tools also use BritLedger. For BritLedger user sync, set one of:
 
-Lead tools are implemented inside the unified server:
+- `BRITLEDGER_PASSWORD_SECRET`
+- `JWT_SECRET`
 
-- `leads.list`
-- `leads.get`
-- `leads.create`
-- `leads.update`
-- `leads.upload_csv`
-- `leads.score`
-- `leads.log_interaction`
-- `leads.convert_to_customer`
+Admin tools require the resolved CRM user to have `role === "ADMIN"`.
 
-Outreach tools are implemented inside the unified server:
+## Response Contract
 
-- `outreach.preview_campaign`
-- `outreach.launch_campaign`
-- `outreach.list_campaigns`
-- `outreach.get_campaign`
-- `outreach.send_follow_up`
-- `outreach.process_replies`
+Every tool returns text containing JSON:
 
-Form tools are implemented inside the unified server:
+```json
+{
+  "success": true,
+  "data": {},
+  "error": null
+}
+```
 
-- `forms.list`
-- `forms.create`
-- `forms.delete`
-- `forms.get_submissions`
-- `forms.submit_public`
-- `forms.generate_share_message`
+On failure:
 
-Calendar tools are implemented inside the unified server:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Human readable error"
+}
+```
 
-- `calendar.get_settings`
-- `calendar.update_settings`
-- `calendar.list_events`
-- `calendar.check_availability`
-- `calendar.create_event`
-- `calendar.book_client_meeting`
-- `calendar.cancel_event`
+Agents should parse `content[0].text` as JSON, check `success`, and only use `data` when `success` is true.
 
-Billing tools are implemented inside the unified server:
+## Safety Rules For Agents
 
-- `billing.list_clients`
-- `billing.create_client`
-- `billing.list_invoices`
-- `billing.create_invoice`
-- `billing.update_invoice`
-- `billing.record_payment`
-- `billing.create_quotation`
-- `billing.list_quotations`
-- `billing.convert_quote_to_invoice`
-- `billing.send_invoice`
+- Read before writing. Use list/get/preview tools before create/update/send tools.
+- Respect ownership. Normal tools operate only on the resolved MCP user's records.
+- Admin tools are global and require an admin user.
+- Use `confirm: false` first for any tool that supports confirmation.
+- Only set `confirm: true` after the user explicitly approves the preview.
+- Never invent record IDs. Pull IDs from list/get tool results.
+- Never expose SMTP passwords. `admin.system_email.update_profile` accepts a password but never returns it.
+- For outreach and meeting tools, expect real emails or calendar records to be created when confirmed.
+- For billing tools, all invoice and quote totals are calculated server-side. Agents can pass direct line `amount` or `quantity` plus `unitCost`.
 
-Admin/Pricing tools are implemented inside the unified server and require `role === "ADMIN"`:
+## Resource Index
 
-- `admin.pricing.list_plans`
-- `admin.pricing.upsert_plan`
-- `admin.pricing.upsert_discount_event`
-- `admin.users.search`
-- `admin.users.update`
-- `admin.system_email.update_profile`
-- `admin.operations.snapshot`
+- `britcrm://docs/index`: this guide.
+- `britcrm://docs/mail`: unified inbox plan and mail usage.
+- `britcrm://docs/leads`: lead management plan and lifecycle.
+- `britcrm://docs/outreach`: campaign, follow-up, and reply processing plan.
+- `britcrm://docs/forms`: forms, submissions, CRM sync, and meeting intake plan.
+- `britcrm://docs/calendar`: availability, meetings, and no double-booking plan.
+- `britcrm://docs/billing`: clients, invoices, quotations, payments, and balances plan.
+- `britcrm://docs/admin`: pricing, discounts, trials, users, system email, and operations plan.
 
-## Cross-Cutting Tool Rules
+## Common Agent Workflows
 
-- Never allow a tool to operate without a resolved user context.
-- Always filter user-owned records by `userId`, `ownerId`, or organization membership.
-- Admin tools must require `role === "ADMIN"`.
-- Destructive tools need a `confirm: true` flag and should return a preview when omitted.
-- Sending email or campaigns must support dry-run previews.
-- Calendar booking must check conflicts inside the same transaction used to create the event.
-- All tools must return structured JSON with `success`, `data`, and `error` fields.
+### Pull CRM Lead Info
 
-## Build Phases
+1. Call `leads.list` with filters.
+2. Pick a lead ID from the returned rows.
+3. Call `leads.get` for full lead context, including interactions, tasks, deals, and campaign history.
 
-1. Create the MCP server skeleton and expose docs resources.
-2. Add read-only tools for each page so agents can inspect CRM state.
-3. Add safe write tools for mail replies, lead updates, form creation, and calendar booking.
-4. Add outreach campaign creation with previews and explicit send confirmation.
-5. Add billing and admin controls after stronger audit logging is in place.
-6. Add integration tests that call MCP tools directly against a test database.
+### Update A Lead
 
-## Acceptance Checks
+1. Call `leads.get`.
+2. Call `leads.update` with only changed fields.
+3. Use `leads.log_interaction` after calls, replies, or notes.
 
-- An agent can discover all page docs through `britcrm://docs/index`.
-- Each tool validates input with schemas before touching Prisma.
-- Normal users cannot access another user's data.
-- Admin-only actions fail for non-admin users.
-- Email sends, outreach launches, calendar bookings, and invoice changes create audit records.
-- The MCP server can run locally with `npm run mcp` after implementation.
+### Send Or Reply To Email
+
+1. Call `mail.list_accounts`.
+2. Call `mail.search_messages`.
+3. Call `mail.read_message`.
+4. Call `mail.draft_reply` to prepare content.
+5. Call `mail.send_email` only after user approval.
+
+### Launch Outreach
+
+1. Call `outreach.preview_campaign`.
+2. Show the recipient count, invalid recipients, duplicate count, and sender accounts to the user.
+3. Call `outreach.launch_campaign` with the same input and `confirm: true`.
+4. Later call `outreach.process_replies`.
+5. Use `outreach.get_campaign` for metrics and per-lead status.
+
+### Create A Form And Collect Client Info
+
+1. Call `forms.create`.
+2. Call `forms.generate_share_message`.
+3. After submissions, call `forms.get_submissions`.
+4. Use `forms.submit_public` only when the agent is intentionally submitting intake data on behalf of a user/client.
+
+### Book A Client Meeting
+
+1. Call `calendar.get_settings`.
+2. Call `calendar.check_availability`.
+3. Call `calendar.book_client_meeting` with `confirm: false`.
+4. After approval, call the same tool with `confirm: true`.
+5. Use `calendar.cancel_event` with `confirm: true` only after approval.
+
+### Create Invoice And Put Balance
+
+1. Call `billing.list_clients` or `billing.create_client`.
+2. Call `billing.create_invoice` with line items.
+3. Each line item can use either:
+   - direct `amount`
+   - or `quantity` plus `unitCost`
+4. Include `discount`, `advancePayment`, `currency`, and `vatRate` as needed.
+5. Read returned `calculations.balanceDue`.
+6. Use `billing.record_payment` to reduce the balance later.
+
+### Manage Pricing, Discount Events, And Trials
+
+1. Call `admin.pricing.list_plans`.
+2. Use `admin.pricing.upsert_plan` with `confirm: false` to preview price, seat, feature, Stripe, and trial-day changes.
+3. Use `admin.pricing.upsert_discount_event` with `confirm: false` to preview frontend-visible offers.
+4. Apply with `confirm: true` only after approval.
+5. Use `admin.operations.snapshot` to audit counts and configuration health.
+
+## Tool Catalog
+
+### Mail Tools
+
+`mail.list_accounts`
+
+- Pulls active mail accounts for the MCP user.
+- Input: none.
+- Returns account IDs, email addresses, SMTP/IMAP host metadata, warmup status, and `sentToday`.
+- Does not return passwords.
+
+`mail.search_messages`
+
+- Pulls recent mailbox messages.
+- Input: `accountId?`, `mailbox = "INBOX"`, `query?`, `limit = 50`.
+- Use `accountId` from `mail.list_accounts`. If omitted, the first active IMAP account is used.
+
+`mail.read_message`
+
+- Gets one message body.
+- Input: `uid`, `accountId?`, `mailbox = "INBOX"`.
+- Use a UID returned by `mail.search_messages`.
+
+`mail.draft_reply`
+
+- Creates a draft reply body. It does not send.
+- Input: `uid`, `instructions`, `accountId?`, `mailbox = "INBOX"`, `tone = "professional"`.
+
+`mail.send_email`
+
+- Sends a real email from a user-owned account.
+- Input: `to[]`, `subject`, `htmlBody`, `accountId?`, `senderName?`, `replyToUid?`.
+- Use only after approval.
+
+`mail.batch_action`
+
+- Performs mailbox actions.
+- Input: `accountId?`, `mailbox = "INBOX"`, `uids[]`, `action`.
+- Actions: `archive`, `trash`, `spam`, `read`, `unread`, `star`, `unstar`.
+
+### Lead Tools
+
+`leads.list`
+
+- Pulls leads owned by the MCP user.
+- Input: `query?`, `status?`, `categoryId?`, `limit = 50`, `offset = 0`, `sortBy = "updatedAt"`, `sortDirection = "desc"`.
+
+`leads.get`
+
+- Gets one lead and related activity.
+- Input: `leadId`.
+
+`leads.create`
+
+- Creates one user-owned lead.
+- Input: `name`, `email`, and optional fields: `phone`, `company`, `licenseType`, `areaOfOperation`, `dealFocus`, `budgetRange`, `website`, `industry`, `location`, `address`, `rating`, `linkedin`, `source`, `status`, `categoryId`.
+
+`leads.update`
+
+- Updates one user-owned lead.
+- Input: `leadId` plus any editable lead fields.
+
+`leads.upload_csv`
+
+- Imports leads from CSV text.
+- Input: `csvText`, `categoryId?`, `source = "MCP CSV Upload"`, `updateExisting = false`.
+- Auto-detects comma, semicolon, or tab delimiter.
+
+`leads.score`
+
+- Runs lead AI scoring.
+- Input: `leadId`.
+- Returns score/insights where configured.
+
+`leads.log_interaction`
+
+- Logs an interaction against a lead.
+- Input: `leadId`, `type = "Note"`, `content`, `sentiment?`, `moveToContacted = true`.
+
+`leads.convert_to_customer`
+
+- Converts a lead to customer.
+- Input: `leadId`, `confirm = false`.
+- Requires `confirm: true` to write.
+
+### Outreach Tools
+
+`outreach.preview_campaign`
+
+- Previews recipients and sender accounts without sending.
+- Input: `campaignName`, `senderName = "BritCRM Outreach"`, `subject`, `htmlContent`, `recipients = ""`, `includeManualRecipients = true`, `leadFilters`, `smtpAccountIds[]`.
+- `leadFilters`: `enabled`, `categoryIds[]`, `includeStatuses[]`, `excludeStatuses[]`.
+
+`outreach.launch_campaign`
+
+- Sends/launches a campaign.
+- Input: same as preview plus `confirm = false`.
+- Requires `confirm: true`.
+
+`outreach.list_campaigns`
+
+- Pulls campaign history.
+- Input: `status?`, `limit = 50`, `offset = 0`.
+
+`outreach.get_campaign`
+
+- Gets one campaign with lead-level delivery status and metrics.
+- Input: `campaignId`.
+
+`outreach.send_follow_up`
+
+- Creates and launches a follow-up campaign for an existing campaign.
+- Input: `campaignId`, `targetFilter`, `customStatus?`, `senderName`, `subject`, `htmlContent`, `smtpAccountIds[]`, `confirm = false`.
+- Requires `confirm: true`.
+
+`outreach.process_replies`
+
+- Scans connected inboxes for outreach replies for the MCP user.
+- Input: none.
+
+### Form Tools
+
+`forms.list`
+
+- Pulls forms owned by the MCP user.
+- Input: `search?`, `limit = 50`, `offset = 0`.
+
+`forms.create`
+
+- Creates a form.
+- Input: `title`, `description?`, `fields[]`, `meetingSchedulingEnabled = false`, `meetingDurationMin = 60`.
+- Field types: `TEXT`, `TEXTAREA`, `DROPDOWN`, `RADIO`, `CHECKBOX`, `EMAIL`, `PHONE`.
+- Each field: `label`, `type`, `required`, `options[]`.
+
+`forms.delete`
+
+- Deletes a form and submissions.
+- Input: `formId`, `confirm = false`.
+- Requires `confirm: true`.
+
+`forms.get_submissions`
+
+- Pulls parsed submissions and CRM links for a user-owned form.
+- Input: `formId`, `limit = 50`, `offset = 0`.
+
+`forms.submit_public`
+
+- Submits an owned public form as an MCP intake action.
+- Input: `formId`, `responses`, optional `meeting`.
+- `responses` is keyed by form field ID.
+- `meeting` can include `slotStart`, `email`, and scheduling metadata when the form supports meetings.
+
+`forms.generate_share_message`
+
+- Creates a share message with the public form URL.
+- Input: `formId`, `tone = "professional"`.
+
+### Calendar Tools
+
+`calendar.get_settings`
+
+- Pulls availability settings for the MCP user.
+- Input: none.
+
+`calendar.update_settings`
+
+- Updates availability.
+- Input: `availableStart = "09:00"`, `availableEnd = "17:00"`, `timeZone = "UTC"`, `reminderAccountId?`.
+- Time format is `HH:MM`.
+
+`calendar.list_events`
+
+- Pulls events.
+- Input: `start?`, `end?`, `limit = 200`.
+- If using date range, provide both `start` and `end`.
+
+`calendar.check_availability`
+
+- Computes free slots.
+- Input: `date`, `durationMin = 60`.
+- Date should be ISO-like, for example `2026-08-21`.
+
+`calendar.create_event`
+
+- Creates a manual calendar event after conflict checking.
+- Input: `title`, `description?`, `start`, `end`, `source = "MCP"`.
+
+`calendar.book_client_meeting`
+
+- Books a client meeting, LiveKit room, locked calendar event, and optional confirmation emails.
+- Input: `title`, `clientEmail`, `start`, `end`, `notes?`, `sendConfirmation = true`, `confirm = false`.
+- Requires `confirm: true`.
+
+`calendar.cancel_event`
+
+- Cancels/deletes a calendar event and linked meeting resources.
+- Input: `eventId`, `confirm = false`.
+- Requires `confirm: true`.
+
+### Billing Tools
+
+`billing.list_clients`
+
+- Pulls BritLedger billing clients.
+- Input: `search?`, `page = 1`, `pageSize = 25`, `includeBalances = false`.
+
+`billing.create_client`
+
+- Creates a BritLedger billing client.
+- Input: `name`, `email?`, `phone?`, `address?`, `companyName?`, `vatNumber?`, `isActive = true`.
+
+`billing.list_invoices`
+
+- Pulls invoices and computed balance due.
+- Input: `clientId?`, `status?`, `search?`, `page = 1`, `pageSize = 25`.
+
+`billing.create_invoice`
+
+- Creates an invoice with server-side totals.
+- Input: `clientId`, `invoiceNumber?`, `issueDate?`, `dueDate?`, `currency = "GBP"`, `status = "DRAFT"`, `lineItems[]`, `discount = 0`, `advancePayment = 0`, `markPaid = false`, `notes?`.
+- Line item: `description`, `quantity = 1`, `unitCost?`, `rate?`, `amount?`, `vatRate = 0`.
+- If `amount` is supplied, it is used directly and unit cost is derived.
+
+`billing.update_invoice`
+
+- Updates invoice fields and recalculates totals if line items are supplied.
+- Input: `invoiceId`, optional invoice fields, optional `lineItems[]`, optional `discount`, `advancePayment`, `markPaid`.
+
+`billing.record_payment`
+
+- Records payment by increasing invoice advance paid and updating status/balance.
+- Input: `invoiceId`, `amount`, `currency?`, `paymentMethod?`, `notes?`.
+
+`billing.create_quotation`
+
+- Creates a quotation with server-side totals.
+- Input: `clientId`, `quotationNumber?`, `issueDate?`, `expiryDate?`, `currency = "GBP"`, `status = "Draft"`, `lineItems[]`, `discount = 0`, `notes?`.
+
+`billing.list_quotations`
+
+- Pulls quotations.
+- Input: `clientId?`, `status?`, `page = 1`, `pageSize = 25`.
+
+`billing.convert_quote_to_invoice`
+
+- Converts a quotation to invoice.
+- Input: `quotationId`, `confirm`.
+- Requires `confirm: true`.
+
+`billing.send_invoice`
+
+- Sends an invoice by email through BritLedger.
+- Input: `invoiceId`, `toEmail`, `subject?`, `personalMessage?`, `includePaymentLink = true`.
+
+### Admin And Pricing Tools
+
+All tools in this section require `role === "ADMIN"`.
+
+`admin.pricing.list_plans`
+
+- Pulls pricing plans, discount events, and optional frontend public preview.
+- Input: `includePublicPreview = true`.
+
+`admin.pricing.upsert_plan`
+
+- Creates or updates a pricing plan.
+- Input: `id?`, `slug`, `name`, `description = ""`, `monthlyPriceCents`, `seatLimit`, `features[]`, `stripePriceId?`, `isActive = true`, `isPopular = false`, `sortOrder = 0`, `trialDays = 14`, `ctaLabel?`, `confirm = false`.
+- Use `monthlyPriceCents: null` for custom/enterprise pricing.
+- Use `seatLimit: null` for unlimited seats.
+- Requires `confirm: true` to write.
+
+`admin.pricing.upsert_discount_event`
+
+- Creates or updates a frontend-visible discount/offer event.
+- Input: `id?`, `title`, `description = ""`, `discountPercent`, `couponCode?`, `startsAt`, `endsAt`, `appliesToPlanSlug?`, `isActive = true`, `confirm = false`.
+- `discountPercent` must be 1 to 95.
+- Requires `confirm: true` to write.
+
+`admin.users.search`
+
+- Pulls users with organization summary.
+- Input: `query = ""`, `role?`, `status?`, `plan?`, `page = 1`, `pageSize = 25`.
+- Does not return passwords or reset tokens.
+
+`admin.users.update`
+
+- Updates user role/status and owned organization subscription fields.
+- Input: `userId`, `role?`, `status?`, `plan?`, `subscriptionStatus?`, `seatLimit?`, `confirm = false`.
+- Blocks self-demotion and self-suspension.
+- Requires `confirm: true`.
+
+`admin.system_email.update_profile`
+
+- Updates transactional or newsletter SMTP profile.
+- Input: `profile`, `host`, `port = 587`, `username`, `password?`, `fromEmail`, `fromName = "BritCRM"`, `secureMode = "STARTTLS"`, `isEnabled = true`, `confirm = false`.
+- Password is write-only and returned only as `[redacted]` in previews.
+- Requires `confirm: true`.
+
+`admin.operations.snapshot`
+
+- Pulls operational counts, configuration readiness, redacted system email profile status, and recent activity.
+- Input: none.
+
+## Current Verified Tool Count
+
+The server exposes 50 tools:
+
+- 6 mail tools
+- 8 lead tools
+- 6 outreach tools
+- 6 form tools
+- 7 calendar tools
+- 10 billing tools
+- 7 admin/pricing tools
+
+## Validation Status
+
+Latest local audit checks:
+
+- TypeScript passed with `tsc --noEmit`.
+- Targeted ESLint passed for MCP and touched integration files.
+- Production build passed with `npm run build`.
+- MCP stdio tool discovery returned all 50 tools.
+- Admin tools reject a normal user.
+- Admin tools work with admin context by email or ID.
+- BritLedger-backed billing tools work with MCP email-only context.
+- Mismatched `BRITCRM_MCP_USER_ID` and `BRITCRM_MCP_USER_EMAIL` fails closed.

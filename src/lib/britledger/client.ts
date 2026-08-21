@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
 import { getSession } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import crypto from "crypto";
 
 const BASE_URL = process.env.BRITLEDGER_API_URL || "https://ledger.britsyncai.com/api/v1";
@@ -119,11 +120,24 @@ async function getBritLedgerSession(): Promise<{ id: string; email: string; role
 
   const mcpUserId = process.env.BRITCRM_MCP_USER_ID?.trim();
   const mcpEmail = process.env.BRITCRM_MCP_USER_EMAIL?.trim().toLowerCase();
-  if (mcpUserId && mcpEmail) {
-    return { id: mcpUserId, email: mcpEmail, role: "MCP" };
+  if (!mcpUserId && !mcpEmail) return null;
+
+  const user = mcpUserId
+    ? await prisma.user.findUnique({
+        where: { id: mcpUserId },
+        select: { id: true, email: true, role: true, status: true },
+      })
+    : await prisma.user.findUnique({
+        where: { email: mcpEmail || "" },
+        select: { id: true, email: true, role: true, status: true },
+      });
+
+  if (!user || (user.status && user.status !== "ACTIVE")) return null;
+  if (mcpEmail && user.email.toLowerCase() !== mcpEmail) {
+    throw new Error("BRITCRM_MCP_USER_ID and BRITCRM_MCP_USER_EMAIL refer to different CRM users.");
   }
 
-  return null;
+  return { id: user.id, email: user.email, role: user.role };
 }
 
 const api: AxiosInstance = axios.create({

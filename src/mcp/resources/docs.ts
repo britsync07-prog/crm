@@ -20,8 +20,8 @@ export const docsResources: DocsResource[] = [
   {
     name: "britcrm.docs.index",
     uri: "britcrm://docs/index",
-    title: "BritCRM MCP Server Plan",
-    description: "Main documentation index for the unified BritCRM MCP server.",
+    title: "BritCRM MCP Agent Guide",
+    description: "Live agent guide for the unified BritCRM MCP server, including setup, safety rules, workflows, and tool catalog.",
     fileName: "README.md",
   },
   {
@@ -101,4 +101,3 @@ export function registerDocsResources(server: McpServer) {
     );
   }
 }
-
