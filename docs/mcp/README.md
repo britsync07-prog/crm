@@ -36,6 +36,8 @@ MCP clients should configure it like this:
 
 Use either `BRITCRM_MCP_USER_ID` or `BRITCRM_MCP_USER_EMAIL`. If both are supplied, they must resolve to the same active CRM user. Tools fail closed when no active user context exists.
 
+Each CRM user can set up their own account-bound MCP server from `/settings/mcp`. That page shows the exact `BRITCRM_MCP_USER_ID` and `BRITCRM_MCP_USER_EMAIL` for the logged-in user, plus an MCP client config. When an agent uses that config, tools write to the same user-owned records visible in that user's dashboard.
+
 Billing tools also use BritLedger. For BritLedger user sync, set one of:
 
 - `BRITLEDGER_PASSWORD_SECRET`
@@ -89,6 +91,30 @@ Agents should parse `content[0].text` as JSON, check `success`, and only use `da
 - `britcrm://docs/calendar`: availability, meetings, and no double-booking plan.
 - `britcrm://docs/billing`: clients, invoices, quotations, payments, and balances plan.
 - `britcrm://docs/admin`: pricing, discounts, trials, users, system email, and operations plan.
+- `britcrm://snapshot/user`: current MCP user's account, organization, dashboard counts, upcoming events, and recent activity.
+
+## Per-User MCP Setup
+
+Every active CRM user can run a separate MCP session for their account. The server is shared code, but the session is user-bound by environment variables:
+
+```env
+BRITCRM_MCP_USER_ID=the-crm-user-id
+BRITCRM_MCP_USER_EMAIL=the-crm-user-email
+```
+
+Agents should prefer both values. If only one is available, the server resolves the other from the CRM database. If both values are supplied and they do not match the same active user, the MCP session fails closed.
+
+User-bound MCP effects:
+
+- `leads.*` changes appear on `/leads`.
+- `mail.*` uses mailboxes connected on `/settings/email`.
+- `outreach.*` changes appear on `/campaigns`.
+- `forms.*` changes appear on `/forms`.
+- `calendar.*` changes appear on `/calendar`.
+- `billing.*` changes appear on `/billing` through that user's BritLedger account.
+- `admin.*` works only for users with `role === "ADMIN"`.
+
+Agents should read `britcrm://snapshot/user` at startup to confirm which CRM account they are operating on.
 
 ## Common Agent Workflows
 
@@ -477,6 +503,7 @@ Latest local audit checks:
 - Targeted ESLint passed for MCP and touched integration files.
 - Production build passed with `npm run build`.
 - MCP stdio tool discovery returned all 50 tools.
+- MCP resource discovery returns docs resources plus `britcrm://snapshot/user`.
 - Admin tools reject a normal user.
 - Admin tools work with admin context by email or ID.
 - BritLedger-backed billing tools work with MCP email-only context.

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Mail, Users, CreditCard, WalletCards } from "lucide-react";
+import { Bot, Mail, Users, CreditCard, WalletCards } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function SettingsTabBar() {
@@ -18,6 +18,11 @@ export default function SettingsTabBar() {
       name: "Team Settings",
       href: "/settings/team",
       icon: Users,
+    },
+    {
+      name: "MCP Agents",
+      href: "/settings/mcp",
+      icon: Bot,
     },
     {
       name: "Subscription",

@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { registerAdminTools } from "./tools/admin.js";
 import { registerBillingTools } from "./tools/billing.js";
 import { registerDocsResources } from "./resources/docs.js";
+import { registerSnapshotResources } from "./resources/snapshots.js";
 import { registerCalendarTools } from "./tools/calendar.js";
 import { registerFormTools } from "./tools/forms.js";
 import { registerLeadTools } from "./tools/leads.js";
@@ -17,6 +18,7 @@ export function createBritCrmMcpServer() {
   });
 
   registerDocsResources(server);
+  registerSnapshotResources(server);
   registerMailTools(server);
   registerLeadTools(server);
   registerOutreachTools(server);
