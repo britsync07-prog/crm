@@ -15,6 +15,12 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: "/:path((?:admin|api|automations|billing|calendar|calls|campaigns|customers|forms|inbox|leads|meet|onboarding|portal|settings|social|team).*)",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
+      },
+      {
         source: "/(.*)",
         headers: [
           { key: "X-Frame-Options", value: "DENY" },
