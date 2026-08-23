@@ -25,6 +25,10 @@ const mediaPipeAssetPaths = {
     tasksVisionFileSet: "/mediapipe/wasm",
     modelAssetPath: "/mediapipe/selfie_segmenter.tflite",
 };
+const mediaPipeHdAssetPaths = {
+    tasksVisionFileSet: "/mediapipe/wasm",
+    modelAssetPath: "/mediapipe/selfie_multiclass_256x256.tflite",
+};
 
 function getBackgroundSwitchOptions(mode: BackgroundMode): SwitchBackgroundProcessorOptions {
     if (mode === "blur") {
@@ -38,10 +42,10 @@ function getBackgroundSwitchOptions(mode: BackgroundMode): SwitchBackgroundProce
     return { mode: "disabled" };
 }
 
-function getInitialBackgroundProcessorOptions(mode: BackgroundMode): BackgroundProcessorOptions {
+function getInitialBackgroundProcessorOptions(mode: BackgroundMode, quality: "hd" | "fast" = "hd"): BackgroundProcessorOptions {
     return {
         ...getBackgroundSwitchOptions(mode),
-        assetPaths: mediaPipeAssetPaths,
+        assetPaths: quality === "hd" ? mediaPipeHdAssetPaths : mediaPipeAssetPaths,
     };
 }
 
@@ -118,6 +122,27 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     const backgroundProcessorRef = useRef<BackgroundProcessorWrapper | null>(null);
     const publishingRef = useRef(false);
     const room = useMemo(() => new Room(), []);
+
+    const attachBackgroundProcessor = useCallback(async (videoTrack: LocalVideoTrack, mode: BackgroundMode) => {
+        if (mode === "none") return;
+
+        try {
+            const processor = BackgroundProcessor(getInitialBackgroundProcessorOptions(mode, "hd"));
+            await videoTrack.setProcessor(processor);
+            backgroundProcessorRef.current = processor;
+            setBackgroundError(null);
+        } catch (hdError) {
+            try {
+                const processor = BackgroundProcessor(getInitialBackgroundProcessorOptions(mode, "fast"));
+                await videoTrack.setProcessor(processor);
+                backgroundProcessorRef.current = processor;
+                setBackgroundError(`HD segmentation was not available, using standard mode: ${getBackgroundErrorMessage(hdError)}`);
+            } catch (fastError) {
+                backgroundProcessorRef.current = null;
+                setBackgroundError(getBackgroundErrorMessage(fastError));
+            }
+        }
+    }, []);
 
     const getLivekitUrl = () => {
         const configuredUrl = (process.env.NEXT_PUBLIC_LIVEKIT_URL || "").trim();
@@ -273,15 +298,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
             setPreviewReady(true);
 
             if (backgroundSupported) {
-                try {
-                    const processor = BackgroundProcessor(getInitialBackgroundProcessorOptions(backgroundMode));
-                    await videoTrack.setProcessor(processor);
-                    backgroundProcessorRef.current = processor;
-                    setBackgroundError(null);
-                } catch (processorError) {
-                    backgroundProcessorRef.current = null;
-                    setBackgroundError(getBackgroundErrorMessage(processorError));
-                }
+                await attachBackgroundProcessor(videoTrack, backgroundMode);
             }
         } catch (error) {
             setPreviewReady(false);
@@ -289,7 +306,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
         } finally {
             setPreviewStarting(false);
         }
-    }, [backgroundMode, backgroundSupported, error, hasJoined, isExpired, previewReady, previewStarting, waitingInfo]);
+    }, [attachBackgroundProcessor, backgroundMode, backgroundSupported, error, hasJoined, isExpired, previewReady, previewStarting, waitingInfo]);
 
     useEffect(() => {
         const videoElement = previewVideoRef.current;
@@ -333,10 +350,18 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
 
                 setBackgroundError(null);
 
+                if (backgroundMode === "none") {
+                    if (backgroundProcessorRef.current) {
+                        await videoTrack.stopProcessor();
+                        await backgroundProcessorRef.current.destroy();
+                        backgroundProcessorRef.current = null;
+                    }
+                    return;
+                }
+
                 if (!backgroundProcessorRef.current) {
-                    const processor = BackgroundProcessor(getInitialBackgroundProcessorOptions("none"));
-                    await videoTrack.setProcessor(processor);
-                    backgroundProcessorRef.current = processor;
+                    await attachBackgroundProcessor(videoTrack, backgroundMode);
+                    return;
                 }
 
                 await backgroundProcessorRef.current.switchTo(getBackgroundSwitchOptions(backgroundMode));
@@ -346,7 +371,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
         };
 
         void applyBackground();
-    }, [backgroundChecked, backgroundMode, backgroundSupported, previewReady]);
+    }, [attachBackgroundProcessor, backgroundChecked, backgroundMode, backgroundSupported, previewReady]);
 
     const ensureLocalTracks = useCallback(async () => {
         if (!localVideoTrackRef.current) {
@@ -356,15 +381,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
             });
 
             if (backgroundSupported) {
-                try {
-                    const processor = BackgroundProcessor(getInitialBackgroundProcessorOptions(backgroundMode));
-                    await videoTrack.setProcessor(processor);
-                    backgroundProcessorRef.current = processor;
-                    setBackgroundError(null);
-                } catch (processorError) {
-                    backgroundProcessorRef.current = null;
-                    setBackgroundError(getBackgroundErrorMessage(processorError));
-                }
+                await attachBackgroundProcessor(videoTrack, backgroundMode);
             }
 
             localVideoTrackRef.current = videoTrack;
@@ -373,7 +390,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
         if (!localAudioTrackRef.current) {
             localAudioTrackRef.current = await createLocalAudioTrack();
         }
-    }, [backgroundMode, backgroundSupported]);
+    }, [attachBackgroundProcessor, backgroundMode, backgroundSupported]);
 
     const publishLocalTracks = useCallback(async () => {
         if (tracksPublished || publishingRef.current) return;
