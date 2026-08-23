@@ -309,9 +309,18 @@ export default function McpDocsPage() {
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Example Arguments</p>
-                          <pre className="mt-2 max-h-64 overflow-auto rounded-xl bg-zinc-950 p-4 text-xs leading-6 text-zinc-100">
-                            <code>{codeBlock(tool.example)}</code>
-                          </pre>
+                          {Object.keys(tool.example).length === 0 ? (
+                            <div className="mt-2 rounded-xl bg-zinc-950 p-4 text-xs font-bold leading-6 text-zinc-100">
+                              No arguments required. Call this tool with an empty arguments object.
+                              <pre className="mt-3 overflow-auto rounded-lg bg-black/40 p-3 font-mono">
+                                <code>{codeBlock({})}</code>
+                              </pre>
+                            </div>
+                          ) : (
+                            <pre className="mt-2 max-h-64 overflow-auto rounded-xl bg-zinc-950 p-4 text-xs leading-6 text-zinc-100">
+                              <code>{codeBlock(tool.example)}</code>
+                            </pre>
+                          )}
                         </div>
                       </div>
                     </section>

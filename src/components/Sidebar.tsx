@@ -17,7 +17,6 @@ import {
   Calendar as CalendarIcon,
   Menu,
   X,
-  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -107,6 +106,7 @@ export default function Sidebar() {
     pathname.startsWith("/invite/") ||
     pathname.startsWith("/f/") ||
     pathname.startsWith("/meet/") ||
+    pathname.startsWith("/mcp/docs") ||
     pathname.startsWith("/features/") ||
     pathname.startsWith("/solutions/") ||
     pathname.startsWith("/vision/") ||

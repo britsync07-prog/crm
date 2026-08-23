@@ -16,6 +16,7 @@ export default function TopNavbar({ session }: { session: any }) {
     pathname === "/pricing" ||
     pathname.startsWith("/f/") ||
     pathname.startsWith("/meet/") || 
+    pathname.startsWith("/mcp/docs") ||
     pathname.startsWith("/features/") || 
     pathname.startsWith("/solutions/") || 
     pathname.startsWith("/vision/") || 
