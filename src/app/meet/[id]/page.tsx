@@ -88,6 +88,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     const [backgroundError, setBackgroundError] = useState<string | null>(null);
     const [previewError, setPreviewError] = useState<string | null>(null);
     const [previewReady, setPreviewReady] = useState(false);
+    const [previewStarting, setPreviewStarting] = useState(false);
     const [tracksPublished, setTracksPublished] = useState(false);
 
     const previewVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -221,6 +222,12 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     }, []);
 
     useEffect(() => {
+        if (backgroundChecked && !backgroundSupported && backgroundMode !== "none") {
+            setBackgroundMode("none");
+        }
+    }, [backgroundChecked, backgroundMode, backgroundSupported]);
+
+    useEffect(() => {
         return () => {
             room.disconnect();
             localVideoTrackRef.current?.stop();
@@ -229,49 +236,36 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
         };
     }, [room]);
 
-    useEffect(() => {
-        if (!backgroundChecked || hasJoined || waitingInfo || error || isExpired || localVideoTrackRef.current) return;
+    const startCameraPreview = useCallback(async () => {
+        if (previewStarting || previewReady || hasJoined || waitingInfo || error || isExpired) return;
 
-        let canceled = false;
+        try {
+            setPreviewStarting(true);
+            setPreviewError(null);
 
-        const startPreview = async () => {
-            try {
-                setPreviewError(null);
-                const videoTrack = await createLocalVideoTrack({
-                    resolution: {
-                        width: 1280,
-                        height: 720,
-                        frameRate: 30,
-                    },
-                });
+            const videoTrack = await createLocalVideoTrack({
+                resolution: {
+                    width: 1280,
+                    height: 720,
+                    frameRate: 30,
+                },
+            });
 
-                if (backgroundSupported) {
-                    const processor = BackgroundProcessor(getBackgroundSwitchOptions(backgroundMode) as BackgroundProcessorOptions);
-                    await videoTrack.setProcessor(processor);
-                    backgroundProcessorRef.current = processor;
-                }
-
-                if (canceled) {
-                    videoTrack.stop();
-                    await backgroundProcessorRef.current?.destroy();
-                    backgroundProcessorRef.current = null;
-                    return;
-                }
-
-                localVideoTrackRef.current = videoTrack;
-                setPreviewReady(true);
-            } catch (error) {
-                setPreviewReady(false);
-                setPreviewError(error instanceof Error ? error.message : "Could not start camera preview.");
+            if (backgroundSupported) {
+                const processor = BackgroundProcessor(getBackgroundSwitchOptions(backgroundMode) as BackgroundProcessorOptions);
+                await videoTrack.setProcessor(processor);
+                backgroundProcessorRef.current = processor;
             }
-        };
 
-        void startPreview();
-
-        return () => {
-            canceled = true;
-        };
-    }, [backgroundChecked, backgroundMode, backgroundSupported, error, hasJoined, isExpired, waitingInfo]);
+            localVideoTrackRef.current = videoTrack;
+            setPreviewReady(true);
+        } catch (error) {
+            setPreviewReady(false);
+            setPreviewError(error instanceof Error ? error.message : "Could not start camera preview.");
+        } finally {
+            setPreviewStarting(false);
+        }
+    }, [backgroundMode, backgroundSupported, error, hasJoined, isExpired, previewReady, previewStarting, waitingInfo]);
 
     useEffect(() => {
         const videoElement = previewVideoRef.current;
@@ -375,10 +369,12 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
 
     const handleJoinClick = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name.trim()) return;
+        if (!name.trim() || !previewReady) return;
 
         void (async () => {
-            await ensureLocalTracks();
+            if (!localAudioTrackRef.current) {
+                localAudioTrackRef.current = await createLocalAudioTrack();
+            }
             await fetchToken(name.trim(), backgroundMode);
         })();
     };
@@ -451,10 +447,18 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                                     <video ref={previewVideoRef} className="h-full w-full object-cover" autoPlay muted playsInline />
                                 ) : (
                                     <div className="flex h-full flex-col items-center justify-center gap-3 text-white/60">
-                                        {previewError ? <VideoOff className="h-8 w-8" /> : <Loader2 className="h-8 w-8 animate-spin" />}
+                                        {previewStarting ? <Loader2 className="h-8 w-8 animate-spin" /> : previewError ? <VideoOff className="h-8 w-8" /> : <Video className="h-8 w-8" />}
                                         <p className="max-w-xs px-4 text-center text-xs font-bold leading-5">
-                                            {previewError || "Starting camera preview..."}
+                                            {previewError || "Start camera preview before joining."}
                                         </p>
+                                        <button
+                                            type="button"
+                                            onClick={startCameraPreview}
+                                            disabled={previewStarting}
+                                            className="rounded-xl bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-950 transition hover:bg-blue-50 disabled:opacity-60"
+                                        >
+                                            {previewStarting ? "Starting" : "Start Camera Preview"}
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -475,7 +479,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                         </div>
                         <button
                             type="submit"
-                            disabled={!name.trim() || !!previewError}
+                            disabled={!name.trim() || !previewReady || !!previewError}
                             className="w-full py-3 bg-[#012169] hover:bg-[#c8102e] disabled:opacity-50 text-white font-black uppercase tracking-widest text-xs rounded-xl transition-colors"
                         >
                             Join Meeting
