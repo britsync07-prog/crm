@@ -11,6 +11,22 @@ type SmtpAccount = {
   encryption?: string | null;
 };
 
+const SMTP_TIMEOUT_MS = 45_000;
+const SENT_FOLDER_APPEND_TIMEOUT_MS = 10_000;
+
+async function withTimeout<T>(operation: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([operation, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function isSmtpDirectTls(encryption: string | null | undefined, port: number) {
   const mode = (encryption || "").toUpperCase();
   return port === 465 || mode === "SSL" || mode === "SSL/TLS";
@@ -22,6 +38,9 @@ function createSmtpTransport(account: SmtpAccount) {
     host: account.host,
     port: account.port,
     secure,
+    connectionTimeout: SMTP_TIMEOUT_MS,
+    greetingTimeout: SMTP_TIMEOUT_MS,
+    socketTimeout: SMTP_TIMEOUT_MS,
     requireTLS: !secure && ["TLS", "STARTTLS"].includes((account.encryption || "").toUpperCase()),
     auth: {
       user: account.username,
@@ -87,13 +106,14 @@ export async function sendRealEmail(config: {
     text: finalBody.replace(/<[^>]*>?/gm, ''), // Simple HTML to Text fallback
   };
 
-  const info = await transporter.sendMail(messageData);
+  const info = await withTimeout(transporter.sendMail(messageData), SMTP_TIMEOUT_MS, "SMTP send");
+  transporter.close();
 
   // Compile raw message and append to IMAP Sent folder
   try {
     const composer = new MailComposer(messageData);
     const rawMessage = await composer.compile().build();
-    await appendEmailToSentFolder(account, rawMessage);
+    await withTimeout(appendEmailToSentFolder(account, rawMessage), SENT_FOLDER_APPEND_TIMEOUT_MS, "IMAP Sent append");
   } catch (err) {
     console.error("Failed to append sent message to IMAP Sent folder", err);
   }

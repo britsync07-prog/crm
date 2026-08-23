@@ -206,7 +206,7 @@ Agents should read `britcrm://snapshot/user` at startup to confirm which CRM acc
 `mail.send_email`
 
 - Sends a real email from a user-owned account.
-- Input: `to[]`, `subject`, `htmlBody`, `accountId?`, `senderName?`, `replyToUid?`.
+- Input: `to`, `subject`, `htmlBody`, `accountId?`, `senderName?`, `replyToUid?`.
 - Use only after approval.
 
 `mail.batch_action`
