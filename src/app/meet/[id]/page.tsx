@@ -6,9 +6,19 @@ import {
     VideoConference,
     RoomAudioRenderer,
 } from "@livekit/components-react";
-import { useEffect, useState, use } from "react";
-import { Loader2, Video, X } from "lucide-react";
+import { BackgroundProcessor, type BackgroundProcessorWrapper, supportsBackgroundProcessors } from "@livekit/track-processors";
+import type { VideoCaptureOptions } from "livekit-client";
+import { useCallback, useEffect, useMemo, useState, use } from "react";
+import { ImageIcon, Loader2, Sparkles, Video, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+
+type BackgroundMode = "none" | "blur" | "virtual";
+
+const backgroundModes: Array<{ mode: BackgroundMode; label: string }> = [
+    { mode: "none", label: "None" },
+    { mode: "blur", label: "Blur" },
+    { mode: "virtual", label: "Virtual" },
+];
 
 export default function MeetingRoomPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: meetingId } = use(params);
@@ -24,6 +34,27 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     const [title, setTitle] = useState("Meeting");
     const [disconnectReason, setDisconnectReason] = useState<string | null>(null);
     const [countdown, setCountdown] = useState<string>("");
+    const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>("blur");
+    const [backgroundSupported, setBackgroundSupported] = useState(false);
+    const [backgroundChecked, setBackgroundChecked] = useState(false);
+    const [backgroundError, setBackgroundError] = useState<string | null>(null);
+
+    const backgroundProcessor = useMemo<BackgroundProcessorWrapper | null>(() => {
+        if (!backgroundSupported) return null;
+        return BackgroundProcessor({ mode: "disabled" });
+    }, [backgroundSupported]);
+
+    const videoCapture = useMemo<VideoCaptureOptions | boolean>(() => {
+        if (!backgroundProcessor) return true;
+        return {
+            processor: backgroundProcessor,
+            resolution: {
+                width: 1280,
+                height: 720,
+                frameRate: 30,
+            },
+        };
+    }, [backgroundProcessor]);
 
     const getLivekitUrl = () => {
         const configuredUrl = (process.env.NEXT_PUBLIC_LIVEKIT_URL || "").trim();
@@ -49,7 +80,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
         return configuredUrl;
     };
 
-    const fetchToken = async (participantName?: string) => {
+    const fetchToken = useCallback(async (participantName?: string) => {
         try {
             const res = await fetch(`/api/meetings/${meetingId}/token${participantName ? `?name=${encodeURIComponent(participantName)}` : ""}`);
             const data = await res.json();
@@ -82,7 +113,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
         } catch {
             setError("Failed to connect to the meeting server.");
         }
-    };
+    }, [meetingId]);
 
     // Countdown logic for Waiting Room
     useEffect(() => {
@@ -105,13 +136,53 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [waitingInfo, name]);
+    }, [fetchToken, waitingInfo, name]);
 
     // Auto-fetch on load (will succeed instantly if they are logged in)
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
         fetchToken();
-    }, [meetingId]);
+    }, [fetchToken]);
+
+    useEffect(() => {
+        setBackgroundSupported(supportsBackgroundProcessors());
+        setBackgroundChecked(true);
+    }, []);
+
+    useEffect(() => {
+        if (!backgroundChecked || !backgroundSupported) {
+            if (backgroundChecked && backgroundMode !== "none") {
+                setBackgroundError("Background effects are not supported in this browser.");
+            }
+            return;
+        }
+
+        if (!backgroundProcessor) return;
+
+        const applyBackground = async () => {
+            try {
+                setBackgroundError(null);
+
+                if (backgroundMode === "blur") {
+                    await backgroundProcessor.switchTo({ mode: "background-blur", blurRadius: 12 });
+                    return;
+                }
+
+                if (backgroundMode === "virtual") {
+                    await backgroundProcessor.switchTo({
+                        mode: "virtual-background",
+                        imagePath: "/backgrounds/britcrm-office.svg",
+                    });
+                    return;
+                }
+
+                await backgroundProcessor.switchTo({ mode: "disabled" });
+            } catch (error) {
+                setBackgroundError(error instanceof Error ? error.message : "Could not apply background effect.");
+            }
+        };
+
+        void applyBackground();
+    }, [backgroundChecked, backgroundMode, backgroundProcessor, backgroundSupported]);
 
     const handleJoinClick = (e: React.FormEvent) => {
         e.preventDefault();
@@ -238,9 +309,9 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
             </div>
 
             <div className="flex-1 overflow-hidden p-2 sm:p-4">
-                <div className="w-full h-full rounded-2xl overflow-hidden border border-white/10 bg-black">
+                <div className="relative w-full h-full rounded-2xl overflow-hidden border border-white/10 bg-black">
                     <LiveKitRoom
-                        video={true}
+                        video={videoCapture}
                         audio={true}
                         token={token}
                         serverUrl={getLivekitUrl()}
@@ -253,6 +324,34 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                         <VideoConference />
                         <RoomAudioRenderer />
                     </LiveKitRoom>
+                    <div className="pointer-events-none absolute right-4 top-4 z-20 flex flex-col items-end gap-2">
+                        <div className="pointer-events-auto flex overflow-hidden rounded-xl border border-white/10 bg-black/70 p-1 shadow-2xl backdrop-blur">
+                            {backgroundModes.map((item) => {
+                                const isActive = backgroundMode === item.mode;
+                                return (
+                                    <button
+                                        key={item.mode}
+                                        type="button"
+                                        onClick={() => setBackgroundMode(item.mode)}
+                                        disabled={!backgroundSupported && item.mode !== "none"}
+                                        className={`flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-black transition ${
+                                            isActive
+                                                ? "bg-white text-slate-950"
+                                                : "text-white/75 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                                        }`}
+                                    >
+                                        {item.mode === "virtual" ? <ImageIcon className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                                        {item.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {backgroundError && (
+                            <div className="pointer-events-auto max-w-xs rounded-xl border border-amber-300/30 bg-amber-950/80 px-3 py-2 text-xs font-bold leading-5 text-amber-50">
+                                {backgroundError}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
