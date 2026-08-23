@@ -7,7 +7,7 @@ import {
     RoomAudioRenderer,
 } from "@livekit/components-react";
 import { BackgroundProcessor, type BackgroundProcessorOptions, type BackgroundProcessorWrapper, type SwitchBackgroundProcessorOptions, supportsBackgroundProcessors } from "@livekit/track-processors";
-import { createLocalAudioTrack, createLocalVideoTrack, LocalAudioTrack, LocalVideoTrack, Room, Track } from "livekit-client";
+import { createLocalAudioTrack, createLocalVideoTrack, LocalAudioTrack, LocalVideoTrack, Room, Track, VideoPresets } from "livekit-client";
 import { useCallback, useEffect, useMemo, useRef, useState, use } from "react";
 import { ImageIcon, Loader2, Sparkles, Video, VideoOff, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -244,21 +244,24 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
             setPreviewError(null);
 
             const videoTrack = await createLocalVideoTrack({
-                resolution: {
-                    width: 1280,
-                    height: 720,
-                    frameRate: 30,
-                },
+                facingMode: "user",
+                resolution: VideoPresets.h540.resolution,
             });
-
-            if (backgroundSupported) {
-                const processor = BackgroundProcessor(getBackgroundSwitchOptions(backgroundMode) as BackgroundProcessorOptions);
-                await videoTrack.setProcessor(processor);
-                backgroundProcessorRef.current = processor;
-            }
 
             localVideoTrackRef.current = videoTrack;
             setPreviewReady(true);
+
+            if (backgroundSupported) {
+                try {
+                    const processor = BackgroundProcessor(getBackgroundSwitchOptions(backgroundMode) as BackgroundProcessorOptions);
+                    await videoTrack.setProcessor(processor);
+                    backgroundProcessorRef.current = processor;
+                    setBackgroundError(null);
+                } catch (processorError) {
+                    backgroundProcessorRef.current = null;
+                    setBackgroundError(processorError instanceof Error ? processorError.message : "Background effects are not available on this device.");
+                }
+            }
         } catch (error) {
             setPreviewReady(false);
             setPreviewError(error instanceof Error ? error.message : "Could not start camera preview.");
@@ -302,13 +305,20 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
             return;
         }
 
-        const backgroundProcessor = backgroundProcessorRef.current;
-        if (!backgroundProcessor) return;
-
         const applyBackground = async () => {
             try {
+                const videoTrack = localVideoTrackRef.current;
+                if (!videoTrack) return;
+
                 setBackgroundError(null);
-                await backgroundProcessor.switchTo(getBackgroundSwitchOptions(backgroundMode));
+
+                if (!backgroundProcessorRef.current) {
+                    const processor = BackgroundProcessor({ mode: "disabled" });
+                    await videoTrack.setProcessor(processor);
+                    backgroundProcessorRef.current = processor;
+                }
+
+                await backgroundProcessorRef.current.switchTo(getBackgroundSwitchOptions(backgroundMode));
             } catch (error) {
                 setBackgroundError(error instanceof Error ? error.message : "Could not apply background effect.");
             }
@@ -320,17 +330,20 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     const ensureLocalTracks = useCallback(async () => {
         if (!localVideoTrackRef.current) {
             const videoTrack = await createLocalVideoTrack({
-                resolution: {
-                    width: 1280,
-                    height: 720,
-                    frameRate: 30,
-                },
+                facingMode: "user",
+                resolution: VideoPresets.h540.resolution,
             });
 
             if (backgroundSupported) {
-                const processor = BackgroundProcessor(getBackgroundSwitchOptions(backgroundMode) as BackgroundProcessorOptions);
-                await videoTrack.setProcessor(processor);
-                backgroundProcessorRef.current = processor;
+                try {
+                    const processor = BackgroundProcessor(getBackgroundSwitchOptions(backgroundMode) as BackgroundProcessorOptions);
+                    await videoTrack.setProcessor(processor);
+                    backgroundProcessorRef.current = processor;
+                    setBackgroundError(null);
+                } catch (processorError) {
+                    backgroundProcessorRef.current = null;
+                    setBackgroundError(processorError instanceof Error ? processorError.message : "Background effects are not available on this device.");
+                }
             }
 
             localVideoTrackRef.current = videoTrack;
@@ -472,7 +485,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                             <BackgroundModeSelector value={backgroundMode} supported={backgroundSupported} onChange={handleBackgroundModeChange} />
                             {backgroundError && (
                                 <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-950/80 px-3 py-2 text-xs font-bold leading-5 text-amber-50">
-                                    {backgroundError}
+                                    Camera preview is on. Background effect could not be applied: {backgroundError}
                                 </p>
                             )}
                             </div>
@@ -560,7 +573,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                         </div>
                         {backgroundError && (
                             <div className="pointer-events-auto max-w-xs rounded-xl border border-amber-300/30 bg-amber-950/80 px-3 py-2 text-xs font-bold leading-5 text-amber-50">
-                                {backgroundError}
+                                Camera is still live. Background effect could not be applied: {backgroundError}
                             </div>
                         )}
                     </div>
