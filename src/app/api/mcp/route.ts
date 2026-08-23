@@ -1,6 +1,7 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createBritCrmMcpServer } from "@/mcp/server";
 import { runWithMcpContext } from "@/mcp/context";
+import { getAppBaseUrl } from "@/lib/app-url";
 import { resolveMcpBearerToken } from "@/lib/mcp-tokens";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,28 @@ const transportHeaders = {
   "Cache-Control": "no-store",
 };
 
+function getAllowedOrigins() {
+  const values = [getAppBaseUrl(), process.env.NEXT_PUBLIC_APP_URL, process.env.NEXTAUTH_URL, process.env.APP_URL];
+  const origins = new Set<string>();
+
+  for (const value of values) {
+    if (!value) continue;
+    try {
+      origins.add(new URL(value).origin);
+    } catch {
+      // Ignore invalid optional deployment URLs.
+    }
+  }
+
+  return origins;
+}
+
+function hasForbiddenOrigin(req: Request) {
+  const origin = req.headers.get("origin");
+  if (!origin) return false;
+  return !getAllowedOrigins().has(origin);
+}
+
 function withTransportHeaders(response: Response) {
   const headers = new Headers(response.headers);
   for (const [key, value] of Object.entries(transportHeaders)) {
@@ -23,6 +46,16 @@ function withTransportHeaders(response: Response) {
     status: response.status,
     statusText: response.statusText,
     headers,
+  });
+}
+
+function forbiddenOrigin() {
+  return new Response(JSON.stringify({ error: "Forbidden MCP origin." }), {
+    status: 403,
+    headers: {
+      ...transportHeaders,
+      "Content-Type": "application/json",
+    },
   });
 }
 
@@ -45,6 +78,8 @@ async function authenticate(req: Request) {
 }
 
 async function handleMcpRequest(req: Request) {
+  if (hasForbiddenOrigin(req)) return forbiddenOrigin();
+
   const context = await authenticate(req);
   if (!context) return unauthorized();
 
@@ -72,7 +107,9 @@ export async function DELETE(req: Request) {
   return handleMcpRequest(req);
 }
 
-export async function OPTIONS() {
+export async function OPTIONS(req: Request) {
+  if (hasForbiddenOrigin(req)) return forbiddenOrigin();
+
   return new Response(null, {
     status: 204,
     headers: transportHeaders,

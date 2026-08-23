@@ -25,6 +25,64 @@ export type McpToolGroup = {
   tools: McpToolDoc[];
 };
 
+export type McpProtocolLayer = {
+  layer: string;
+  standardExpectation: string;
+  britcrmStatus: string;
+  agentUse: string;
+};
+
+export const mcpProtocolLayers: McpProtocolLayer[] = [
+  {
+    layer: "Base Protocol",
+    standardExpectation: "JSON-RPC messages over an MCP transport after initialize/initialized negotiation.",
+    britcrmStatus: "Implemented by the official MCP SDK server.",
+    agentUse: "Connect with an MCP client; do not call CRM REST endpoints directly.",
+  },
+  {
+    layer: "Transport",
+    standardExpectation: "Hosted servers use Streamable HTTP; local development can use stdio.",
+    britcrmStatus: "Implemented at /api/mcp for hosted HTTP and npm run mcp for stdio development.",
+    agentUse: "Use the hosted HTTPS URL in production. Local cwd/env setup is not needed for normal users.",
+  },
+  {
+    layer: "Authorization",
+    standardExpectation: "HTTP MCP calls send a bearer token in the Authorization header.",
+    britcrmStatus: "Implemented with user-owned bcrm_mcp_ tokens that bind every call to one CRM account.",
+    agentUse: "Send Authorization: Bearer bcrm_mcp_... on every request and read the snapshot to confirm the account.",
+  },
+  {
+    layer: "Resources",
+    standardExpectation: "Read-only context exposed through resources/list and resources/read.",
+    britcrmStatus: "Implemented with account snapshot plus domain guides for mail, leads, outreach, forms, calendar, billing, and admin.",
+    agentUse: "Read britcrm://snapshot/user at startup, then use docs resources for domain-specific workflow context.",
+  },
+  {
+    layer: "Tools",
+    standardExpectation: "Model-controlled actions exposed through tools/list and tools/call with names, descriptions, and input schemas.",
+    britcrmStatus: "Implemented with 50 CRM tools covering inbox, leads, outreach, forms, calendar, billing, and admin.",
+    agentUse: "Call tools after reading context. Use preview/confirm flows for writes that affect customers, mail, calendar, billing, or admin settings.",
+  },
+  {
+    layer: "Prompts",
+    standardExpectation: "Optional user-controlled prompt templates exposed by servers.",
+    britcrmStatus: "Not implemented. BritCRM uses resources, playbooks, and tool docs instead.",
+    agentUse: "Use the public docs page and docs resources as the operating guide.",
+  },
+  {
+    layer: "Client Features",
+    standardExpectation: "Clients may provide roots and sampling capabilities when a server requests them.",
+    britcrmStatus: "Not required for current CRM operations.",
+    agentUse: "No client filesystem roots or model-sampling delegation are required.",
+  },
+  {
+    layer: "Safety And Audit",
+    standardExpectation: "Clients should surface tool descriptions, schemas, confirmations, and security boundaries to users.",
+    britcrmStatus: "Implemented through bearer-token scoping, admin role checks, preview-first tools, dashboard activity records, and explicit docs safety rules.",
+    agentUse: "Confirm the user and role before writes, never invent IDs, and log meaningful CRM interactions.",
+  },
+];
+
 export const mcpDocsSections: McpDocsSection[] = [
   {
     id: "setup",

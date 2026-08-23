@@ -3,6 +3,7 @@ import { AlertTriangle, Bot, ExternalLink, KeyRound, Lock, Network, ShieldCheck,
 import { getAppBaseUrl } from "@/lib/app-url";
 import {
   mcpErrorContract,
+  mcpProtocolLayers,
   mcpResponseContract,
   mcpSafetyRules,
   mcpSetupSteps,
@@ -84,6 +85,7 @@ export default function McpDocsPage() {
             <nav className="mt-5 space-y-1 text-sm font-bold">
               {[
                 ["overview", "Overview"],
+                ["layers", "MCP Layers"],
                 ["setup", "Setup"],
                 ["auth", "Auth"],
                 ["contracts", "Responses"],
@@ -136,6 +138,34 @@ export default function McpDocsPage() {
               ))}
             </div>
           </header>
+
+          <section id="layers" className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="text-2xl font-black">MCP Layers</h2>
+            <p className="mt-3 text-sm font-medium leading-7 text-zinc-600 dark:text-zinc-300">
+              This is how agents should understand the BritCRM MCP server compared with the standard MCP model.
+            </p>
+            <div className="mt-5 grid gap-4">
+              {mcpProtocolLayers.map((item) => (
+                <article key={item.layer} className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+                  <h3 className="font-black">{item.layer}</h3>
+                  <div className="mt-3 grid gap-3 text-sm lg:grid-cols-3">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">MCP Standard</p>
+                      <p className="mt-1 font-medium leading-6 text-zinc-700 dark:text-zinc-200">{item.standardExpectation}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">BritCRM Status</p>
+                      <p className="mt-1 font-medium leading-6 text-zinc-700 dark:text-zinc-200">{item.britcrmStatus}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Agent Use</p>
+                      <p className="mt-1 font-medium leading-6 text-zinc-700 dark:text-zinc-200">{item.agentUse}</p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
 
           <section id="setup" className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
             <div className="flex items-center gap-3">

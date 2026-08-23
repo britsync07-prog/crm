@@ -103,10 +103,7 @@ export function registerSnapshotResources(server: McpServer) {
           userId: context.userId,
           email: context.email,
           role: context.role,
-          env: {
-            BRITCRM_MCP_USER_ID: context.userId,
-            BRITCRM_MCP_USER_EMAIL: context.email,
-          },
+          binding: "bearer-token",
         },
         dashboardCounts: {
           activeMailboxes: emailAccounts,
@@ -123,6 +120,7 @@ export function registerSnapshotResources(server: McpServer) {
         notes: [
           "Tools in this MCP session write to the dashboard records owned by mcpContext.userId.",
           "Admin tools are available only when mcpContext.role is ADMIN.",
+          "Hosted MCP clients only need the HTTPS endpoint and Authorization bearer token.",
           "Secrets are not included in this snapshot.",
         ],
       });
