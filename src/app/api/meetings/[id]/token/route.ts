@@ -10,6 +10,7 @@ export async function GET(
     const { id: meetingId } = await params;
     const session = await getSession();
     const { searchParams } = new URL(request.url);
+    const previewOnly = searchParams.get("preview") === "1";
     const participantName = searchParams.get("name") || session?.name || session?.email || "Guest";
 
     // Validate meeting exists
@@ -49,6 +50,14 @@ export async function GET(
     }
 
     const isHost = session?.id === meeting.hostId;
+
+    if (previewOnly) {
+        return NextResponse.json({
+            status: "READY",
+            isHost,
+            title: meeting.title,
+        });
+    }
 
     const apiKey = process.env.LIVEKIT_API_KEY!;
     const apiSecret = process.env.LIVEKIT_API_SECRET!;
