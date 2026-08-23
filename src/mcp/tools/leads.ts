@@ -1,10 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { parse } from "csv-parse/sync";
-import { prisma } from "../../lib/db.js";
-import { analyzeSentimentReal, runLeadCategorizationAgent, runLeadScoringAgent } from "../../lib/ai-agents.js";
-import { ensureCustomerFromLead, LEAD_STAGES, transitionLeadStage } from "../../lib/crm-lifecycle.js";
-import { getMcpContext } from "../context.js";
+import { prisma } from "@/lib/db";
+import { analyzeSentimentReal, runLeadCategorizationAgent, runLeadScoringAgent } from "@/lib/ai-agents";
+import { ensureCustomerFromLead, LEAD_STAGES, transitionLeadStage } from "@/lib/crm-lifecycle";
+import { getMcpContext } from "../context";
 
 const emailSchema = z.string().email().transform((value) => value.trim().toLowerCase());
 const leadStageSchema = z.enum([
@@ -462,4 +462,3 @@ export function registerLeadTools(server: McpServer) {
       })
   );
 }
-

@@ -1,14 +1,16 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { registerAdminTools } from "./tools/admin.js";
-import { registerBillingTools } from "./tools/billing.js";
-import { registerDocsResources } from "./resources/docs.js";
-import { registerSnapshotResources } from "./resources/snapshots.js";
-import { registerCalendarTools } from "./tools/calendar.js";
-import { registerFormTools } from "./tools/forms.js";
-import { registerLeadTools } from "./tools/leads.js";
-import { registerMailTools } from "./tools/mail.js";
-import { registerOutreachTools } from "./tools/outreach.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { registerAdminTools } from "./tools/admin";
+import { registerBillingTools } from "./tools/billing";
+import { registerDocsResources } from "./resources/docs";
+import { registerSnapshotResources } from "./resources/snapshots";
+import { registerCalendarTools } from "./tools/calendar";
+import { registerFormTools } from "./tools/forms";
+import { registerLeadTools } from "./tools/leads";
+import { registerMailTools } from "./tools/mail";
+import { registerOutreachTools } from "./tools/outreach";
 
 export function createBritCrmMcpServer() {
   const server = new McpServer({
@@ -38,7 +40,12 @@ async function main() {
   console.error("BritCRM MCP server running on stdio.");
 }
 
-main().catch((error) => {
-  console.error("BritCRM MCP server failed to start:", error);
-  process.exit(1);
-});
+const currentFile = fileURLToPath(import.meta.url);
+const entryFile = process.argv[1] ? path.resolve(process.argv[1]) : "";
+
+if (entryFile === currentFile) {
+  main().catch((error) => {
+    console.error("BritCRM MCP server failed to start:", error);
+    process.exit(1);
+  });
+}

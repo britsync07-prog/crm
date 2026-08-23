@@ -87,7 +87,7 @@ Creates an invoice from a quotation.
 ## Implementation Gaps
 
 - MCP wrappers over the current BritLedger billing client are implemented in `src/mcp/tools/billing.ts`.
-- MCP billing calls can use `BRITCRM_MCP_USER_ID` and `BRITCRM_MCP_USER_EMAIL` as the BritLedger auth context when no browser session exists.
+- Hosted MCP billing calls use the bearer-token account context from `/api/mcp`; local stdio development can still use `BRITCRM_MCP_USER_ID` and `BRITCRM_MCP_USER_EMAIL` when no browser session exists.
 - Add payment transaction model if not already present.
 - Add PDF generation tools after invoice CRUD is stable.
 

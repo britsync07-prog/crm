@@ -1,10 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
-import { prisma } from "../../lib/db.js";
-import { launchOutreachCampaign, parseRecipients } from "../../lib/outreach-worker.js";
-import { runOutreachReplySync } from "../../lib/outreach-reply-worker.js";
-import { getMcpContext } from "../context.js";
+import { prisma } from "@/lib/db";
+import { launchOutreachCampaign, parseRecipients } from "@/lib/outreach-worker";
+import { runOutreachReplySync } from "@/lib/outreach-reply-worker";
+import { getMcpContext } from "../context";
 
 const leadFiltersSchema = z
   .object({
@@ -386,4 +386,3 @@ export function registerOutreachTools(server: McpServer) {
       })
   );
 }
-

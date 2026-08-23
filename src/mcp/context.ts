@@ -1,4 +1,5 @@
-import { prisma } from "../lib/db.js";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { prisma } from "@/lib/db";
 
 export type BritCrmMcpContext = {
   userId: string;
@@ -6,7 +7,20 @@ export type BritCrmMcpContext = {
   email: string;
 };
 
+const mcpContextStorage = new AsyncLocalStorage<BritCrmMcpContext>();
+
+export function getCurrentMcpContext() {
+  return mcpContextStorage.getStore() || null;
+}
+
+export function runWithMcpContext<T>(context: BritCrmMcpContext, operation: () => Promise<T>) {
+  return mcpContextStorage.run(context, operation);
+}
+
 export async function getMcpContext(): Promise<BritCrmMcpContext> {
+  const requestContext = getCurrentMcpContext();
+  if (requestContext) return requestContext;
+
   const userId = process.env.BRITCRM_MCP_USER_ID?.trim();
   const email = process.env.BRITCRM_MCP_USER_EMAIL?.trim().toLowerCase();
 
@@ -38,4 +52,3 @@ export async function getMcpContext(): Promise<BritCrmMcpContext> {
     email: user.email,
   };
 }
-

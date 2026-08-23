@@ -1,16 +1,16 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { prisma } from "../../lib/db.js";
-import { getAppBaseUrl } from "../../lib/app-url.js";
+import { prisma } from "@/lib/db";
+import { getAppBaseUrl } from "@/lib/app-url";
 import {
   createLiveKitRoomForMeeting,
   getFormAvailability,
   getPublicMeetingUrl,
   makeMeetingRoomId,
   sendMeetingConfirmationEmails,
-} from "../../lib/form-meeting.js";
-import { ensureCustomerFromLead, upsertLeadFromFormSubmission } from "../../lib/crm-lifecycle.js";
-import { getMcpContext } from "../context.js";
+} from "@/lib/form-meeting";
+import { ensureCustomerFromLead, upsertLeadFromFormSubmission } from "@/lib/crm-lifecycle";
+import { getMcpContext } from "../context";
 
 const fieldTypeSchema = z.enum(["TEXT", "TEXTAREA", "DROPDOWN", "RADIO", "CHECKBOX", "EMAIL", "PHONE"]);
 const fieldSchema = z.object({
@@ -482,4 +482,3 @@ export function registerFormTools(server: McpServer) {
       })
   );
 }
-

@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { prisma } from "../../lib/db.js";
-import { fetchEmailBody, fetchRecentEmails, performBatchEmailAction } from "../../lib/imap.js";
-import { sendRealEmail } from "../../lib/mailer.js";
-import { getMcpContext } from "../context.js";
+import { prisma } from "@/lib/db";
+import { fetchEmailBody, fetchRecentEmails, performBatchEmailAction } from "@/lib/imap";
+import { sendRealEmail } from "@/lib/mailer";
+import { getMcpContext } from "../context";
 
 const mailActionSchema = z.enum(["archive", "trash", "spam", "read", "unread", "star", "unstar"]);
 
@@ -243,4 +243,3 @@ export function registerMailTools(server: McpServer) {
       })
   );
 }
-

@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { prisma } from "../../lib/db.js";
-import { getMcpContext } from "../context.js";
+import { prisma } from "@/lib/db";
+import { getMcpContext } from "../context";
 
 function jsonResource(uri: URL, payload: unknown) {
   return {

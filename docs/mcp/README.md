@@ -4,46 +4,48 @@
 
 This is the live operating guide for the unified BritCRM MCP server. AI agents should read this document first through `britcrm://docs/index`, then use the page-specific docs and tools below to safely inspect, create, update, send, and manage CRM data.
 
-The server is implemented in `src/mcp/server.ts` and exposes one MCP server named `britcrm`. It uses stdio transport and registers resources plus tools for Mail, Leads, Outreach, Forms, Calendar, Billing, and Admin/Pricing.
+The server is implemented in `src/mcp/server.ts` and exposes one MCP server named `britcrm`. Production users connect through the hosted Streamable HTTP endpoint at `/api/mcp`; local operators can still use stdio for development. The same server registers resources plus tools for Mail, Leads, Outreach, Forms, Calendar, Billing, and Admin/Pricing.
 
-## Run Configuration
+## Normal User Setup
 
-Start the server from the CRM project root:
-
-```bash
-cd D:\job\crm
-npm run mcp
-```
-
-MCP clients should configure it like this:
+Each active CRM user creates their own MCP token from `/settings/mcp`. MCP clients should configure the hosted endpoint like this:
 
 ```json
 {
   "mcpServers": {
     "britcrm": {
-      "command": "npm",
-      "args": ["run", "mcp", "--silent"],
-      "cwd": "D:\\job\\crm",
-      "env": {
-        "JWT_SECRET": "use-the-crm-secret",
-        "DATABASE_URL": "file:./prisma/dev.db",
-        "BRITCRM_MCP_USER_EMAIL": "admin@example.com"
+      "url": "https://your-crm-domain.com/api/mcp",
+      "headers": {
+        "Authorization": "Bearer bcrm_mcp_generated_token"
       }
     }
   }
 }
 ```
 
-Use either `BRITCRM_MCP_USER_ID` or `BRITCRM_MCP_USER_EMAIL`. If both are supplied, they must resolve to the same active CRM user. Tools fail closed when no active user context exists.
+Users never configure local project paths, database URLs, JWT secrets, or other server environment values in their agent. Those values stay on the CRM deployment.
 
-Each CRM user can set up their own account-bound MCP server from `/settings/mcp`. That page shows the exact `BRITCRM_MCP_USER_ID` and `BRITCRM_MCP_USER_EMAIL` for the logged-in user, plus an MCP client config. When an agent uses that config, tools write to the same user-owned records visible in that user's dashboard.
+When an agent uses a token, tools write to the same user-owned records visible in that user's dashboard. Revoking the token from `/settings/mcp` blocks future calls.
 
-Billing tools also use BritLedger. For BritLedger user sync, set one of:
+## Server Environment
+
+The deployed CRM server owns the database and app secrets. Billing tools also use BritLedger. For BritLedger user sync, server operators should set one of:
 
 - `BRITLEDGER_PASSWORD_SECRET`
 - `JWT_SECRET`
 
 Admin tools require the resolved CRM user to have `role === "ADMIN"`.
+
+## Local Operator Setup
+
+For local development only, start the stdio transport from the CRM project root:
+
+```bash
+cd D:\job\crm
+npm run mcp
+```
+
+The local stdio transport can read `BRITCRM_MCP_USER_ID` or `BRITCRM_MCP_USER_EMAIL` from the operator's process environment. This is not the normal end-user setup.
 
 ## Response Contract
 
@@ -95,14 +97,7 @@ Agents should parse `content[0].text` as JSON, check `success`, and only use `da
 
 ## Per-User MCP Setup
 
-Every active CRM user can run a separate MCP session for their account. The server is shared code, but the session is user-bound by environment variables:
-
-```env
-BRITCRM_MCP_USER_ID=the-crm-user-id
-BRITCRM_MCP_USER_EMAIL=the-crm-user-email
-```
-
-Agents should prefer both values. If only one is available, the server resolves the other from the CRM database. If both values are supplied and they do not match the same active user, the MCP session fails closed.
+Every active CRM user can create one or more bearer tokens for their account. The server is shared code, but each request is user-bound by the token presented to `/api/mcp`.
 
 User-bound MCP effects:
 
@@ -502,9 +497,10 @@ Latest local audit checks:
 - TypeScript passed with `tsc --noEmit`.
 - Targeted ESLint passed for MCP and touched integration files.
 - Production build passed with `npm run build`.
-- MCP stdio tool discovery returned all 50 tools.
+- MCP hosted endpoint rejects unauthenticated requests.
+- MCP stdio tool discovery returned all 50 tools for local development.
 - MCP resource discovery returns docs resources plus `britcrm://snapshot/user`.
 - Admin tools reject a normal user.
 - Admin tools work with admin context by email or ID.
 - BritLedger-backed billing tools work with MCP email-only context.
-- Mismatched `BRITCRM_MCP_USER_ID` and `BRITCRM_MCP_USER_EMAIL` fails closed.
+- Stdio-only mismatched `BRITCRM_MCP_USER_ID` and `BRITCRM_MCP_USER_EMAIL` fails closed.

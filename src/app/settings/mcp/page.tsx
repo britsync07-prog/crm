@@ -1,7 +1,28 @@
 import { redirect } from "next/navigation";
-import { Bot, BookOpen, CheckCircle2, Database, KeyRound, ShieldCheck, Terminal } from "lucide-react";
+import {
+  Bot,
+  BookOpen,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  Crown,
+  Database,
+  ExternalLink,
+  FileText,
+  Globe2,
+  Mail,
+  ReceiptText,
+  Send,
+  ShieldCheck,
+  Terminal,
+  Users,
+} from "lucide-react";
+import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getAppBaseUrl } from "@/lib/app-url";
+import { listMcpAccessTokens } from "@/lib/mcp-tokens";
+import { McpTokenManager, type McpTokenView } from "@/components/McpTokenManager";
 
 export const dynamic = "force-dynamic";
 
@@ -40,33 +61,27 @@ export default async function McpSettingsPage() {
     prisma.calendarEvent.count({ where: { userId: user.id } }),
   ]);
 
+  const endpoint = `${getAppBaseUrl()}/api/mcp`;
+  const tokens = (await listMcpAccessTokens(user.id)).map((token): McpTokenView => ({
+    id: token.id,
+    name: token.name,
+    lastFour: token.lastFour,
+    createdAt: token.createdAt.toISOString(),
+    updatedAt: token.updatedAt.toISOString(),
+    lastUsedAt: token.lastUsedAt?.toISOString() || null,
+    expiresAt: token.expiresAt?.toISOString() || null,
+    revokedAt: token.revokedAt?.toISOString() || null,
+  }));
   const mcpConfig = {
     mcpServers: {
       britcrm: {
-        command: "npm",
-        args: ["run", "mcp", "--silent"],
-        cwd: "D:\\job\\crm",
-        env: {
-          JWT_SECRET: "use-the-same-JWT_SECRET-as-your-CRM-server",
-          DATABASE_URL: "file:./prisma/dev.db",
-          BRITCRM_MCP_USER_ID: user.id,
-          BRITCRM_MCP_USER_EMAIL: user.email,
+        url: endpoint,
+        headers: {
+          Authorization: "Bearer bcrm_mcp_your_token_here",
         },
       },
     },
   };
-
-  const resourceList = [
-    "britcrm://docs/index",
-    "britcrm://snapshot/user",
-    "britcrm://docs/mail",
-    "britcrm://docs/leads",
-    "britcrm://docs/outreach",
-    "britcrm://docs/forms",
-    "britcrm://docs/calendar",
-    "britcrm://docs/billing",
-    ...(user.role === "ADMIN" ? ["britcrm://docs/admin"] : []),
-  ];
 
   const dashboardCounts = [
     { label: "Mailboxes", value: mailboxes },
@@ -77,6 +92,84 @@ export default async function McpSettingsPage() {
   ];
 
   const organization = user.ownedOrganization || user.memberProfile?.organization || null;
+  const docSections = [
+    {
+      id: "setup",
+      title: "Setup",
+      icon: Terminal,
+      description: "Create a token, add the hosted endpoint to the agent, then read the account snapshot before calling tools.",
+      workflow: ["Create a token from Hosted MCP Access.", "Paste the generated config into the MCP client.", "Ask the agent to read the account snapshot before any write."],
+      tools: ["resources/read", "tools/list", "tools/call"],
+    },
+    {
+      id: "snapshot",
+      title: "Account Snapshot",
+      icon: FileText,
+      description: "Confirms which CRM user, role, organization, counts, upcoming events, and recent activity the agent is operating on.",
+      workflow: ["Read snapshot at startup.", "Confirm email and role with the user.", "Use returned counts and IDs as context for later work."],
+      tools: ["account snapshot resource"],
+    },
+    {
+      id: "mail",
+      title: "Mail",
+      icon: Mail,
+      description: "Manage connected inboxes, read messages, draft replies, send approved email, and perform mailbox actions.",
+      workflow: ["List connected accounts.", "Search or read messages.", "Draft first, send only after approval."],
+      tools: ["mail.list_accounts", "mail.search_messages", "mail.read_message", "mail.draft_reply", "mail.send_email", "mail.batch_action"],
+    },
+    {
+      id: "leads",
+      title: "Leads",
+      icon: Users,
+      description: "List, create, update, upload, score, log interactions, and convert user-owned leads.",
+      workflow: ["List or upload leads.", "Open a lead before updating it.", "Log every important call, note, or reply."],
+      tools: ["leads.list", "leads.get", "leads.create", "leads.update", "leads.upload_csv", "leads.score", "leads.log_interaction", "leads.convert_to_customer"],
+    },
+    {
+      id: "outreach",
+      title: "Outreach",
+      icon: Send,
+      description: "Preview campaigns, launch approved outreach, send follow-ups, process replies, and inspect campaign analytics.",
+      workflow: ["Preview recipients and sender accounts.", "Get explicit approval.", "Launch with confirm true and process replies later."],
+      tools: ["outreach.preview_campaign", "outreach.launch_campaign", "outreach.list_campaigns", "outreach.get_campaign", "outreach.send_follow_up", "outreach.process_replies"],
+    },
+    {
+      id: "forms",
+      title: "Forms",
+      icon: ClipboardList,
+      description: "Create forms, generate share messages, inspect submissions, and sync intake data into CRM records.",
+      workflow: ["Create the form and fields.", "Share the public form link.", "Review submissions and meeting intake data."],
+      tools: ["forms.list", "forms.create", "forms.delete", "forms.get_submissions", "forms.submit_public", "forms.generate_share_message"],
+    },
+    {
+      id: "calendar",
+      title: "Calendar",
+      icon: CalendarDays,
+      description: "Manage availability, check free slots, create events, book client meetings, and cancel events safely.",
+      workflow: ["Read settings.", "Check availability before booking.", "Use confirm true only after approval for client meetings."],
+      tools: ["calendar.get_settings", "calendar.update_settings", "calendar.list_events", "calendar.check_availability", "calendar.create_event", "calendar.book_client_meeting", "calendar.cancel_event"],
+    },
+    {
+      id: "billing",
+      title: "Billing",
+      icon: ReceiptText,
+      description: "Manage BritLedger clients, invoices, quotations, payments, balances, and invoice email sending.",
+      workflow: ["List or create a client.", "Create invoice or quote with line items.", "Use returned balance due and record payments later."],
+      tools: ["billing.list_clients", "billing.create_client", "billing.list_invoices", "billing.create_invoice", "billing.update_invoice", "billing.record_payment", "billing.create_quotation", "billing.list_quotations", "billing.convert_quote_to_invoice", "billing.send_invoice"],
+    },
+    ...(user.role === "ADMIN"
+      ? [
+          {
+            id: "admin",
+            title: "Admin",
+            icon: Crown,
+            description: "Manage pricing plans, discount events, trials, users, system email profiles, and operations snapshots.",
+            workflow: ["Preview admin changes with confirm false.", "Apply only after approval.", "Audit operations and activity after changes."],
+            tools: ["admin.pricing.list_plans", "admin.pricing.upsert_plan", "admin.pricing.upsert_discount_event", "admin.users.search", "admin.users.update", "admin.system_email.update_profile", "admin.operations.snapshot"],
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-8 sm:py-12">
@@ -129,7 +222,7 @@ export default async function McpSettingsPage() {
               </p>
             </div>
             <p className="rounded-xl bg-blue-50 p-4 text-xs font-bold leading-6 text-[#012169] dark:bg-blue-950/30 dark:text-blue-100">
-              Use both `BRITCRM_MCP_USER_ID` and `BRITCRM_MCP_USER_EMAIL` for the strongest binding. If they do not match, the MCP server rejects the session.
+              MCP tokens are bound to this CRM account. Agents only receive a hosted endpoint and bearer token; server secrets stay on the CRM server.
             </p>
           </div>
         </section>
@@ -145,21 +238,96 @@ export default async function McpSettingsPage() {
         </section>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-          <div className="flex items-center gap-3">
-            <BookOpen className="h-5 w-5 text-[#012169] dark:text-blue-300" />
-            <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-50">Agent Docs</h2>
-          </div>
-          <ul className="mt-5 space-y-3">
-            {resourceList.map((uri) => (
-              <li key={uri} className="break-all rounded-xl bg-zinc-50 px-3 py-2 font-mono text-xs text-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
-                {uri}
-              </li>
-            ))}
-          </ul>
-        </section>
+      <section className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="flex items-center gap-3">
+          <Globe2 className="h-5 w-5 text-[#012169] dark:text-blue-300" />
+          <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-50">Hosted MCP Access</h2>
+        </div>
+        <div className="mt-6">
+          <McpTokenManager endpoint={endpoint} tokens={tokens} />
+        </div>
+      </section>
 
+      <section className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <BookOpen className="h-5 w-5 text-[#012169] dark:text-blue-300" />
+              <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-50">Agent Documentation</h2>
+            </div>
+            <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-zinc-500 dark:text-zinc-400">
+              One-page MCP guide for agents. Use the navigation, scroll to the needed workflow, then call tools with the account-bound token from this page.
+            </p>
+          </div>
+          <Link href="/mcp/docs" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#012169] px-4 py-3 text-sm font-black text-white">
+            Open Docs Page
+            <ExternalLink className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <nav className="mt-6 flex gap-2 overflow-x-auto pb-2">
+          {docSections.map((section) => {
+            const Icon = section.icon;
+            return (
+              <a
+                key={section.id}
+                href={`#mcp-doc-${section.id}`}
+                className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-xs font-black text-zinc-700 hover:border-[#012169] hover:text-[#012169] dark:border-zinc-800 dark:text-zinc-200 dark:hover:border-blue-300 dark:hover:text-blue-200"
+              >
+                <Icon className="h-4 w-4" />
+                {section.title}
+              </a>
+            );
+          })}
+        </nav>
+
+        <div className="mt-6 space-y-5">
+          {docSections.map((section) => {
+            const Icon = section.icon;
+            return (
+              <article key={section.id} id={`mcp-doc-${section.id}`} className="scroll-mt-24 rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#012169] dark:bg-blue-950/30 dark:text-blue-200">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-50">{section.title}</h3>
+                      <p className="mt-1 text-sm font-medium leading-6 text-zinc-500 dark:text-zinc-400">{section.description}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Agent Workflow</p>
+                    <ul className="mt-3 space-y-2 text-sm font-bold text-zinc-600 dark:text-zinc-300">
+                      {section.workflow.map((item) => (
+                        <li key={item} className="flex gap-2">
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Tools And Resources</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {section.tools.map((tool) => (
+                        <span key={tool} className="rounded-lg bg-zinc-100 px-2.5 py-1.5 font-mono text-[11px] font-bold text-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
+                          {tool}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
           <div className="flex items-center gap-3">
             <Database className="h-5 w-5 text-[#012169] dark:text-blue-300" />
@@ -177,13 +345,13 @@ export default async function McpSettingsPage() {
 
         <section className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
           <div className="flex items-center gap-3">
-            <KeyRound className="h-5 w-5 text-[#012169] dark:text-blue-300" />
-            <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-50">Required Server Env</h2>
+            <ShieldCheck className="h-5 w-5 text-[#012169] dark:text-blue-300" />
+            <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-50">Server Managed</h2>
           </div>
           <div className="mt-5 space-y-3 text-sm font-bold text-zinc-600 dark:text-zinc-300">
-            <p>`JWT_SECRET` must match the CRM server secret.</p>
-            <p>`DATABASE_URL` must point to the CRM database.</p>
-            <p>`BRITLEDGER_PASSWORD_SECRET` is recommended for billing tools.</p>
+            <p>Users do not configure database paths or application secrets.</p>
+            <p>The CRM server authenticates each MCP request by bearer token.</p>
+            <p>Revoking a token immediately blocks that agent from future calls.</p>
             <p>Admin tools are visible to all clients, but calls fail unless your CRM role is `ADMIN`.</p>
           </div>
         </section>

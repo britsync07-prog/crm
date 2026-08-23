@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosError } from "axios";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
+import { getCurrentMcpContext } from "@/mcp/context";
 
 const BASE_URL = process.env.BRITLEDGER_API_URL || "https://ledger.britsyncai.com/api/v1";
 const GLOBAL_EMAIL = process.env.BRITLEDGER_EMAIL || "";
@@ -117,6 +118,9 @@ async function ensureToken(userId?: string, email?: string): Promise<string> {
 async function getBritLedgerSession(): Promise<{ id: string; email: string; role?: string } | null> {
   const session = await getSession().catch(() => null);
   if (session?.id && session?.email) return session;
+
+  const mcpContext = getCurrentMcpContext();
+  if (mcpContext) return { id: mcpContext.userId, email: mcpContext.email, role: mcpContext.role };
 
   const mcpUserId = process.env.BRITCRM_MCP_USER_ID?.trim();
   const mcpEmail = process.env.BRITCRM_MCP_USER_EMAIL?.trim().toLowerCase();

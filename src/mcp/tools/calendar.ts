@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { prisma } from "../../lib/db.js";
+import { prisma } from "@/lib/db";
 import {
   createLiveKitRoomForMeeting,
   deleteLiveKitRoomSafe,
@@ -8,8 +8,8 @@ import {
   makeMeetingRoomId,
   sendMeetingCancellationEmails,
   sendMeetingConfirmationEmails,
-} from "../../lib/form-meeting.js";
-import { getMcpContext } from "../context.js";
+} from "@/lib/form-meeting";
+import { getMcpContext } from "../context";
 
 function jsonResult(payload: unknown) {
   return {
@@ -405,4 +405,3 @@ export function registerCalendarTools(server: McpServer) {
       })
   );
 }
-

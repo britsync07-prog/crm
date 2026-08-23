@@ -1,18 +1,18 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { createClient, getClientBalances, listClients } from "../../lib/britledger/clients.js";
+import { createClient, getClientBalances, listClients } from "@/lib/britledger/clients";
 import {
   createInvoice,
   getInvoice,
   listInvoices,
   sendInvoice,
   updateInvoice,
-} from "../../lib/britledger/invoices.js";
+} from "@/lib/britledger/invoices";
 import {
   convertQuotationToInvoice,
   createQuotation,
   listQuotations,
-} from "../../lib/britledger/quotations.js";
+} from "@/lib/britledger/quotations";
 import type {
   InvoiceCreate,
   InvoiceItem,
@@ -21,9 +21,9 @@ import type {
   QuotationCreate,
   QuotationItem,
   QuotationStatus,
-} from "../../lib/britledger/types.js";
-import { generateInvoiceNumber, generateQuotationNumber } from "../../lib/britledger/utils.js";
-import { getMcpContext } from "../context.js";
+} from "@/lib/britledger/types";
+import { generateInvoiceNumber, generateQuotationNumber } from "@/lib/britledger/utils";
+import { getMcpContext } from "../context";
 
 function jsonResult(payload: unknown) {
   return {

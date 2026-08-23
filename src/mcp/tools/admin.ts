@@ -1,14 +1,14 @@
 import crypto from "crypto";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { prisma } from "../../lib/db.js";
+import { prisma } from "@/lib/db";
 import {
   ensurePricingTables,
   getPricingOffers,
   getPricingPlans,
   getPublicPricingPlans,
-} from "../../lib/pricing.js";
-import { getMcpContext } from "../context.js";
+} from "@/lib/pricing";
+import { getMcpContext } from "../context";
 
 function jsonResult(payload: unknown) {
   return {
