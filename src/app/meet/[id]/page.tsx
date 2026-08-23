@@ -21,6 +21,10 @@ const backgroundModes: Array<{ mode: BackgroundMode; label: string }> = [
 ];
 
 const virtualBackgroundPath = "/backgrounds/britcrm-office.png";
+const mediaPipeAssetPaths = {
+    tasksVisionFileSet: "/mediapipe/wasm",
+    modelAssetPath: "/mediapipe/selfie_segmenter.tflite",
+};
 
 function getBackgroundSwitchOptions(mode: BackgroundMode): SwitchBackgroundProcessorOptions {
     if (mode === "blur") {
@@ -32,6 +36,23 @@ function getBackgroundSwitchOptions(mode: BackgroundMode): SwitchBackgroundProce
     }
 
     return { mode: "disabled" };
+}
+
+function getInitialBackgroundProcessorOptions(mode: BackgroundMode): BackgroundProcessorOptions {
+    return {
+        ...getBackgroundSwitchOptions(mode),
+        assetPaths: mediaPipeAssetPaths,
+    };
+}
+
+function getBackgroundErrorMessage(error: unknown) {
+    if (error instanceof Error && error.message) return error.message;
+    if (typeof error === "string" && error.trim()) return error;
+    try {
+        return JSON.stringify(error);
+    } catch {
+        return "The browser could not initialize the segmentation processor.";
+    }
 }
 
 function BackgroundModeSelector({
@@ -253,13 +274,13 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
 
             if (backgroundSupported) {
                 try {
-                    const processor = BackgroundProcessor(getBackgroundSwitchOptions(backgroundMode) as BackgroundProcessorOptions);
+                    const processor = BackgroundProcessor(getInitialBackgroundProcessorOptions(backgroundMode));
                     await videoTrack.setProcessor(processor);
                     backgroundProcessorRef.current = processor;
                     setBackgroundError(null);
                 } catch (processorError) {
                     backgroundProcessorRef.current = null;
-                    setBackgroundError(processorError instanceof Error ? processorError.message : "Background effects are not available on this device.");
+                    setBackgroundError(getBackgroundErrorMessage(processorError));
                 }
             }
         } catch (error) {
@@ -313,14 +334,14 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                 setBackgroundError(null);
 
                 if (!backgroundProcessorRef.current) {
-                    const processor = BackgroundProcessor({ mode: "disabled" });
+                    const processor = BackgroundProcessor(getInitialBackgroundProcessorOptions("none"));
                     await videoTrack.setProcessor(processor);
                     backgroundProcessorRef.current = processor;
                 }
 
                 await backgroundProcessorRef.current.switchTo(getBackgroundSwitchOptions(backgroundMode));
             } catch (error) {
-                setBackgroundError(error instanceof Error ? error.message : "Could not apply background effect.");
+                setBackgroundError(getBackgroundErrorMessage(error));
             }
         };
 
@@ -336,13 +357,13 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
 
             if (backgroundSupported) {
                 try {
-                    const processor = BackgroundProcessor(getBackgroundSwitchOptions(backgroundMode) as BackgroundProcessorOptions);
+                    const processor = BackgroundProcessor(getInitialBackgroundProcessorOptions(backgroundMode));
                     await videoTrack.setProcessor(processor);
                     backgroundProcessorRef.current = processor;
                     setBackgroundError(null);
                 } catch (processorError) {
                     backgroundProcessorRef.current = null;
-                    setBackgroundError(processorError instanceof Error ? processorError.message : "Background effects are not available on this device.");
+                    setBackgroundError(getBackgroundErrorMessage(processorError));
                 }
             }
 
