@@ -7,9 +7,9 @@ import {
     RoomAudioRenderer,
 } from "@livekit/components-react";
 import { BackgroundProcessor, type BackgroundProcessorOptions, type BackgroundProcessorWrapper, type SwitchBackgroundProcessorOptions, supportsBackgroundProcessors } from "@livekit/track-processors";
-import type { VideoCaptureOptions } from "livekit-client";
-import { useCallback, useEffect, useMemo, useState, use } from "react";
-import { ImageIcon, Loader2, Sparkles, Video, X } from "lucide-react";
+import { createLocalAudioTrack, createLocalVideoTrack, LocalAudioTrack, LocalVideoTrack, Room, Track } from "livekit-client";
+import { useCallback, useEffect, useMemo, useRef, useState, use } from "react";
+import { ImageIcon, Loader2, Sparkles, Video, VideoOff, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type BackgroundMode = "none" | "blur" | "virtual";
@@ -32,10 +32,6 @@ function getBackgroundSwitchOptions(mode: BackgroundMode): SwitchBackgroundProce
     }
 
     return { mode: "disabled" };
-}
-
-function getInitialBackgroundProcessorOptions(mode: BackgroundMode): BackgroundProcessorOptions {
-    return getBackgroundSwitchOptions(mode);
 }
 
 function BackgroundModeSelector({
@@ -87,27 +83,19 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     const [disconnectReason, setDisconnectReason] = useState<string | null>(null);
     const [countdown, setCountdown] = useState<string>("");
     const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>("none");
-    const [joinedBackgroundMode, setJoinedBackgroundMode] = useState<BackgroundMode>("none");
     const [backgroundSupported, setBackgroundSupported] = useState(false);
     const [backgroundChecked, setBackgroundChecked] = useState(false);
     const [backgroundError, setBackgroundError] = useState<string | null>(null);
+    const [previewError, setPreviewError] = useState<string | null>(null);
+    const [previewReady, setPreviewReady] = useState(false);
+    const [tracksPublished, setTracksPublished] = useState(false);
 
-    const backgroundProcessor = useMemo<BackgroundProcessorWrapper | null>(() => {
-        if (!backgroundSupported) return null;
-        return BackgroundProcessor(getInitialBackgroundProcessorOptions(joinedBackgroundMode));
-    }, [backgroundSupported, joinedBackgroundMode]);
-
-    const videoCapture = useMemo<VideoCaptureOptions | boolean>(() => {
-        if (!backgroundProcessor) return true;
-        return {
-            processor: backgroundProcessor,
-            resolution: {
-                width: 1280,
-                height: 720,
-                frameRate: 30,
-            },
-        };
-    }, [backgroundProcessor]);
+    const previewVideoRef = useRef<HTMLVideoElement | null>(null);
+    const localVideoTrackRef = useRef<LocalVideoTrack | null>(null);
+    const localAudioTrackRef = useRef<LocalAudioTrack | null>(null);
+    const backgroundProcessorRef = useRef<BackgroundProcessorWrapper | null>(null);
+    const publishingRef = useRef(false);
+    const room = useMemo(() => new Room(), []);
 
     const getLivekitUrl = () => {
         const configuredUrl = (process.env.NEXT_PUBLIC_LIVEKIT_URL || "").trim();
@@ -187,10 +175,11 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
             }
 
             if (data.token) {
-                setJoinedBackgroundMode(backgroundSupported ? selectedBackgroundMode : "none");
+                setBackgroundMode(backgroundSupported ? selectedBackgroundMode : "none");
                 setToken(data.token);
                 setHasJoined(true);
                 setWaitingInfo(null); // Clear waiting if we got a token
+                setTracksPublished(false);
             } else {
                 setHasJoined(false);
             }
@@ -231,6 +220,74 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
         setBackgroundChecked(true);
     }, []);
 
+    useEffect(() => {
+        return () => {
+            room.disconnect();
+            localVideoTrackRef.current?.stop();
+            localAudioTrackRef.current?.stop();
+            void backgroundProcessorRef.current?.destroy();
+        };
+    }, [room]);
+
+    useEffect(() => {
+        if (!backgroundChecked || hasJoined || waitingInfo || error || isExpired || localVideoTrackRef.current) return;
+
+        let canceled = false;
+
+        const startPreview = async () => {
+            try {
+                setPreviewError(null);
+                const videoTrack = await createLocalVideoTrack({
+                    resolution: {
+                        width: 1280,
+                        height: 720,
+                        frameRate: 30,
+                    },
+                });
+
+                if (backgroundSupported) {
+                    const processor = BackgroundProcessor(getBackgroundSwitchOptions(backgroundMode) as BackgroundProcessorOptions);
+                    await videoTrack.setProcessor(processor);
+                    backgroundProcessorRef.current = processor;
+                }
+
+                if (canceled) {
+                    videoTrack.stop();
+                    await backgroundProcessorRef.current?.destroy();
+                    backgroundProcessorRef.current = null;
+                    return;
+                }
+
+                localVideoTrackRef.current = videoTrack;
+                setPreviewReady(true);
+            } catch (error) {
+                setPreviewReady(false);
+                setPreviewError(error instanceof Error ? error.message : "Could not start camera preview.");
+            }
+        };
+
+        void startPreview();
+
+        return () => {
+            canceled = true;
+        };
+    }, [backgroundChecked, backgroundMode, backgroundSupported, error, hasJoined, isExpired, waitingInfo]);
+
+    useEffect(() => {
+        const videoElement = previewVideoRef.current;
+        const videoTrack = localVideoTrackRef.current;
+
+        if (!videoElement || !videoTrack || hasJoined) return;
+
+        videoTrack.attach(videoElement);
+        videoElement.muted = true;
+        videoElement.playsInline = true;
+
+        return () => {
+            videoTrack.detach(videoElement);
+        };
+    }, [hasJoined, previewReady]);
+
     const handleBackgroundModeChange = (mode: BackgroundMode) => {
         setBackgroundMode(mode);
         if (mode === "none") {
@@ -245,13 +302,14 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
 
     useEffect(() => {
         if (!backgroundChecked || !backgroundSupported) {
-            if (backgroundChecked && hasJoined && backgroundMode !== "none") {
+            if (backgroundChecked && backgroundMode !== "none") {
                 setBackgroundError("Background effects are not supported in this browser.");
             }
             return;
         }
 
-        if (!hasJoined || !backgroundProcessor) return;
+        const backgroundProcessor = backgroundProcessorRef.current;
+        if (!backgroundProcessor) return;
 
         const applyBackground = async () => {
             try {
@@ -263,11 +321,66 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
         };
 
         void applyBackground();
-    }, [backgroundChecked, backgroundMode, backgroundProcessor, backgroundSupported, hasJoined]);
+    }, [backgroundChecked, backgroundMode, backgroundSupported, previewReady]);
+
+    const ensureLocalTracks = useCallback(async () => {
+        if (!localVideoTrackRef.current) {
+            const videoTrack = await createLocalVideoTrack({
+                resolution: {
+                    width: 1280,
+                    height: 720,
+                    frameRate: 30,
+                },
+            });
+
+            if (backgroundSupported) {
+                const processor = BackgroundProcessor(getBackgroundSwitchOptions(backgroundMode) as BackgroundProcessorOptions);
+                await videoTrack.setProcessor(processor);
+                backgroundProcessorRef.current = processor;
+            }
+
+            localVideoTrackRef.current = videoTrack;
+        }
+
+        if (!localAudioTrackRef.current) {
+            localAudioTrackRef.current = await createLocalAudioTrack();
+        }
+    }, [backgroundMode, backgroundSupported]);
+
+    const publishLocalTracks = useCallback(async () => {
+        if (tracksPublished || publishingRef.current) return;
+
+        publishingRef.current = true;
+
+        try {
+            await ensureLocalTracks();
+            const videoTrack = localVideoTrackRef.current;
+            const audioTrack = localAudioTrackRef.current;
+
+            if (videoTrack) {
+                await room.localParticipant.publishTrack(videoTrack, { source: Track.Source.Camera });
+            }
+
+            if (audioTrack) {
+                await room.localParticipant.publishTrack(audioTrack, { source: Track.Source.Microphone });
+            }
+
+            setTracksPublished(true);
+        } catch (error) {
+            setDisconnectReason(error instanceof Error ? error.message : "Could not publish camera or microphone.");
+        } finally {
+            publishingRef.current = false;
+        }
+    }, [ensureLocalTracks, room, tracksPublished]);
 
     const handleJoinClick = (e: React.FormEvent) => {
         e.preventDefault();
-        if (name.trim()) fetchToken(name.trim(), backgroundMode);
+        if (!name.trim()) return;
+
+        void (async () => {
+            await ensureLocalTracks();
+            await fetchToken(name.trim(), backgroundMode);
+        })();
     };
 
     if (error || isExpired) {
@@ -332,7 +445,20 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                             onChange={e => setName(e.target.value)}
                             className="w-full bg-zinc-50 dark:bg-slate-900 border border-blue-100 dark:border-blue-900/30 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-[#012169] dark:text-white transition"
                         />
-                        <div className="rounded-2xl border border-blue-100 bg-slate-950 p-3 dark:border-blue-900/30">
+                        <div className="overflow-hidden rounded-2xl border border-blue-100 bg-slate-950 dark:border-blue-900/30">
+                            <div className="aspect-video bg-black">
+                                {previewReady ? (
+                                    <video ref={previewVideoRef} className="h-full w-full object-cover" autoPlay muted playsInline />
+                                ) : (
+                                    <div className="flex h-full flex-col items-center justify-center gap-3 text-white/60">
+                                        {previewError ? <VideoOff className="h-8 w-8" /> : <Loader2 className="h-8 w-8 animate-spin" />}
+                                        <p className="max-w-xs px-4 text-center text-xs font-bold leading-5">
+                                            {previewError || "Starting camera preview..."}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="p-3">
                             <div className="mb-3 flex items-center justify-between gap-3">
                                 <p className="text-xs font-black uppercase tracking-widest text-white/70">Background</p>
                                 <span className="text-[10px] font-bold text-white/45">
@@ -345,10 +471,11 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                                     {backgroundError}
                                 </p>
                             )}
+                            </div>
                         </div>
                         <button
                             type="submit"
-                            disabled={!name.trim()}
+                            disabled={!name.trim() || !!previewError}
                             className="w-full py-3 bg-[#012169] hover:bg-[#c8102e] disabled:opacity-50 text-white font-black uppercase tracking-widest text-xs rounded-xl transition-colors"
                         >
                             Join Meeting
@@ -406,14 +533,18 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
             <div className="flex-1 overflow-hidden p-2 sm:p-4">
                 <div className="relative w-full h-full rounded-2xl overflow-hidden border border-white/10 bg-black">
                     <LiveKitRoom
-                        video={videoCapture}
-                        audio={true}
+                        room={room}
+                        video={false}
+                        audio={false}
                         token={token}
                         serverUrl={getLivekitUrl()}
                         data-lk-theme="default"
                         style={{ height: "100%" }}
                         connectOptions={{ autoSubscribe: true }}
                         onDisconnected={() => setDisconnected(true)}
+                        onConnected={() => {
+                            void publishLocalTracks();
+                        }}
                         onError={(err) => setDisconnectReason(err?.message || "Unknown error occurred")}
                     >
                         <VideoConference />
