@@ -6,11 +6,11 @@ import {
     VideoConference,
     RoomAudioRenderer,
 } from "@livekit/components-react";
-import { BackgroundProcessor, type BackgroundProcessorWrapper, type SwitchBackgroundProcessorOptions, supportsBackgroundProcessors } from "@livekit/track-processors";
 import { createLocalAudioTrack, createLocalVideoTrack, LocalAudioTrack, LocalVideoTrack, Room, Track, VideoPresets } from "livekit-client";
 import { useCallback, useEffect, useMemo, useRef, useState, use } from "react";
 import { ImageIcon, Loader2, Sparkles, Video, VideoOff, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { EffectsPipeline, type BackgroundInput } from "longpipe";
 
 type BackgroundMode = "none" | "blur" | "virtual";
 
@@ -21,15 +21,11 @@ const backgroundModes: Array<{ mode: BackgroundMode; label: string }> = [
 ];
 
 const virtualBackgroundPath = "/backgrounds/britcrm-office.png";
-const mediaPipeAssetPaths = {
-    tasksVisionFileSet: "/mediapipe/wasm",
-    modelAssetPath: "/mediapipe/selfie_multiclass_256x256.tflite",
-};
 
-function getBackgroundSwitchOptions(mode: BackgroundMode): SwitchBackgroundProcessorOptions {
-    if (mode === "blur") return { mode: "background-blur", blurRadius: 10 };
-    if (mode === "virtual") return { mode: "virtual-background", imagePath: virtualBackgroundPath };
-    return { mode: "disabled" };
+function getBackgroundInput(mode: BackgroundMode): BackgroundInput {
+    if (mode === "blur") return { blur: { strength: "high" } };
+    if (mode === "virtual") return virtualBackgroundPath;
+    return "none";
 }
 
 function getBackgroundErrorMessage(error: unknown) {
@@ -101,21 +97,33 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
 
     const previewVideoRef = useRef<HTMLVideoElement | null>(null);
     const localVideoTrackRef = useRef<LocalVideoTrack | null>(null);
+    const sourceVideoTrackRef = useRef<LocalVideoTrack | null>(null);
     const localAudioTrackRef = useRef<LocalAudioTrack | null>(null);
-    const backgroundProcessorRef = useRef<BackgroundProcessorWrapper | null>(null);
+    const effectsPipelineRef = useRef<EffectsPipeline | null>(null);
     const publishingRef = useRef(false);
     const room = useMemo(() => new Room(), []);
 
-    const attachBackgroundProcessor = useCallback(async (videoTrack: LocalVideoTrack, mode: BackgroundMode) => {
-        const processor = BackgroundProcessor({
-            ...getBackgroundSwitchOptions("none"),
-            assetPaths: mediaPipeAssetPaths,
+    const createEffectsVideoTrack = useCallback((videoTrack: LocalVideoTrack, mode: BackgroundMode) => {
+        const inputStream = new MediaStream([videoTrack.mediaStreamTrack]);
+        const pipeline = new EffectsPipeline(inputStream, {
+            background: getBackgroundInput(mode),
+            preset: "auto",
+            adaptive: true,
+            audio: "passthrough",
+            outputResolution: { w: 640, h: 360 },
+            onError: (err) => setBackgroundError(err.message),
         });
+        const outputTrack = pipeline.stream.getVideoTracks()[0];
 
-        await videoTrack.setProcessor(processor);
-        await processor.switchTo(getBackgroundSwitchOptions(mode));
-        backgroundProcessorRef.current = processor;
+        if (!outputTrack) {
+            pipeline.destroy();
+            throw new Error("Longpipe did not create a processed video track.");
+        }
+
+        effectsPipelineRef.current = pipeline;
+        void pipeline.ready.catch((err) => setBackgroundError(getBackgroundErrorMessage(err)));
         setBackgroundError(null);
+        return new LocalVideoTrack(outputTrack);
     }, []);
 
     const getLivekitUrl = () => {
@@ -237,7 +245,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     }, [fetchMeetingStatus]);
 
     useEffect(() => {
-        setBackgroundSupported(supportsBackgroundProcessors());
+        setBackgroundSupported(typeof window !== "undefined" && typeof window.MediaStream !== "undefined");
         setBackgroundChecked(true);
     }, []);
 
@@ -251,8 +259,11 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
         return () => {
             room.disconnect();
             localVideoTrackRef.current?.stop();
+            effectsPipelineRef.current?.destroy();
+            if (sourceVideoTrackRef.current !== localVideoTrackRef.current) {
+                sourceVideoTrackRef.current?.stop();
+            }
             localAudioTrackRef.current?.stop();
-            void backgroundProcessorRef.current?.destroy();
         };
     }, [room]);
 
@@ -263,27 +274,33 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
             setPreviewStarting(true);
             setPreviewError(null);
 
-            const videoTrack = await createLocalVideoTrack({
+            const sourceVideoTrack = await createLocalVideoTrack({
                 facingMode: "user",
                 resolution: VideoPresets.h360.resolution,
             });
 
-            localVideoTrackRef.current = videoTrack;
+            sourceVideoTrackRef.current = sourceVideoTrack;
 
             if (backgroundSupported) {
-                await attachBackgroundProcessor(videoTrack, backgroundMode);
+                localVideoTrackRef.current = createEffectsVideoTrack(sourceVideoTrack, backgroundMode);
+            } else {
+                localVideoTrackRef.current = sourceVideoTrack;
             }
 
             setPreviewReady(true);
         } catch (error) {
             localVideoTrackRef.current?.stop();
             localVideoTrackRef.current = null;
+            effectsPipelineRef.current?.destroy();
+            effectsPipelineRef.current = null;
+            sourceVideoTrackRef.current?.stop();
+            sourceVideoTrackRef.current = null;
             setPreviewReady(false);
             setPreviewError(error instanceof Error ? error.message : "Could not start camera preview.");
         } finally {
             setPreviewStarting(false);
         }
-    }, [attachBackgroundProcessor, backgroundMode, backgroundSupported, error, hasJoined, isExpired, previewReady, previewStarting, waitingInfo]);
+    }, [backgroundMode, backgroundSupported, createEffectsVideoTrack, error, hasJoined, isExpired, previewReady, previewStarting, waitingInfo]);
 
     useEffect(() => {
         const videoElement = previewVideoRef.current;
@@ -327,38 +344,39 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
 
                 setBackgroundError(null);
 
-                if (!backgroundProcessorRef.current) {
-                    await attachBackgroundProcessor(videoTrack, backgroundMode);
+                if (!effectsPipelineRef.current) {
                     return;
                 }
 
-                await backgroundProcessorRef.current.switchTo(getBackgroundSwitchOptions(backgroundMode));
+                await effectsPipelineRef.current.setBackground(getBackgroundInput(backgroundMode));
             } catch (error) {
                 setBackgroundError(getBackgroundErrorMessage(error));
             }
         };
 
         void applyBackground();
-    }, [attachBackgroundProcessor, backgroundChecked, backgroundMode, backgroundSupported, previewReady]);
+    }, [backgroundChecked, backgroundMode, backgroundSupported, previewReady]);
 
     const ensureLocalTracks = useCallback(async () => {
         if (!localVideoTrackRef.current) {
-            const videoTrack = await createLocalVideoTrack({
+            const sourceVideoTrack = await createLocalVideoTrack({
                 facingMode: "user",
                 resolution: VideoPresets.h360.resolution,
             });
 
-            if (backgroundSupported) {
-                await attachBackgroundProcessor(videoTrack, backgroundMode);
-            }
+            sourceVideoTrackRef.current = sourceVideoTrack;
 
-            localVideoTrackRef.current = videoTrack;
+            if (backgroundSupported) {
+                localVideoTrackRef.current = createEffectsVideoTrack(sourceVideoTrack, backgroundMode);
+            } else {
+                localVideoTrackRef.current = sourceVideoTrack;
+            }
         }
 
         if (!localAudioTrackRef.current) {
             localAudioTrackRef.current = await createLocalAudioTrack();
         }
-    }, [attachBackgroundProcessor, backgroundMode, backgroundSupported]);
+    }, [backgroundMode, backgroundSupported, createEffectsVideoTrack]);
 
     const publishLocalTracks = useCallback(async () => {
         if (tracksPublished || publishingRef.current) return;
