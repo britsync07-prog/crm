@@ -27,7 +27,6 @@
     "@prisma/adapter-better-sqlite3": "^7.4.2",
     "@prisma/client": "^7.4.2",
     "@types/sanitize-html": "^2.16.1",
-    "@vpalmisano/virtual-background": "^1.0.14",
     "axios": "^1.13.6",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.6.2",

@@ -6,17 +6,13 @@ import {
     VideoConference,
     RoomAudioRenderer,
 } from "@livekit/components-react";
+import { BackgroundProcessor, type BackgroundProcessorWrapper, type SwitchBackgroundProcessorOptions, supportsBackgroundProcessors } from "@livekit/track-processors";
 import { createLocalAudioTrack, createLocalVideoTrack, LocalAudioTrack, LocalVideoTrack, Room, Track, VideoPresets } from "livekit-client";
 import { useCallback, useEffect, useMemo, useRef, useState, use } from "react";
 import { ImageIcon, Loader2, Sparkles, Video, VideoOff, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type { ProcessVideoTrackOptions } from "@vpalmisano/virtual-background";
 
 type BackgroundMode = "none" | "blur" | "virtual";
-type VirtualBackgroundApi = {
-    options: ProcessVideoTrackOptions & { backgroundSource?: unknown };
-    processVideoTrack: (track: MediaStreamTrack, options?: Partial<ProcessVideoTrackOptions>) => Promise<MediaStreamTrack>;
-};
 
 const backgroundModes: Array<{ mode: BackgroundMode; label: string }> = [
     { mode: "none", label: "None" },
@@ -26,48 +22,14 @@ const backgroundModes: Array<{ mode: BackgroundMode; label: string }> = [
 
 const virtualBackgroundPath = "/backgrounds/britcrm-office.png";
 const mediaPipeAssetPaths = {
-    wasmLoaderPath: "/mediapipe/wasm/vision_wasm_internal.js",
-    wasmBinaryPath: "/mediapipe/wasm/vision_wasm_internal.wasm",
-    modelPath: "/mediapipe/selfie_multiclass_256x256.tflite",
+    tasksVisionFileSet: "/mediapipe/wasm",
+    modelAssetPath: "/mediapipe/selfie_segmenter.tflite",
 };
 
-function getVirtualBackgroundOptions(mode: BackgroundMode): ProcessVideoTrackOptions {
-    return {
-        ...mediaPipeAssetPaths,
-        runWorker: false,
-        enabled: mode !== "none",
-        backgroundUrl: mode === "virtual" ? virtualBackgroundPath : "",
-        bgBlur: mode === "blur" ? 1 : 0,
-        bgBlurRadius: 42,
-        borderSmooth: 0.08,
-        smoothing: 0.94,
-        smoothstepMin: 0.35,
-        smoothstepMax: 0.82,
-        restartEvery: 0,
-        showStats: false,
-        enableFilters: false,
-        blur: 0,
-        brightness: 0,
-        contrast: 1,
-        gamma: 1,
-    };
-}
-
-function supportsPrebuiltVirtualBackground() {
-    if (typeof window === "undefined") return false;
-
-    const canvas = document.createElement("canvas");
-    return (
-        typeof window.OffscreenCanvas !== "undefined" &&
-        typeof window.VideoFrame !== "undefined" &&
-        typeof canvas.captureStream === "function" &&
-        typeof canvas.transferControlToOffscreen === "function"
-    );
-}
-
-async function loadVirtualBackgroundApi(): Promise<VirtualBackgroundApi> {
-    const virtualBackgroundModule = await import("@vpalmisano/virtual-background");
-    return ("processVideoTrack" in virtualBackgroundModule ? virtualBackgroundModule : (virtualBackgroundModule as unknown as { default: VirtualBackgroundApi }).default) as VirtualBackgroundApi;
+function getBackgroundSwitchOptions(mode: BackgroundMode): SwitchBackgroundProcessorOptions {
+    if (mode === "blur") return { mode: "background-blur", blurRadius: 10 };
+    if (mode === "virtual") return { mode: "virtual-background", imagePath: virtualBackgroundPath };
+    return { mode: "disabled" };
 }
 
 function getBackgroundErrorMessage(error: unknown) {
@@ -139,28 +101,21 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
 
     const previewVideoRef = useRef<HTMLVideoElement | null>(null);
     const localVideoTrackRef = useRef<LocalVideoTrack | null>(null);
-    const sourceVideoTrackRef = useRef<LocalVideoTrack | null>(null);
     const localAudioTrackRef = useRef<LocalAudioTrack | null>(null);
-    const backgroundPipelineReadyRef = useRef(false);
+    const backgroundProcessorRef = useRef<BackgroundProcessorWrapper | null>(null);
     const publishingRef = useRef(false);
     const room = useMemo(() => new Room(), []);
 
-    const applyVirtualBackgroundMode = useCallback(async (mode: BackgroundMode) => {
-        const virtualBackground = await loadVirtualBackgroundApi();
-        Object.assign(virtualBackground.options, getVirtualBackgroundOptions(mode));
-        setBackgroundError(null);
-    }, []);
+    const attachBackgroundProcessor = useCallback(async (videoTrack: LocalVideoTrack, mode: BackgroundMode) => {
+        const processor = BackgroundProcessor({
+            ...getBackgroundSwitchOptions("none"),
+            assetPaths: mediaPipeAssetPaths,
+        });
 
-    const createProcessedVideoTrack = useCallback(async (sourceTrack: LocalVideoTrack, mode: BackgroundMode) => {
-        const virtualBackground = await loadVirtualBackgroundApi();
-        const processedMediaTrack = await virtualBackground.processVideoTrack(
-            sourceTrack.mediaStreamTrack,
-            getVirtualBackgroundOptions(mode)
-        );
-
-        backgroundPipelineReadyRef.current = true;
+        await videoTrack.setProcessor(processor);
+        await processor.switchTo(getBackgroundSwitchOptions(mode));
+        backgroundProcessorRef.current = processor;
         setBackgroundError(null);
-        return new LocalVideoTrack(processedMediaTrack);
     }, []);
 
     const getLivekitUrl = () => {
@@ -282,7 +237,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     }, [fetchMeetingStatus]);
 
     useEffect(() => {
-        setBackgroundSupported(supportsPrebuiltVirtualBackground());
+        setBackgroundSupported(supportsBackgroundProcessors());
         setBackgroundChecked(true);
     }, []);
 
@@ -296,10 +251,8 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
         return () => {
             room.disconnect();
             localVideoTrackRef.current?.stop();
-            if (sourceVideoTrackRef.current !== localVideoTrackRef.current) {
-                sourceVideoTrackRef.current?.stop();
-            }
             localAudioTrackRef.current?.stop();
+            void backgroundProcessorRef.current?.destroy();
         };
     }, [room]);
 
@@ -310,32 +263,27 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
             setPreviewStarting(true);
             setPreviewError(null);
 
-            const sourceVideoTrack = await createLocalVideoTrack({
+            const videoTrack = await createLocalVideoTrack({
                 facingMode: "user",
-                resolution: VideoPresets.h540.resolution,
+                resolution: VideoPresets.h360.resolution,
             });
 
-            sourceVideoTrackRef.current = sourceVideoTrack;
+            localVideoTrackRef.current = videoTrack;
 
             if (backgroundSupported) {
-                localVideoTrackRef.current = await createProcessedVideoTrack(sourceVideoTrack, backgroundMode);
-            } else {
-                localVideoTrackRef.current = sourceVideoTrack;
+                await attachBackgroundProcessor(videoTrack, backgroundMode);
             }
 
             setPreviewReady(true);
         } catch (error) {
             localVideoTrackRef.current?.stop();
             localVideoTrackRef.current = null;
-            sourceVideoTrackRef.current?.stop();
-            sourceVideoTrackRef.current = null;
-            backgroundPipelineReadyRef.current = false;
             setPreviewReady(false);
             setPreviewError(error instanceof Error ? error.message : "Could not start camera preview.");
         } finally {
             setPreviewStarting(false);
         }
-    }, [backgroundMode, backgroundSupported, createProcessedVideoTrack, error, hasJoined, isExpired, previewReady, previewStarting, waitingInfo]);
+    }, [attachBackgroundProcessor, backgroundMode, backgroundSupported, error, hasJoined, isExpired, previewReady, previewStarting, waitingInfo]);
 
     useEffect(() => {
         const videoElement = previewVideoRef.current;
@@ -376,52 +324,41 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
             try {
                 const videoTrack = localVideoTrackRef.current;
                 if (!videoTrack) return;
-                const videoElement = previewVideoRef.current;
 
                 setBackgroundError(null);
 
-                if (!backgroundPipelineReadyRef.current) {
-                    const sourceVideoTrack = sourceVideoTrackRef.current;
-                    if (!sourceVideoTrack) return;
-
-                    const processedTrack = await createProcessedVideoTrack(sourceVideoTrack, backgroundMode);
-                    localVideoTrackRef.current = processedTrack;
-                    if (videoElement && !hasJoined) {
-                        videoTrack.detach(videoElement);
-                        processedTrack.attach(videoElement);
-                    }
+                if (!backgroundProcessorRef.current) {
+                    await attachBackgroundProcessor(videoTrack, backgroundMode);
                     return;
                 }
 
-                await applyVirtualBackgroundMode(backgroundMode);
+                await backgroundProcessorRef.current.switchTo(getBackgroundSwitchOptions(backgroundMode));
             } catch (error) {
                 setBackgroundError(getBackgroundErrorMessage(error));
             }
         };
 
         void applyBackground();
-    }, [applyVirtualBackgroundMode, backgroundChecked, backgroundMode, backgroundSupported, createProcessedVideoTrack, hasJoined, previewReady]);
+    }, [attachBackgroundProcessor, backgroundChecked, backgroundMode, backgroundSupported, previewReady]);
 
     const ensureLocalTracks = useCallback(async () => {
         if (!localVideoTrackRef.current) {
-            const sourceVideoTrack = await createLocalVideoTrack({
+            const videoTrack = await createLocalVideoTrack({
                 facingMode: "user",
-                resolution: VideoPresets.h540.resolution,
+                resolution: VideoPresets.h360.resolution,
             });
 
-            sourceVideoTrackRef.current = sourceVideoTrack;
-
             if (backgroundSupported) {
-                localVideoTrackRef.current = await createProcessedVideoTrack(sourceVideoTrack, backgroundMode);
-            } else {
-                localVideoTrackRef.current = sourceVideoTrack;
+                await attachBackgroundProcessor(videoTrack, backgroundMode);
             }
+
+            localVideoTrackRef.current = videoTrack;
         }
 
         if (!localAudioTrackRef.current) {
             localAudioTrackRef.current = await createLocalAudioTrack();
         }
-    }, [backgroundMode, backgroundSupported, createProcessedVideoTrack]);
+    }, [attachBackgroundProcessor, backgroundMode, backgroundSupported]);
 
     const publishLocalTracks = useCallback(async () => {
         if (tracksPublished || publishingRef.current) return;
