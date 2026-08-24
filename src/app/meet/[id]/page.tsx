@@ -8,9 +8,10 @@ import {
 } from "@livekit/components-react";
 import { createLocalAudioTrack, createLocalVideoTrack, LocalAudioTrack, LocalVideoTrack, Room, Track, VideoPresets } from "livekit-client";
 import { useCallback, useEffect, useMemo, useRef, useState, use } from "react";
-import { ImageIcon, Loader2, Sparkles, Video, VideoOff, X } from "lucide-react";
+import { ImageIcon, Loader2, Mic, MicOff, Sparkles, Video, VideoOff, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { EffectsPipeline, type BackgroundInput } from "longpipe";
+import "@tensorflow/tfjs-backend-webgl";
+import * as bodyPix from "@tensorflow-models/body-pix";
 
 type BackgroundMode = "none" | "blur" | "virtual";
 
@@ -22,12 +23,6 @@ const backgroundModes: Array<{ mode: BackgroundMode; label: string }> = [
 
 const virtualBackgroundPath = "/backgrounds/britcrm-office.png";
 
-function getBackgroundInput(mode: BackgroundMode): BackgroundInput {
-    if (mode === "blur") return { blur: { strength: "high" } };
-    if (mode === "virtual") return virtualBackgroundPath;
-    return "none";
-}
-
 function getBackgroundErrorMessage(error: unknown) {
     if (error instanceof Error && error.message) return error.message;
     if (typeof error === "string" && error.trim()) return error;
@@ -36,6 +31,97 @@ function getBackgroundErrorMessage(error: unknown) {
     } catch {
         return "The browser could not initialize the segmentation processor.";
     }
+}
+
+let bodyPixSegmenterPromise: Promise<bodyPix.BodyPix> | null = null;
+
+function getBodyPixSegmenter() {
+    bodyPixSegmenterPromise ??= bodyPix.load({
+        architecture: "MobileNetV1",
+        outputStride: 16,
+        multiplier: 0.75,
+        quantBytes: 2,
+    });
+
+    return bodyPixSegmenterPromise;
+}
+
+function createBodyPixVideoTrack(videoTrack: LocalVideoTrack, getMode: () => BackgroundMode, onError: (error: unknown) => void) {
+    const sourceVideo = document.createElement("video");
+    const canvas = document.createElement("canvas");
+    const personCanvas = document.createElement("canvas");
+    const stream = canvas.captureStream(24);
+    const outputTrack = stream.getVideoTracks()[0];
+    const context = canvas.getContext("2d");
+    const personContext = personCanvas.getContext("2d");
+    let cancelled = false;
+    let backgroundImage: HTMLImageElement | null = null;
+
+    if (!outputTrack || !context || !personContext) {
+        outputTrack?.stop();
+        throw new Error("Could not create BodyPix video output.");
+    }
+
+    sourceVideo.srcObject = new MediaStream([videoTrack.mediaStreamTrack]);
+    sourceVideo.muted = true;
+    sourceVideo.playsInline = true;
+
+    const drawFrame = async () => {
+        if (cancelled) return;
+
+        if (sourceVideo.videoWidth && sourceVideo.videoHeight) {
+            const mode = getMode();
+
+            if (canvas.width !== sourceVideo.videoWidth || canvas.height !== sourceVideo.videoHeight) {
+                canvas.width = sourceVideo.videoWidth;
+                canvas.height = sourceVideo.videoHeight;
+                personCanvas.width = canvas.width;
+                personCanvas.height = canvas.height;
+            }
+
+            try {
+                if (mode === "none") {
+                    context.drawImage(sourceVideo, 0, 0, canvas.width, canvas.height);
+                } else {
+                    const segmenter = await getBodyPixSegmenter();
+                    const segmentation = await segmenter.segmentPerson(sourceVideo, {
+                        internalResolution: "medium",
+                        segmentationThreshold: 0.65,
+                    });
+
+                    if (mode === "blur") {
+                        bodyPix.drawBokehEffect(canvas, sourceVideo, segmentation, 12, 4, false);
+                    } else {
+                        backgroundImage ??= Object.assign(new Image(), { src: virtualBackgroundPath });
+                        context.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+                        personContext.globalCompositeOperation = "source-over";
+                        personContext.clearRect(0, 0, personCanvas.width, personCanvas.height);
+                        personContext.drawImage(sourceVideo, 0, 0, personCanvas.width, personCanvas.height);
+                        personContext.globalCompositeOperation = "destination-in";
+                        personContext.putImageData(bodyPix.toMask(segmentation, { r: 0, g: 0, b: 0, a: 255 }, { r: 0, g: 0, b: 0, a: 0 }, false), 0, 0);
+                        context.drawImage(personCanvas, 0, 0, canvas.width, canvas.height);
+                    }
+                }
+            } catch (error) {
+                onError(error);
+                context.drawImage(sourceVideo, 0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        window.setTimeout(drawFrame, 42);
+    };
+
+    void sourceVideo.play().then(drawFrame).catch(onError);
+
+    return {
+        track: new LocalVideoTrack(outputTrack),
+        destroy: () => {
+            cancelled = true;
+            sourceVideo.pause();
+            sourceVideo.srcObject = null;
+            outputTrack.stop();
+        },
+    };
 }
 
 function BackgroundModeSelector({
@@ -93,36 +179,30 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     const [previewError, setPreviewError] = useState<string | null>(null);
     const [previewReady, setPreviewReady] = useState(false);
     const [previewStarting, setPreviewStarting] = useState(false);
+    const [cameraEnabled, setCameraEnabled] = useState(true);
+    const [micEnabled, setMicEnabled] = useState(true);
+    const [micError, setMicError] = useState<string | null>(null);
     const [tracksPublished, setTracksPublished] = useState(false);
 
     const previewVideoRef = useRef<HTMLVideoElement | null>(null);
+    const backgroundModeRef = useRef(backgroundMode);
     const localVideoTrackRef = useRef<LocalVideoTrack | null>(null);
     const sourceVideoTrackRef = useRef<LocalVideoTrack | null>(null);
     const localAudioTrackRef = useRef<LocalAudioTrack | null>(null);
-    const effectsPipelineRef = useRef<EffectsPipeline | null>(null);
+    const effectsPipelineRef = useRef<{ destroy: () => void } | null>(null);
     const publishingRef = useRef(false);
     const room = useMemo(() => new Room(), []);
 
+    useEffect(() => {
+        backgroundModeRef.current = backgroundMode;
+    }, [backgroundMode]);
+
     const createEffectsVideoTrack = useCallback((videoTrack: LocalVideoTrack, mode: BackgroundMode) => {
-        const inputStream = new MediaStream([videoTrack.mediaStreamTrack]);
-        const pipeline = new EffectsPipeline(inputStream, {
-            background: getBackgroundInput(mode),
-            preset: "auto",
-            adaptive: true,
-            audio: "passthrough",
-            onError: (err) => setBackgroundError(err.message),
-        });
-        const outputTrack = pipeline.stream.getVideoTracks()[0];
-
-        if (!outputTrack) {
-            pipeline.destroy();
-            throw new Error("Longpipe did not create a processed video track.");
-        }
-
+        backgroundModeRef.current = mode;
+        const pipeline = createBodyPixVideoTrack(videoTrack, () => backgroundModeRef.current, (error) => setBackgroundError(getBackgroundErrorMessage(error)));
         effectsPipelineRef.current = pipeline;
-        void pipeline.ready.catch((err) => setBackgroundError(getBackgroundErrorMessage(err)));
         setBackgroundError(null);
-        return new LocalVideoTrack(outputTrack);
+        return pipeline.track;
     }, []);
 
     const getLivekitUrl = () => {
@@ -266,6 +346,24 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
         };
     }, [room]);
 
+    const stopCameraPreview = useCallback(() => {
+        const processedTrack = localVideoTrackRef.current;
+        const sourceTrack = sourceVideoTrackRef.current;
+
+        processedTrack?.stop();
+        effectsPipelineRef.current?.destroy();
+        if (sourceTrack && sourceTrack !== processedTrack) {
+            sourceTrack.stop();
+        }
+
+        localVideoTrackRef.current = null;
+        sourceVideoTrackRef.current = null;
+        effectsPipelineRef.current = null;
+        setPreviewReady(false);
+        setPreviewError(null);
+        setBackgroundError(null);
+    }, []);
+
     const startCameraPreview = useCallback(async () => {
         if (previewStarting || previewReady || hasJoined || waitingInfo || error || isExpired) return;
 
@@ -300,6 +398,31 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
             setPreviewStarting(false);
         }
     }, [backgroundMode, backgroundSupported, createEffectsVideoTrack, error, hasJoined, isExpired, previewReady, previewStarting, waitingInfo]);
+
+    const handleCameraToggle = useCallback(() => {
+        if (cameraEnabled) {
+            setCameraEnabled(false);
+            setBackgroundMode("none");
+            stopCameraPreview();
+            return;
+        }
+
+        setCameraEnabled(true);
+        void startCameraPreview();
+    }, [cameraEnabled, startCameraPreview, stopCameraPreview]);
+
+    const handleMicToggle = useCallback(() => {
+        if (micEnabled) {
+            localAudioTrackRef.current?.stop();
+            localAudioTrackRef.current = null;
+            setMicEnabled(false);
+            setMicError(null);
+            return;
+        }
+
+        setMicEnabled(true);
+        setMicError(null);
+    }, [micEnabled]);
 
     useEffect(() => {
         const videoElement = previewVideoRef.current;
@@ -338,16 +461,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
 
         const applyBackground = async () => {
             try {
-                const videoTrack = localVideoTrackRef.current;
-                if (!videoTrack) return;
-
                 setBackgroundError(null);
-
-                if (!effectsPipelineRef.current) {
-                    return;
-                }
-
-                await effectsPipelineRef.current.setBackground(getBackgroundInput(backgroundMode));
             } catch (error) {
                 setBackgroundError(getBackgroundErrorMessage(error));
             }
@@ -357,7 +471,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     }, [backgroundChecked, backgroundMode, backgroundSupported, previewReady]);
 
     const ensureLocalTracks = useCallback(async () => {
-        if (!localVideoTrackRef.current) {
+        if (cameraEnabled && !localVideoTrackRef.current) {
             const sourceVideoTrack = await createLocalVideoTrack({
                 facingMode: "user",
                 resolution: VideoPresets.h360.resolution,
@@ -372,10 +486,16 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
             }
         }
 
-        if (!localAudioTrackRef.current) {
-            localAudioTrackRef.current = await createLocalAudioTrack();
+        if (micEnabled && !localAudioTrackRef.current) {
+            try {
+                localAudioTrackRef.current = await createLocalAudioTrack();
+                setMicError(null);
+            } catch (error) {
+                setMicError(error instanceof Error ? error.message : "Could not start microphone.");
+                throw error;
+            }
         }
-    }, [backgroundMode, backgroundSupported, createEffectsVideoTrack]);
+    }, [backgroundMode, backgroundSupported, cameraEnabled, createEffectsVideoTrack, micEnabled]);
 
     const publishLocalTracks = useCallback(async () => {
         if (tracksPublished || publishingRef.current) return;
@@ -387,11 +507,11 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
             const videoTrack = localVideoTrackRef.current;
             const audioTrack = localAudioTrackRef.current;
 
-            if (videoTrack) {
+            if (cameraEnabled && videoTrack) {
                 await room.localParticipant.publishTrack(videoTrack, { source: Track.Source.Camera });
             }
 
-            if (audioTrack) {
+            if (micEnabled && audioTrack) {
                 await room.localParticipant.publishTrack(audioTrack, { source: Track.Source.Microphone });
             }
 
@@ -401,18 +521,13 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
         } finally {
             publishingRef.current = false;
         }
-    }, [ensureLocalTracks, room, tracksPublished]);
+    }, [cameraEnabled, ensureLocalTracks, micEnabled, room, tracksPublished]);
 
     const handleJoinClick = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name.trim() || !previewReady) return;
+        if (!name.trim() || previewStarting || (cameraEnabled && !!previewError)) return;
 
-        void (async () => {
-            if (!localAudioTrackRef.current) {
-                localAudioTrackRef.current = await createLocalAudioTrack();
-            }
-            await fetchToken(name.trim(), backgroundMode);
-        })();
+        void fetchToken(name.trim(), cameraEnabled ? backgroundMode : "none");
     };
 
     if (error || isExpired) {
@@ -467,7 +582,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                         <Video className="w-6 h-6 text-[#012169] dark:text-blue-300" />
                     </div>
                     <h1 className="text-2xl font-black tracking-tight mb-2">Join {title}</h1>
-                    <p className="text-sm text-zinc-500 mb-6">Enter your name and choose your camera background before joining.</p>
+                    <p className="text-sm text-zinc-500 mb-6">Enter your name and choose your camera and microphone before joining.</p>
 
                     <form onSubmit={handleJoinClick} className="space-y-4">
                         <input
@@ -479,43 +594,73 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                         />
                         <div className="overflow-hidden rounded-2xl border border-blue-100 bg-slate-950 dark:border-blue-900/30">
                             <div className="aspect-video bg-black">
-                                {previewReady ? (
+                                {cameraEnabled && previewReady ? (
                                     <video ref={previewVideoRef} className="h-full w-full object-cover" autoPlay muted playsInline />
                                 ) : (
                                     <div className="flex h-full flex-col items-center justify-center gap-3 text-white/60">
-                                        {previewStarting ? <Loader2 className="h-8 w-8 animate-spin" /> : previewError ? <VideoOff className="h-8 w-8" /> : <Video className="h-8 w-8" />}
+                                        {previewStarting ? <Loader2 className="h-8 w-8 animate-spin" /> : <VideoOff className="h-8 w-8" />}
                                         <p className="max-w-xs px-4 text-center text-xs font-bold leading-5">
-                                            {previewError || "Start camera preview before joining."}
+                                            {!cameraEnabled ? "Camera is off. You can still join." : previewError || "Start camera preview or join directly."}
                                         </p>
-                                        <button
-                                            type="button"
-                                            onClick={startCameraPreview}
-                                            disabled={previewStarting}
-                                            className="rounded-xl bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-950 transition hover:bg-blue-50 disabled:opacity-60"
-                                        >
-                                            {previewStarting ? "Starting" : "Start Camera Preview"}
-                                        </button>
+                                        {cameraEnabled && (
+                                            <button
+                                                type="button"
+                                                onClick={startCameraPreview}
+                                                disabled={previewStarting}
+                                                className="rounded-xl bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-950 transition hover:bg-blue-50 disabled:opacity-60"
+                                            >
+                                                {previewStarting ? "Starting" : "Start Camera Preview"}
+                                            </button>
+                                        )}
                                     </div>
                                 )}
                             </div>
                             <div className="p-3">
+                            <div className="mb-3 grid grid-cols-2 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleCameraToggle}
+                                    disabled={previewStarting}
+                                    className={`flex min-h-11 items-center justify-center gap-2 rounded-xl text-xs font-black uppercase tracking-widest transition disabled:opacity-60 ${
+                                        cameraEnabled ? "bg-white text-slate-950 hover:bg-blue-50" : "bg-red-600 text-white hover:bg-red-500"
+                                    }`}
+                                >
+                                    {cameraEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
+                                    {cameraEnabled ? "Camera On" : "Camera Off"}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleMicToggle}
+                                    className={`flex min-h-11 items-center justify-center gap-2 rounded-xl text-xs font-black uppercase tracking-widest transition ${
+                                        micEnabled ? "bg-white text-slate-950 hover:bg-blue-50" : "bg-red-600 text-white hover:bg-red-500"
+                                    }`}
+                                >
+                                    {micEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+                                    {micEnabled ? "Mic On" : "Mic Off"}
+                                </button>
+                            </div>
                             <div className="mb-3 flex items-center justify-between gap-3">
                                 <p className="text-xs font-black uppercase tracking-widest text-white/70">Background</p>
                                 <span className="text-[10px] font-bold text-white/45">
-                                    {backgroundChecked ? (backgroundSupported ? "Ready" : "Not supported") : "Checking"}
+                                    {!cameraEnabled ? "Camera off" : backgroundChecked ? (backgroundSupported ? "Ready" : "Not supported") : "Checking"}
                                 </span>
                             </div>
-                            <BackgroundModeSelector value={backgroundMode} supported={backgroundSupported} onChange={handleBackgroundModeChange} />
+                            <BackgroundModeSelector value={backgroundMode} supported={cameraEnabled && backgroundSupported} onChange={handleBackgroundModeChange} />
                             {backgroundError && (
                                 <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-950/80 px-3 py-2 text-xs font-bold leading-5 text-amber-50">
                                     Camera preview is on. Background effect could not be applied: {backgroundError}
+                                </p>
+                            )}
+                            {micError && (
+                                <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-950/80 px-3 py-2 text-xs font-bold leading-5 text-amber-50">
+                                    Microphone could not be started: {micError}
                                 </p>
                             )}
                             </div>
                         </div>
                         <button
                             type="submit"
-                            disabled={!name.trim() || !previewReady || !!previewError}
+                            disabled={!name.trim() || previewStarting || (cameraEnabled && !!previewError)}
                             className="w-full py-3 bg-[#012169] hover:bg-[#c8102e] disabled:opacity-50 text-white font-black uppercase tracking-widest text-xs rounded-xl transition-colors"
                         >
                             Join Meeting
