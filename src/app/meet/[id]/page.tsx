@@ -50,6 +50,11 @@ function createBodyPixVideoTrack(videoTrack: LocalVideoTrack, getMode: () => Bac
     const sourceVideo = document.createElement("video");
     const canvas = document.createElement("canvas");
     const personCanvas = document.createElement("canvas");
+    const initialSettings = videoTrack.mediaStreamTrack.getSettings();
+    canvas.width = initialSettings.width || 640;
+    canvas.height = initialSettings.height || 360;
+    personCanvas.width = canvas.width;
+    personCanvas.height = canvas.height;
     const stream = canvas.captureStream(24);
     const outputTrack = stream.getVideoTracks()[0];
     const context = canvas.getContext("2d");
@@ -69,7 +74,7 @@ function createBodyPixVideoTrack(videoTrack: LocalVideoTrack, getMode: () => Bac
     const drawFrame = async () => {
         if (cancelled) return;
 
-        if (sourceVideo.videoWidth && sourceVideo.videoHeight) {
+        if (sourceVideo.videoWidth > 1 && sourceVideo.videoHeight > 1 && canvas.width > 0 && canvas.height > 0) {
             const mode = getMode();
 
             if (canvas.width !== sourceVideo.videoWidth || canvas.height !== sourceVideo.videoHeight) {
@@ -93,18 +98,26 @@ function createBodyPixVideoTrack(videoTrack: LocalVideoTrack, getMode: () => Bac
                         bodyPix.drawBokehEffect(canvas, sourceVideo, segmentation, 12, 4, false);
                     } else {
                         backgroundImage ??= Object.assign(new Image(), { src: virtualBackgroundPath });
-                        context.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+                        if (backgroundImage.complete && backgroundImage.naturalWidth > 0 && backgroundImage.naturalHeight > 0) {
+                            context.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+                        } else {
+                            context.fillStyle = "#111827";
+                            context.fillRect(0, 0, canvas.width, canvas.height);
+                        }
                         personContext.globalCompositeOperation = "source-over";
                         personContext.clearRect(0, 0, personCanvas.width, personCanvas.height);
                         personContext.drawImage(sourceVideo, 0, 0, personCanvas.width, personCanvas.height);
                         personContext.globalCompositeOperation = "destination-in";
                         personContext.putImageData(bodyPix.toMask(segmentation, { r: 0, g: 0, b: 0, a: 255 }, { r: 0, g: 0, b: 0, a: 0 }, false), 0, 0);
+                        personContext.globalCompositeOperation = "source-over";
                         context.drawImage(personCanvas, 0, 0, canvas.width, canvas.height);
                     }
                 }
             } catch (error) {
                 onError(error);
-                context.drawImage(sourceVideo, 0, 0, canvas.width, canvas.height);
+                if (sourceVideo.videoWidth > 1 && sourceVideo.videoHeight > 1 && canvas.width > 0 && canvas.height > 0) {
+                    context.drawImage(sourceVideo, 0, 0, canvas.width, canvas.height);
+                }
             }
         }
 
