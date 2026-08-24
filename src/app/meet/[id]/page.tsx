@@ -23,7 +23,7 @@ const backgroundModes: Array<{ mode: BackgroundMode; label: string }> = [
 const virtualBackgroundPath = "/backgrounds/britcrm-office.png";
 const mediaPipeAssetPaths = {
     tasksVisionFileSet: "/mediapipe/wasm",
-    modelAssetPath: "/mediapipe/selfie_segmenter.tflite",
+    modelAssetPath: "/mediapipe/selfie_multiclass_256x256.tflite",
 };
 
 function getBackgroundSwitchOptions(mode: BackgroundMode): SwitchBackgroundProcessorOptions {
