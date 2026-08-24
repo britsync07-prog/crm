@@ -110,7 +110,6 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
             preset: "auto",
             adaptive: true,
             audio: "passthrough",
-            outputResolution: { w: 640, h: 360 },
             onError: (err) => setBackgroundError(err.message),
         });
         const outputTrack = pipeline.stream.getVideoTracks()[0];
