@@ -79,11 +79,12 @@ export default function LeadsPageClient({
 
     setIsDeleting(true);
     try {
-      await deleteLeadsAction(selectedIds);
-      toast.success(`${selectedIds.length} records purged`);
+      const result = await deleteLeadsAction(selectedIds);
+      toast.success(`${result.deleted} records purged`);
       setSelectedIds([]);
-    } catch {
-      toast.error("Operation failed");
+      router.refresh();
+    } catch (e: any) {
+      toast.error(e?.message || "Operation failed");
     } finally {
       setIsDeleting(false);
     }

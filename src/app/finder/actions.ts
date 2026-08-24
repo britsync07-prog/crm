@@ -58,10 +58,26 @@ export async function bulkUpdateLeadStatusAction(leadIds: string[], status: stri
 export async function deleteLeadsAction(leadIds: string[]) {
   const session = await getSession();
   if (!session) throw new Error("Unauthorized");
-
-  await prisma.lead.deleteMany({
+  const leads = await prisma.lead.findMany({
     where: { id: { in: leadIds }, userId: session.id },
+    select: { id: true },
+  });
+  const ownedLeadIds = leads.map((lead) => lead.id);
+
+  if (ownedLeadIds.length === 0) return { deleted: 0 };
+
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.campaignLead.deleteMany({ where: { leadId: { in: ownedLeadIds } } });
+    await tx.deal.updateMany({ where: { leadId: { in: ownedLeadIds }, userId: session.id }, data: { leadId: null } });
+    await tx.task.updateMany({ where: { leadId: { in: ownedLeadIds } }, data: { leadId: null } });
+    await tx.booking.updateMany({ where: { leadId: { in: ownedLeadIds } }, data: { leadId: null } });
+    await tx.interaction.updateMany({ where: { leadId: { in: ownedLeadIds } }, data: { leadId: null } });
+
+    return tx.lead.deleteMany({
+      where: { id: { in: ownedLeadIds }, userId: session.id },
+    });
   });
 
   revalidatePath("/leads");
+  return { deleted: result.count };
 }
