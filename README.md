@@ -1,4 +1,10 @@
 # BritCRM
+<div align="center">
+
+![License](https://img.shields.io/github/license/britsync07-prog/crm?style=flat-square&label=license&color=06b6d4) ![Language](https://img.shields.io/github/languages/top/britsync07-prog/crm?style=flat-square&color=0ea5e9) ![Stars](https://img.shields.io/github/stars/britsync07-prog/crm?style=flat-square&color=f59e0b) ![Last commit](https://img.shields.io/github/last-commit/britsync07-prog/crm?style=flat-square&color=22c55e) ![Repo size](https://img.shields.io/github/repo-size/britsync07-prog/crm?style=flat-square&color=94a3b8)
+
+</div>
+
 > A self-hosted Next.js CRM that unifies sales pipelines, real-time team chat, LiveKit video meetings, AI email outreach, and an MCP server for AI agents.
 
 BritCRM is an all-in-one customer relationship platform for small teams and agencies: leads, customers, deals, invoicing, campaigns, meetings, and automations in one deployable Node process. It is designed to run on a single VPS with SQLite, expose its data to human users through a React App Router UI, and to AI agents through a first-party Model Context Protocol (MCP) server.
@@ -61,16 +67,16 @@ crm/
 +-- ecosystem.config.cjs    # PM2 production config
 +-- prisma/                 # schema.prisma, migrations/, seed.ts
 +-- src/
-¦   +-- app/
-¦   ¦   +-- api/            # REST-ish route handlers by domain
-¦   ¦   +-- admin/          # Users, organizations, pricing, system email, ops
-¦   ¦   +-- meet/[id]/      # LiveKit meeting room with background effects
-¦   ¦   +-- portal/ billing/ leads/ campaigns/ inbox/ calendar/ ...
-¦   ¦   +-- mcp/            # Public MCP documentation page
-¦   +-- components/         # Feature components (workspace, inbox, billing, admin)
-¦   +-- lib/                # auth, workers, britledger client, scrapers, mailers, seo
-¦   +-- mcp/                # MCP server, tools/, resources/
-¦   +-- generated/          # Prisma client output
+ï¿½   +-- app/
+ï¿½   ï¿½   +-- api/            # REST-ish route handlers by domain
+ï¿½   ï¿½   +-- admin/          # Users, organizations, pricing, system email, ops
+ï¿½   ï¿½   +-- meet/[id]/      # LiveKit meeting room with background effects
+ï¿½   ï¿½   +-- portal/ billing/ leads/ campaigns/ inbox/ calendar/ ...
+ï¿½   ï¿½   +-- mcp/            # Public MCP documentation page
+ï¿½   +-- components/         # Feature components (workspace, inbox, billing, admin)
+ï¿½   +-- lib/                # auth, workers, britledger client, scrapers, mailers, seo
+ï¿½   +-- mcp/                # MCP server, tools/, resources/
+ï¿½   +-- generated/          # Prisma client output
 +-- scripts/                # create-admin.ts, IMAP/inbox diagnostic scripts
 +-- livekit/                # LiveKit binary target dir (populated by setup script)
 +-- socket.io/              # Reserved placeholder directory
@@ -183,4 +189,4 @@ Hygiene warnings (filenames only): `prisma/dev.db`, `prisma/dev.db-shm`, `prisma
 
 ## License
 
-MIT License — Copyright (c) 2026 Musfiqur Rahman Saimon. See [LICENSE](./LICENSE).
+MIT License ï¿½ Copyright (c) 2026 Musfiqur Rahman Saimon. See [LICENSE](./LICENSE).
