@@ -190,3 +190,8 @@ Hygiene warnings (filenames only): `prisma/dev.db`, `prisma/dev.db-shm`, `prisma
 ## License
 
 MIT License � Copyright (c) 2026 Musfiqur Rahman Saimon. See [LICENSE](./LICENSE).
+
+
+---
+Keywords: self-hosted crm, livekit, team chat, mcp server, nextjs, prisma, stripe billing
+
