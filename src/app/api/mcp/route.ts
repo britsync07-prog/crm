@@ -60,12 +60,13 @@ function forbiddenOrigin() {
 }
 
 function unauthorized() {
+  const baseUrl = getAppBaseUrl();
   return new Response(JSON.stringify({ error: "Unauthorized MCP token." }), {
     status: 401,
     headers: {
       ...transportHeaders,
       "Content-Type": "application/json",
-      "WWW-Authenticate": 'Bearer realm="BritCRM MCP"',
+      "WWW-Authenticate": `Bearer realm="BritCRM MCP", resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`,
     },
   });
 }

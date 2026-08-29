@@ -150,30 +150,45 @@ export async function revokeMcpAccessToken(userId: string, tokenId: string) {
   }
 }
 
+import { resolveOAuthAccessToken } from "@/lib/oauth-store";
+
 export async function resolveMcpBearerToken(token: string): Promise<BritCrmMcpContext | null> {
-  if (!/^bcrm_mcp_[A-Za-z0-9_-]{32,}$/.test(token)) return null;
-  await ensureMcpAccessTokenTable();
+  if (!token) return null;
 
-  const rows = await prisma.$queryRawUnsafe<Array<TokenRow & { email: string; role: string; status: string }>>(
-    `SELECT t.*, u."email", u."role", u."status"
-     FROM "McpAccessToken" t
-     INNER JOIN "User" u ON u."id" = t."userId"
-     WHERE t."tokenHash" = ?
-     LIMIT 1`,
-    hashToken(token),
-  );
+  if (/^bcrm_mcp_[A-Za-z0-9_-]{32,}$/.test(token)) {
+    await ensureMcpAccessTokenTable();
 
-  const row = rows[0];
-  if (!row || row.revokedAt || (row.status && row.status !== "ACTIVE")) return null;
-  const expiresAt = normalizeDate(row.expiresAt);
-  if (expiresAt && expiresAt.getTime() <= Date.now()) return null;
+    const rows = await prisma.$queryRawUnsafe<Array<TokenRow & { email: string; role: string; status: string }>>(
+      `SELECT t.*, u."email", u."role", u."status"
+       FROM "McpAccessToken" t
+       INNER JOIN "User" u ON u."id" = t."userId"
+       WHERE t."tokenHash" = ?
+       LIMIT 1`,
+      hashToken(token),
+    );
 
-  const now = new Date().toISOString();
-  await prisma.$executeRawUnsafe(`UPDATE "McpAccessToken" SET "lastUsedAt" = ?, "updatedAt" = ? WHERE "id" = ?`, now, now, row.id);
+    const row = rows[0];
+    if (!row || row.revokedAt || (row.status && row.status !== "ACTIVE")) return null;
+    const expiresAt = normalizeDate(row.expiresAt);
+    if (expiresAt && expiresAt.getTime() <= Date.now()) return null;
 
-  return {
-    userId: row.userId,
-    role: row.role,
-    email: row.email,
-  };
+    const now = new Date().toISOString();
+    await prisma.$executeRawUnsafe(`UPDATE "McpAccessToken" SET "lastUsedAt" = ?, "updatedAt" = ? WHERE "id" = ?`, now, now, row.id);
+
+    return {
+      userId: row.userId,
+      role: row.role,
+      email: row.email,
+    };
+  }
+
+  // Check if standard OAuth 2.0 access token
+  try {
+    const oauthContext = await resolveOAuthAccessToken(token);
+    if (oauthContext) return oauthContext;
+  } catch (err) {
+    console.error("[MCP] Error resolving OAuth token:", err);
+  }
+
+  return null;
 }

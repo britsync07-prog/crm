@@ -14,6 +14,7 @@ import {
   ReceiptText,
   Send,
   ShieldCheck,
+  Sparkles,
   Terminal,
   Users,
 } from "lucide-react";
@@ -22,7 +23,9 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getAppBaseUrl } from "@/lib/app-url";
 import { listMcpAccessTokens } from "@/lib/mcp-tokens";
+import { listOAuthClients } from "@/lib/oauth-store";
 import { McpTokenManager, type McpTokenView } from "@/components/McpTokenManager";
+import { OAuthClientManager, type OAuthClientView } from "@/components/OAuthClientManager";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +65,12 @@ export default async function McpSettingsPage() {
   ]);
 
   const endpoint = `${getAppBaseUrl()}/api/mcp`;
-  const tokens = (await listMcpAccessTokens(user.id)).map((token): McpTokenView => ({
+  const [tokensRaw, oauthClientsRaw] = await Promise.all([
+    listMcpAccessTokens(user.id),
+    listOAuthClients(user.id),
+  ]);
+
+  const tokens = tokensRaw.map((token): McpTokenView => ({
     id: token.id,
     name: token.name,
     lastFour: token.lastFour,
@@ -72,6 +80,19 @@ export default async function McpSettingsPage() {
     expiresAt: token.expiresAt?.toISOString() || null,
     revokedAt: token.revokedAt?.toISOString() || null,
   }));
+
+  const oauthClients: OAuthClientView[] = oauthClientsRaw.map((client) => ({
+    id: client.id,
+    name: client.name,
+    clientId: client.clientId,
+    clientSecret: client.clientSecret,
+    redirectUris: client.redirectUris,
+    createdAt: client.createdAt.toISOString(),
+    updatedAt: client.updatedAt.toISOString(),
+    revokedAt: client.revokedAt?.toISOString() || null,
+    activeTokenCount: client.activeTokenCount || 0,
+  }));
+
   const mcpConfig = {
     mcpServers: {
       britcrm: {
@@ -98,7 +119,7 @@ export default async function McpSettingsPage() {
       title: "Setup",
       icon: Terminal,
       description: "Create a token, add the hosted endpoint to the agent, then read the account snapshot before calling tools.",
-      workflow: ["Create a token from Hosted MCP Access.", "Paste the generated config into the MCP client.", "Ask the agent to read the account snapshot before any write."],
+      workflow: ["Create a token from Hosted MCP Access or Standard OAuth.", "Paste the generated config into the MCP client or Gemini.", "Ask the agent to read the account snapshot before any write."],
       tools: ["resources/read", "tools/list", "tools/call"],
     },
     {
@@ -179,15 +200,29 @@ export default async function McpSettingsPage() {
             <Bot className="h-7 w-7" />
           </div>
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">MCP Agents</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">MCP Agents</h1>
+              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-black uppercase text-[#012169] dark:bg-blue-950 dark:text-blue-300">
+                OAuth 2.0 & Bearer
+              </span>
+            </div>
             <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-zinc-500">
-              Connect an AI agent to your own BritCRM account. Any MCP action runs as your user and appears in your dashboard data.
+              Connect AI agents and tools to your BritCRM account. Supports Claude, Cursor, Windsurf, and Google Gemini Spark Connected Apps.
             </p>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-bold text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
-          <span className="text-zinc-400">Account:</span> {user.email}
+        <div className="flex flex-wrap gap-2">
+          <a
+            href="#gemini-oauth"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2.5 text-xs font-black text-[#012169] hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200"
+          >
+            <Sparkles className="h-4 w-4" />
+            Gemini OAuth Section
+          </a>
+          <div className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-xs font-bold text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
+            <span className="text-zinc-400">Account:</span> {user.email}
+          </div>
         </div>
       </div>
 
@@ -200,6 +235,38 @@ export default async function McpSettingsPage() {
         ))}
       </div>
 
+      {/* DEDICATED SEPARATED STANDARD OAUTH SECTION FOR GEMINI SPARK & CONNECTED APPS */}
+      <section
+        id="gemini-oauth"
+        className="rounded-3xl border-2 border-blue-200 bg-white p-6 sm:p-8 shadow-sm dark:border-blue-900/50 dark:bg-zinc-950"
+      >
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-zinc-100 dark:border-zinc-800/80 pb-6">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#012169] to-[#0a389c] text-white shadow-lg shadow-blue-900/20">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-50 sm:text-2xl">
+                  Standard OAuth 2.0 (Gemini Spark & Custom Connected Apps)
+                </h2>
+                <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-black uppercase text-[#012169] dark:bg-blue-950 dark:text-blue-300">
+                  Google Gemini Ready
+                </span>
+              </div>
+              <p className="mt-1 text-sm font-medium text-zinc-500">
+                Generate standard OAuth 2.0 credentials (Client ID & Client Secret) required when connecting BritCRM to Google Gemini Spark.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <OAuthClientManager endpoint={endpoint} clients={oauthClients} />
+        </div>
+      </section>
+
+      {/* ACCOUNT BINDING & JSON CONFIG */}
       <div className="grid gap-6 lg:grid-cols-12">
         <section className="lg:col-span-5 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
           <div className="flex items-center gap-3">
@@ -222,7 +289,7 @@ export default async function McpSettingsPage() {
               </p>
             </div>
             <p className="rounded-xl bg-blue-50 p-4 text-xs font-bold leading-6 text-[#012169] dark:bg-blue-950/30 dark:text-blue-100">
-              MCP tokens are bound to this CRM account. Agents only receive a hosted endpoint and bearer token; server secrets stay on the CRM server.
+              MCP tokens and OAuth credentials are bound to this CRM account. Server secrets stay secure on the CRM server.
             </p>
           </div>
         </section>
@@ -230,7 +297,7 @@ export default async function McpSettingsPage() {
         <section className="lg:col-span-7 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
           <div className="flex items-center gap-3">
             <Terminal className="h-5 w-5 text-[#012169] dark:text-blue-300" />
-            <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-50">Agent MCP Config</h2>
+            <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-50">Agent MCP Config (Claude / Cursor)</h2>
           </div>
           <pre className="mt-6 max-h-[520px] overflow-auto rounded-xl bg-zinc-950 p-4 text-xs leading-6 text-zinc-100">
             <code>{codeBlock(mcpConfig)}</code>
@@ -238,16 +305,25 @@ export default async function McpSettingsPage() {
         </section>
       </div>
 
+      {/* PERSONAL MCP BEARER TOKENS SECTION (UNTOUCHED) */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center gap-3">
           <Globe2 className="h-5 w-5 text-[#012169] dark:text-blue-300" />
-          <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-50">Hosted MCP Access</h2>
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-50">
+              Personal Bearer Tokens (Direct MCP Access)
+            </h2>
+            <p className="text-xs text-zinc-500 font-medium mt-0.5">
+              Used for direct command-line or config-based MCP clients like Claude Desktop, Cursor, and Windsurf.
+            </p>
+          </div>
         </div>
         <div className="mt-6">
           <McpTokenManager endpoint={endpoint} tokens={tokens} />
         </div>
       </section>
 
+      {/* DOCUMENTATION */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -256,7 +332,7 @@ export default async function McpSettingsPage() {
               <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-50">Agent Documentation</h2>
             </div>
             <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-zinc-500 dark:text-zinc-400">
-              One-page MCP guide for agents. Use the navigation, scroll to the needed workflow, then call tools with the account-bound token from this page.
+              One-page MCP guide for agents. Use the navigation, scroll to the needed workflow, then call tools with the account-bound credentials from this page.
             </p>
           </div>
           <Link href="/mcp/docs" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#012169] px-4 py-3 text-sm font-black text-white">
@@ -350,8 +426,8 @@ export default async function McpSettingsPage() {
           </div>
           <div className="mt-5 space-y-3 text-sm font-bold text-zinc-600 dark:text-zinc-300">
             <p>Users do not configure database paths or application secrets.</p>
-            <p>The CRM server authenticates each MCP request by bearer token.</p>
-            <p>Revoking a token immediately blocks that agent from future calls.</p>
+            <p>The CRM server authenticates each MCP request via standard OAuth 2.0 or personal bearer token.</p>
+            <p>Revoking an OAuth client or token immediately blocks that agent from future calls.</p>
             <p>Admin tools are visible to all clients, but calls fail unless your CRM role is `ADMIN`.</p>
           </div>
         </section>
