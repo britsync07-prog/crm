@@ -84,8 +84,12 @@ function detectDelimiter(csvText: string) {
 
 async function assertCategoryAccess(userId: string, categoryId?: string | null) {
   if (!categoryId) return null;
+  const trimmed = categoryId.trim();
   const category = await prisma.category.findFirst({
-    where: { id: categoryId, userId },
+    where: {
+      userId,
+      OR: [{ id: trimmed }, { name: trimmed }],
+    },
     select: { id: true },
   });
   if (!category) throw new Error("Category not found for this MCP user.");
@@ -115,6 +119,12 @@ function toLeadSelect() {
     aiScore: true,
     aiInsights: true,
     categoryId: true,
+    category: {
+      select: {
+        id: true,
+        name: true,
+      },
+    },
     createdAt: true,
     updatedAt: true,
   };
@@ -141,7 +151,10 @@ export function registerLeadTools(server: McpServer) {
         const context = await getMcpContext();
         const where: any = { userId: context.userId };
         if (status) where.status = status;
-        if (categoryId) where.categoryId = categoryId;
+        if (categoryId) {
+          const resolved = await assertCategoryAccess(context.userId, categoryId).catch(() => categoryId);
+          where.categoryId = resolved;
+        }
         if (source) where.source = { contains: source };
         if (company) where.company = { contains: company };
         if (search) {
@@ -459,6 +472,192 @@ export function registerLeadTools(server: McpServer) {
         const customer = await ensureCustomerFromLead(leadId, context.userId);
         if (!customer) throw new Error("Lead could not be converted.");
         return customer;
+      })
+  );
+
+  server.registerResource(
+    "britcrm.leads.categories",
+    "britcrm://leads/categories",
+    {
+      title: "Lead Categories",
+      description: "Categories owned by the MCP user for organizing leads, including category IDs and names.",
+      mimeType: "application/json",
+    },
+    async (uri) => {
+      const context = await getMcpContext();
+      const categories = await prisma.category.findMany({
+        where: { userId: context.userId },
+        select: {
+          id: true,
+          name: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: { select: { leads: true } },
+        },
+        orderBy: { name: "asc" },
+      });
+
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            mimeType: "application/json",
+            text: JSON.stringify(
+              {
+                categories: categories.map((c) => ({
+                  id: c.id,
+                  name: c.name,
+                  leadCount: c._count.leads,
+                  createdAt: c.createdAt,
+                  updatedAt: c.updatedAt,
+                })),
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  server.registerTool(
+    "leads.list_categories",
+    {
+      title: "List Lead Categories",
+      description: "List lead categories owned by the MCP user, exposing category IDs (e.g. Talent category ID), names, and lead counts. Use this to discover category IDs before creating or updating leads.",
+      inputSchema: {
+        search: z.string().optional(),
+      },
+    },
+    async ({ search }) =>
+      runTool(async () => {
+        const context = await getMcpContext();
+        const where: any = { userId: context.userId };
+        if (search) {
+          where.name = { contains: search };
+        }
+
+        const categories = await prisma.category.findMany({
+          where,
+          select: {
+            id: true,
+            name: true,
+            createdAt: true,
+            updatedAt: true,
+            _count: { select: { leads: true } },
+          },
+          orderBy: { name: "asc" },
+        });
+
+        return {
+          categories: categories.map((c) => ({
+            id: c.id,
+            name: c.name,
+            leadCount: c._count.leads,
+            createdAt: c.createdAt,
+            updatedAt: c.updatedAt,
+          })),
+        };
+      })
+  );
+
+  server.registerTool(
+    "categories.list",
+    {
+      title: "List Categories",
+      description: "List lead categories owned by the MCP user, exposing category IDs, names, and lead counts (alias for leads.list_categories).",
+      inputSchema: {
+        search: z.string().optional(),
+      },
+    },
+    async ({ search }) =>
+      runTool(async () => {
+        const context = await getMcpContext();
+        const where: any = { userId: context.userId };
+        if (search) {
+          where.name = { contains: search };
+        }
+
+        const categories = await prisma.category.findMany({
+          where,
+          select: {
+            id: true,
+            name: true,
+            createdAt: true,
+            updatedAt: true,
+            _count: { select: { leads: true } },
+          },
+          orderBy: { name: "asc" },
+        });
+
+        return {
+          categories: categories.map((c) => ({
+            id: c.id,
+            name: c.name,
+            leadCount: c._count.leads,
+            createdAt: c.createdAt,
+            updatedAt: c.updatedAt,
+          })),
+        };
+      })
+  );
+
+  server.registerTool(
+    "leads.create_category",
+    {
+      title: "Create Lead Category",
+      description: "Create a new lead category for the MCP user, or return the existing one if it already exists with the same name.",
+      inputSchema: {
+        name: z.string().min(1),
+      },
+    },
+    async ({ name }) =>
+      runTool(async () => {
+        const context = await getMcpContext();
+        const trimmed = name.trim();
+        const existing = await prisma.category.findFirst({
+          where: { userId: context.userId, name: trimmed },
+          select: { id: true, name: true, createdAt: true, updatedAt: true },
+        });
+        if (existing) {
+          return { category: existing, created: false };
+        }
+
+        const category = await prisma.category.create({
+          data: { name: trimmed, userId: context.userId },
+          select: { id: true, name: true, createdAt: true, updatedAt: true },
+        });
+        return { category, created: true };
+      })
+  );
+
+  server.registerTool(
+    "categories.create",
+    {
+      title: "Create Category",
+      description: "Create a new category for the MCP user (alias for leads.create_category).",
+      inputSchema: {
+        name: z.string().min(1),
+      },
+    },
+    async ({ name }) =>
+      runTool(async () => {
+        const context = await getMcpContext();
+        const trimmed = name.trim();
+        const existing = await prisma.category.findFirst({
+          where: { userId: context.userId, name: trimmed },
+          select: { id: true, name: true, createdAt: true, updatedAt: true },
+        });
+        if (existing) {
+          return { category: existing, created: false };
+        }
+
+        const category = await prisma.category.create({
+          data: { name: trimmed, userId: context.userId },
+          select: { id: true, name: true, createdAt: true, updatedAt: true },
+        });
+        return { category, created: true };
       })
   );
 }

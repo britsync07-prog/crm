@@ -31,6 +31,20 @@ Implemented in `src/mcp/tools/leads.ts`:
 - `leads.score`
 - `leads.log_interaction`
 - `leads.convert_to_customer`
+- `leads.list_categories` (alias: `categories.list`)
+- `leads.create_category` (alias: `categories.create`)
+
+### `leads.list_categories`
+
+Input: optional `search`.
+
+Returns categories owned by the MCP user with `id`, `name`, `leadCount`, `createdAt`, and `updatedAt`. Use this to find category IDs (such as for "Talent") so the agent can assign leads to categories.
+
+### `leads.create_category`
+
+Input: `name`.
+
+Creates a new lead category for the user or returns the existing category if one already exists with the same name.
 
 ### `leads.list`
 
@@ -95,5 +109,4 @@ Creates or links a customer record from the lead and triggers existing automatio
 ## Implementation Gaps
 
 - Add explicit API routes for lead CRUD instead of relying only on server actions.
-- Add category CRUD MCP tools.
 - Add duplicate-resolution rules because `Lead.email` is currently globally unique.
