@@ -38,6 +38,7 @@ export function registerSnapshotResources(server: McpServer) {
         calendarEvents,
         upcomingEvents,
         recentActivity,
+        categories,
       ] = await Promise.all([
         prisma.user.findUnique({
           where: { id: context.userId },
@@ -95,6 +96,11 @@ export function registerSnapshotResources(server: McpServer) {
           take: 10,
           select: { id: true, action: true, details: true, createdAt: true },
         }),
+        prisma.category.findMany({
+          where: { userId: context.userId },
+          select: { id: true, name: true, _count: { select: { leads: true } } },
+          orderBy: { name: "asc" },
+        }),
       ]);
 
       return jsonResource(uri, {
@@ -108,6 +114,7 @@ export function registerSnapshotResources(server: McpServer) {
         dashboardCounts: {
           activeMailboxes: emailAccounts,
           leads,
+          categories: categories.length,
           customers,
           campaigns,
           activeCampaigns,
@@ -115,6 +122,11 @@ export function registerSnapshotResources(server: McpServer) {
           formSubmissions,
           calendarEvents,
         },
+        categories: categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          leadCount: c._count.leads,
+        })),
         upcomingEvents,
         recentActivity,
         notes: [

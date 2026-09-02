@@ -33,7 +33,13 @@ const leadEditableFields = {
   linkedin: z.string().optional(),
   source: z.string().optional(),
   status: leadStageSchema.optional(),
-  categoryId: z.string().nullable().optional(),
+  categoryId: z
+    .string()
+    .nullable()
+    .optional()
+    .describe(
+      "Category ID or Category Name (e.g. 'Talent') to assign this lead to. AI agents can also call leads.list_categories or check britcrm://leads/categories to discover category IDs."
+    ),
 };
 
 type CsvRecord = Record<string, unknown>;
@@ -135,11 +141,11 @@ export function registerLeadTools(server: McpServer) {
     "leads.list",
     {
       title: "List Leads",
-      description: "List CRM leads owned by the MCP user with filters.",
+      description: "List CRM leads owned by the MCP user with filters. categoryId can be a category ID or category name (e.g. 'Talent').",
       inputSchema: {
         search: z.string().optional(),
         status: z.string().optional(),
-        categoryId: z.string().optional(),
+        categoryId: z.string().optional().describe("Filter by Category ID or Category Name (e.g. 'Talent')."),
         source: z.string().optional(),
         company: z.string().optional(),
         limit: z.number().int().min(1).max(200).default(50),
@@ -216,7 +222,7 @@ export function registerLeadTools(server: McpServer) {
     "leads.create",
     {
       title: "Create Lead",
-      description: "Create one user-owned CRM lead.",
+      description: "Create one user-owned CRM lead. To assign a category (e.g. 'Talent'), provide categoryId as either the category ID or category name. Use leads.list_categories to discover available categories and IDs.",
       inputSchema: {
         ...leadEditableFields,
         name: z.string().min(1),
@@ -256,7 +262,7 @@ export function registerLeadTools(server: McpServer) {
     "leads.update",
     {
       title: "Update Lead",
-      description: "Update one user-owned CRM lead.",
+      description: "Update one user-owned CRM lead. To assign or change category (e.g. 'Talent'), provide categoryId as either the category ID or category name. Use leads.list_categories to discover available categories and IDs.",
       inputSchema: {
         leadId: z.string().min(1),
         ...leadEditableFields,
@@ -306,7 +312,7 @@ export function registerLeadTools(server: McpServer) {
       description: "Import leads from CSV text into the current user's CRM leads.",
       inputSchema: {
         csvText: z.string().min(1),
-        categoryId: z.string().optional(),
+        categoryId: z.string().optional().describe("Category ID or Category Name to assign imported leads to."),
         runCategorization: z.boolean().default(false),
       },
     },
