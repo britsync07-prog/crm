@@ -93,6 +93,7 @@ Agents should parse `content[0].text` as JSON, check `success`, and only use `da
 - `britcrm://docs/calendar`: availability, meetings, and no double-booking plan.
 - `britcrm://docs/billing`: clients, invoices, quotations, payments, and balances plan.
 - `britcrm://docs/admin`: pricing, discounts, trials, users, system email, and operations plan.
+- `britcrm://leads/categories`: user's lead categories for organizing leads.
 - `britcrm://snapshot/user`: current MCP user's account, organization, dashboard counts, upcoming events, and recent activity.
 
 ## Per-User MCP Setup
@@ -259,6 +260,18 @@ Agents should read `britcrm://snapshot/user` at startup to confirm which CRM acc
 - Converts a lead to customer.
 - Input: `leadId`, `confirm = false`.
 - Requires `confirm: true` to write.
+
+`leads.list_categories`
+
+- Lists all lead categories owned by the user, exposing category IDs, names, and lead counts.
+- Input: `search?`.
+- Alias: `categories.list`.
+
+`leads.create_category`
+
+- Creates a new lead category or returns the existing category if already present.
+- Input: `name`.
+- Alias: `categories.create`.
 
 ### Outreach Tools
 
