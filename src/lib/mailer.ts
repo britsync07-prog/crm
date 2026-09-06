@@ -81,6 +81,7 @@ export async function sendRealEmail(config: {
   body: string;
   senderName?: string;
   variables?: Record<string, string>;
+  skipSentFolder?: boolean;
 }) {
   const account = await prisma.emailAccount.findUnique({
     where: { id: config.emailAccountId },
@@ -110,12 +111,14 @@ export async function sendRealEmail(config: {
   transporter.close();
 
   // Compile raw message and append to IMAP Sent folder
-  try {
-    const composer = new MailComposer(messageData);
-    const rawMessage = await composer.compile().build();
-    await withTimeout(appendEmailToSentFolder(account, rawMessage), SENT_FOLDER_APPEND_TIMEOUT_MS, "IMAP Sent append");
-  } catch (err) {
-    console.error("Failed to append sent message to IMAP Sent folder", err);
+  if (!config.skipSentFolder) {
+    try {
+      const composer = new MailComposer(messageData);
+      const rawMessage = await composer.compile().build();
+      await withTimeout(appendEmailToSentFolder(account, rawMessage), SENT_FOLDER_APPEND_TIMEOUT_MS, "IMAP Sent append");
+    } catch (err) {
+      console.error("Failed to append sent message to IMAP Sent folder", err);
+    }
   }
 
   // Track send volume for reporting only. This is not used as a send quota.

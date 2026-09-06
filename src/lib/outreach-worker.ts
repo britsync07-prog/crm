@@ -1,22 +1,16 @@
-import { prisma } from "@/lib/db";
+﻿import { prisma } from "@/lib/db";
 import { sendRealEmail } from "@/lib/mailer";
 import { getAppBaseUrl } from "@/lib/app-url";
 
-const SEND_DELAY_MS = 5000;
-const MAX_CONSECUTIVE_FAILURES = 3;
-const SMTP_REST_MS = 60 * 60 * 1000;
 const activeCampaigns = new Set<string>();
-const smtpHealth = new Map<string, { consecutiveFails: number; restUntil: number | null }>();
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function normalizeEmail(input: string): string | null {
+export function normalizeEmail(input: string): string | null {
   const email = String(input || "").trim().toLowerCase();
   if (!email) return null;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
 }
 
-function nameFromEmail(email: string): string {
+export function nameFromEmail(email: string): string {
   const prefix = email.split("@")[0] || "Lead";
   return prefix
     .replace(/[._-]+/g, " ")
@@ -34,59 +28,6 @@ function injectOpenPixel(html: string, campaignLeadId: string): string {
   return `${html}\n${pixel}`;
 }
 
-function getSmtpState(accountId: string) {
-  const state = smtpHealth.get(accountId);
-  if (state) return state;
-  const initial = { consecutiveFails: 0, restUntil: null as number | null };
-  smtpHealth.set(accountId, initial);
-  return initial;
-}
-
-function canUseSmtpAccount(accountId: string, nowTs = Date.now()) {
-  const state = getSmtpState(accountId);
-  return !state.restUntil || state.restUntil <= nowTs;
-}
-
-function markSmtpSuccess(accountId: string) {
-  const state = getSmtpState(accountId);
-  state.consecutiveFails = 0;
-  state.restUntil = null;
-}
-
-function markSmtpFailure(accountId: string): number | null {
-  const state = getSmtpState(accountId);
-  state.consecutiveFails += 1;
-  if (state.consecutiveFails >= MAX_CONSECUTIVE_FAILURES) {
-    state.restUntil = Date.now() + SMTP_REST_MS;
-    state.consecutiveFails = MAX_CONSECUTIVE_FAILURES;
-    return state.restUntil;
-  }
-  return null;
-}
-
-function getEarliestRestWakeup(accountIds: string[]) {
-  let earliest: number | null = null;
-  for (const accountId of accountIds) {
-    const state = getSmtpState(accountId);
-    if (!state.restUntil) continue;
-    if (earliest === null || state.restUntil < earliest) earliest = state.restUntil;
-  }
-  return earliest;
-}
-
-function pickAvailableSmtpAccount(accountIds: string[], currentIndex: number) {
-  if (accountIds.length === 0) return { accountId: null as string | null, nextIndex: currentIndex };
-  const nowTs = Date.now();
-  for (let offset = 0; offset < accountIds.length; offset += 1) {
-    const idx = (currentIndex + offset) % accountIds.length;
-    const accountId = accountIds[idx];
-    if (canUseSmtpAccount(accountId, nowTs)) {
-      return { accountId, nextIndex: (idx + 1) % accountIds.length };
-    }
-  }
-  return { accountId: null as string | null, nextIndex: currentIndex };
-}
-
 export function parseRecipients(raw: string): string[] {
   const tokens = raw
     .split(/[\n,;]+/)
@@ -94,6 +35,20 @@ export function parseRecipients(raw: string): string[] {
     .filter((v): v is string => Boolean(v));
 
   return Array.from(new Set(tokens));
+}
+
+function isPermanentMailBounce(error: unknown): boolean {
+  const msg = String(error instanceof Error ? error.message : error || "").toLowerCase();
+  return (
+    /\b55[0-4]\b/.test(msg) ||
+    msg.includes("user unknown") ||
+    msg.includes("recipient not found") ||
+    msg.includes("mailbox not found") ||
+    msg.includes("mailbox unavailable") ||
+    msg.includes("invalid address") ||
+    msg.includes("no such user") ||
+    msg.includes("address rejected")
+  );
 }
 
 export async function launchOutreachCampaign(input: {
@@ -109,20 +64,25 @@ export async function launchOutreachCampaign(input: {
   if (recipients.length === 0) {
     throw new Error("No valid recipients provided.");
   }
-  if (input.smtpAccountIds.length === 0) {
-    throw new Error("Please select at least one SMTP sender account.");
-  }
 
-  const accounts = await prisma.emailAccount.findMany({
+  // Find active accounts from the requested IDs or any active account for this user
+  let accounts = await prisma.emailAccount.findMany({
     where: {
-      id: { in: input.smtpAccountIds },
+      id: input.smtpAccountIds.length > 0 ? { in: input.smtpAccountIds } : undefined,
       userId: input.userId,
       isActive: true,
     },
     select: { id: true, email: true },
   });
+
   if (accounts.length === 0) {
-    throw new Error("No active SMTP sender accounts found.");
+    accounts = await prisma.emailAccount.findMany({
+      where: {
+        userId: input.userId,
+        isActive: true,
+      },
+      select: { id: true, email: true },
+    });
   }
 
   const campaign = await prisma.$transaction(async (tx) => {
@@ -134,7 +94,7 @@ export async function launchOutreachCampaign(input: {
         body: input.htmlContent,
         type: "EMAIL",
         status: "Active",
-        emailAccountId: accounts[0].id,
+        emailAccountId: accounts[0]?.id || null,
       },
     });
 
@@ -171,7 +131,9 @@ export async function launchOutreachCampaign(input: {
     return created;
   });
 
-  queueCampaignWorker(campaign.id, input.userId, accounts.map((a) => a.id), input.senderName || "BritCRM Outreach");
+  // Always queue the campaign for background processing without throwing errors to the caller
+  const activeIds = accounts.map((a) => a.id);
+  queueCampaignWorker(campaign.id, input.userId, activeIds, input.senderName || "BritCRM Outreach");
   return campaign;
 }
 
@@ -198,6 +160,21 @@ async function processCampaign(campaignId: string, userId: string, smtpAccountId
     });
     if (!campaign) return;
 
+    let accountIds = [...smtpAccountIds];
+    if (accountIds.length === 0) {
+      const fallbackAccounts = await prisma.emailAccount.findMany({
+        where: { userId, isActive: true },
+        select: { id: true },
+      });
+      accountIds = fallbackAccounts.map((a) => a.id);
+    }
+
+    // If still no sender accounts, keep leads queued as Pending for future delivery
+    if (accountIds.length === 0) {
+      console.warn(`[OutreachWorker] No active SMTP sender accounts found for campaign ${campaignId}. Mails remain safely queued.`);
+      return;
+    }
+
     const pending = await prisma.campaignLead.findMany({
       where: { campaignId, status: "Pending" },
       include: { lead: true },
@@ -205,19 +182,8 @@ async function processCampaign(campaignId: string, userId: string, smtpAccountId
     });
 
     for (const recipient of pending) {
-      let selection = pickAvailableSmtpAccount(smtpAccountIds, senderIndex);
-      while (!selection.accountId) {
-        const wakeupAt = getEarliestRestWakeup(smtpAccountIds);
-        const waitMs = wakeupAt ? Math.max(5000, wakeupAt - Date.now()) : SMTP_REST_MS;
-        const wakeupIso = new Date(Date.now() + waitMs).toISOString();
-        console.warn(
-          `[OutreachWorker] All selected SMTP accounts are resting. Campaign ${campaignId} waiting until ${wakeupIso}`
-        );
-        await sleep(waitMs);
-        selection = pickAvailableSmtpAccount(smtpAccountIds, senderIndex);
-      }
-      const accountId = selection.accountId;
-      senderIndex = selection.nextIndex;
+      const accountId = accountIds[senderIndex % accountIds.length];
+      senderIndex += 1;
 
       try {
         await sendRealEmail({
@@ -231,39 +197,43 @@ async function processCampaign(campaignId: string, userId: string, smtpAccountId
             Company: recipient.lead.company || "your team",
             SenderName: senderName,
           },
+          skipSentFolder: true,
         });
-        markSmtpSuccess(accountId);
 
         await prisma.campaignLead.update({
           where: { id: recipient.id },
           data: { status: "Sent", sentAt: new Date() },
         });
       } catch (err: any) {
-        const restUntil = markSmtpFailure(accountId);
-        if (restUntil) {
+        if (isPermanentMailBounce(err)) {
+          await prisma.campaignLead.update({
+            where: { id: recipient.id },
+            data: { status: "Bounced" },
+          });
+          console.warn(`[OutreachWorker] Permanent bounce for recipient ${recipient.lead.email}:`, err?.message || err);
+        } else {
+          // Mail server error, timeout, or rate/time limit: keep mail queued (Pending)
           console.warn(
-            `[OutreachWorker] SMTP ${accountId} reached ${MAX_CONSECUTIVE_FAILURES} consecutive failures. Resting until ${new Date(restUntil).toISOString()}`
+            `[OutreachWorker] Mail server error or time limit for recipient ${recipient.lead.email}: ${err?.message || err}. Mail remains queued in campaign.`
           );
+          // Recipient status remains "Pending" in the database queue
         }
-        await prisma.campaignLead.update({
-          where: { id: recipient.id },
-          data: { status: "Bounced" },
-        });
-        console.error(`[OutreachWorker] Failed recipient ${recipient.lead.email}:`, err?.message || err);
       }
-
-      await sleep(SEND_DELAY_MS);
     }
+
+    const remainingPending = await prisma.campaignLead.count({
+      where: { campaignId, status: "Pending" },
+    });
 
     await prisma.campaign.update({
       where: { id: campaignId, userId },
-      data: { status: "Completed" },
+      data: { status: remainingPending > 0 ? "Active" : "Completed" },
     });
   } catch (err: any) {
-    console.error(`[OutreachWorker] Campaign ${campaignId} failed:`, err?.message || err);
+    console.error(`[OutreachWorker] Campaign ${campaignId} queue worker encountered error:`, err?.message || err);
     await prisma.campaign.updateMany({
       where: { id: campaignId, userId },
-      data: { status: "Completed" },
+      data: { status: "Active" },
     });
   }
 }
