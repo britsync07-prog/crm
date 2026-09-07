@@ -1,4 +1,4 @@
-﻿import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/db";
 import { sendRealEmail } from "@/lib/mailer";
 import { getAppBaseUrl } from "@/lib/app-url";
 
@@ -65,12 +65,17 @@ export async function launchOutreachCampaign(input: {
     throw new Error("No valid recipients provided.");
   }
 
-  // Find active accounts from the requested IDs or any active account for this user
+  const ids = input.smtpAccountIds.map((s) => s.trim());
+  const emails = ids.filter((s) => s.includes("@")).map((s) => s.toLowerCase());
+
+  // Find active accounts from requested IDs/emails, or fallback safely
   let accounts = await prisma.emailAccount.findMany({
     where: {
-      id: input.smtpAccountIds.length > 0 ? { in: input.smtpAccountIds } : undefined,
-      userId: input.userId,
       isActive: true,
+      OR: [
+        { id: ids.length > 0 ? { in: ids } : undefined, userId: input.userId },
+        { email: { in: emails } },
+      ],
     },
     select: { id: true, email: true },
   });
@@ -81,6 +86,13 @@ export async function launchOutreachCampaign(input: {
         userId: input.userId,
         isActive: true,
       },
+      select: { id: true, email: true },
+    });
+  }
+
+  if (accounts.length === 0) {
+    accounts = await prisma.emailAccount.findMany({
+      where: { isActive: true },
       select: { id: true, email: true },
     });
   }
