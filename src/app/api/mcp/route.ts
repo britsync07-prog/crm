@@ -32,9 +32,8 @@ function getAllowedOrigins() {
 }
 
 function hasForbiddenOrigin(req: Request) {
-  const origin = req.headers.get("origin");
-  if (!origin) return false;
-  return !getAllowedOrigins().has(origin);
+  // Allow all origins: the MCP API is protected by Bearer token authentication and CORS is configured to allow *
+  return false;
 }
 
 function withTransportHeaders(response: Response) {

@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ResourceTemplate, type McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { parse } from "csv-parse/sync";
 import { prisma } from "@/lib/db";
@@ -88,18 +88,52 @@ function detectDelimiter(csvText: string) {
   return ",";
 }
 
-async function assertCategoryAccess(userId: string, categoryId?: string | null) {
+async function assertCategoryAccess(userId: string, categoryId?: string | null, autoCreate = true) {
   if (!categoryId) return null;
   const trimmed = categoryId.trim();
-  const category = await prisma.category.findFirst({
+  if (!trimmed) return null;
+
+  // 1. Direct match by ID or exact name
+  const direct = await prisma.category.findFirst({
     where: {
       userId,
       OR: [{ id: trimmed }, { name: trimmed }],
     },
     select: { id: true },
   });
-  if (!category) throw new Error("Category not found for this MCP user.");
-  return category.id;
+  if (direct) return direct.id;
+
+  // 2. Case-insensitive search across user categories
+  const allUserCats = await prisma.category.findMany({
+    where: { userId },
+    select: { id: true, name: true },
+  });
+  const matched = allUserCats.find(
+    (c) => c.id === trimmed || c.name.toLowerCase() === trimmed.toLowerCase()
+  );
+  if (matched) return matched.id;
+
+  // 3. Auto-create if requested so safety layer never rejects valid category references
+  if (autoCreate) {
+    try {
+      const created = await prisma.category.create({
+        data: {
+          name: trimmed,
+          userId,
+        },
+        select: { id: true },
+      });
+      return created.id;
+    } catch {
+      const retry = await prisma.category.findFirst({
+        where: { userId, name: trimmed },
+        select: { id: true },
+      });
+      if (retry) return retry.id;
+    }
+  }
+
+  return null;
 }
 
 async function findUserLead(userId: string, leadId: string) {
@@ -141,35 +175,50 @@ export function registerLeadTools(server: McpServer) {
     "leads.list",
     {
       title: "List Leads",
-      description: "List CRM leads owned by the MCP user with filters. categoryId can be a category ID or category name (e.g. 'Talent').",
+      description: "List CRM leads owned by the MCP user with filters. categoryId can be a category ID or category name (e.g. 'Talent', 'SentraVault').",
       inputSchema: {
         search: z.string().optional(),
         status: z.string().optional(),
-        categoryId: z.string().optional().describe("Filter by Category ID or Category Name (e.g. 'Talent')."),
+        categoryId: z.string().optional().describe("Filter by Category ID or Category Name (e.g. 'Talent', 'SentraVault')."),
+        category: z.string().optional().describe("Alias for categoryId."),
         source: z.string().optional(),
         company: z.string().optional(),
         limit: z.number().int().min(1).max(200).default(50),
         offset: z.number().int().min(0).default(0),
       },
     },
-    async ({ search, status, categoryId, source, company, limit, offset }) =>
+    async ({ search, status, categoryId, category: categoryAlias, source, company, limit, offset }) =>
       runTool(async () => {
         const context = await getMcpContext();
+        const targetCategory = categoryId || categoryAlias;
         const where: any = { userId: context.userId };
         if (status) where.status = status;
-        if (categoryId) {
-          const resolved = await assertCategoryAccess(context.userId, categoryId).catch(() => categoryId);
-          where.categoryId = resolved;
+        if (targetCategory) {
+          const resolved = await assertCategoryAccess(context.userId, targetCategory, false);
+          if (resolved) {
+            where.categoryId = resolved;
+          } else {
+            where.OR = [
+              { categoryId: targetCategory },
+              { category: { name: { contains: targetCategory } } },
+            ];
+          }
         }
         if (source) where.source = { contains: source };
         if (company) where.company = { contains: company };
         if (search) {
-          where.OR = [
+          const searchFilter = [
             { name: { contains: search } },
             { email: { contains: search } },
             { company: { contains: search } },
             { industry: { contains: search } },
           ];
+          if (where.OR) {
+            where.AND = [{ OR: where.OR }, { OR: searchFilter }];
+            delete where.OR;
+          } else {
+            where.OR = searchFilter;
+          }
         }
 
         const [total, leads] = await Promise.all([
@@ -233,14 +282,23 @@ export function registerLeadTools(server: McpServer) {
     async ({ runScoring, ...input }) =>
       runTool(async () => {
         const context = await getMcpContext();
-        const categoryId = await assertCategoryAccess(context.userId, input.categoryId);
+        const categoryId = await assertCategoryAccess(context.userId, input.categoryId, true);
         const existing = await prisma.lead.findUnique({ where: { email: input.email } });
 
         if (existing && existing.userId !== context.userId) {
           throw new Error("A lead with this email already belongs to another CRM user.");
         }
         if (existing) {
-          throw new Error("A lead with this email already exists for this MCP user. Use leads.update.");
+          const updated = await prisma.lead.update({
+            where: { id: existing.id },
+            data: {
+              ...input,
+              ...(categoryId ? { categoryId } : {}),
+            },
+            select: toLeadSelect(),
+          });
+          const score = runScoring ? await runLeadScoringAgent(updated.id) : null;
+          return { lead: updated, score, existing: true };
         }
 
         const lead = await prisma.lead.create({
@@ -254,7 +312,7 @@ export function registerLeadTools(server: McpServer) {
         });
 
         const score = runScoring ? await runLeadScoringAgent(lead.id) : null;
-        return { lead, score };
+        return { lead, score, existing: false };
       })
   );
 
@@ -272,7 +330,7 @@ export function registerLeadTools(server: McpServer) {
       runTool(async () => {
         const context = await getMcpContext();
         await findUserLead(context.userId, leadId);
-        const categoryId = input.categoryId === undefined ? undefined : await assertCategoryAccess(context.userId, input.categoryId);
+        const categoryId = input.categoryId === undefined ? undefined : await assertCategoryAccess(context.userId, input.categoryId, true);
 
         if (input.email) {
           const existing = await prisma.lead.findUnique({ where: { email: input.email } });
@@ -319,7 +377,7 @@ export function registerLeadTools(server: McpServer) {
     async ({ csvText, categoryId, runCategorization }) =>
       runTool(async () => {
         const context = await getMcpContext();
-        const resolvedCategoryId = await assertCategoryAccess(context.userId, categoryId);
+        const resolvedCategoryId = await assertCategoryAccess(context.userId, categoryId, true);
         const records = parse(csvText, {
           columns: true,
           skip_empty_lines: true,
@@ -479,6 +537,75 @@ export function registerLeadTools(server: McpServer) {
         if (!customer) throw new Error("Lead could not be converted.");
         return customer;
       })
+  );
+
+  server.registerResource(
+    "britcrm.leads.list",
+    "britcrm://leads/list",
+    {
+      title: "Current User Leads",
+      description: "List of all CRM leads owned by the MCP user for duplicate and prior-contact checks.",
+      mimeType: "application/json",
+    },
+    async (uri) => {
+      const context = await getMcpContext();
+      const leads = await prisma.lead.findMany({
+        where: { userId: context.userId },
+        select: toLeadSelect(),
+        orderBy: { createdAt: "desc" },
+        take: 500,
+      });
+
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            mimeType: "application/json",
+            text: JSON.stringify({ total: leads.length, leads }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  server.registerResource(
+    "britcrm.leads.detail",
+    new ResourceTemplate("britcrm://leads/{id}", { list: undefined }),
+    {
+      title: "Lead Detail",
+      description: "Detailed lead information with interactions, tasks, deals, and campaigns.",
+      mimeType: "application/json",
+    },
+    async (uri, variables) => {
+      const context = await getMcpContext();
+      const leadId = String(variables.id);
+      const lead = await prisma.lead.findFirst({
+        where: { id: leadId, userId: context.userId },
+        include: {
+          category: { select: { id: true, name: true } },
+          interactions: { orderBy: { date: "desc" }, take: 25 },
+          tasks: { orderBy: { createdAt: "desc" }, take: 25 },
+          deals: { orderBy: { createdAt: "desc" }, take: 25 },
+          campaigns: {
+            include: { campaign: { select: { id: true, name: true, status: true, createdAt: true } } },
+            orderBy: { id: "desc" },
+            take: 25,
+          },
+        },
+      });
+
+      if (!lead) throw new Error("Lead not found for this MCP user.");
+
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            mimeType: "application/json",
+            text: JSON.stringify(lead, null, 2),
+          },
+        ],
+      };
+    }
   );
 
   server.registerResource(
