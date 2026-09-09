@@ -31,6 +31,8 @@ import {
   approveAllActionsAction,
   updateDocumentContentAction,
   activateClientAction,
+  previewDocumentAction,
+  previewCommunicationAction,
 } from "@/app/onboarding/actions";
 
 interface OnboardingCommandCenterProps {
@@ -584,9 +586,10 @@ export default function OnboardingCommandCenter({
                       {act.actionType === "GENERATE_DOCUMENT" && (
                         <button
                           onClick={async () => {
-                            const { renderDocumentForOnboarding } = await import("@/lib/onboarding/ai-engine");
-                            const rendered = await renderDocumentForOnboarding(instance.id, payload.documentType);
-                            setPreviewItem({ title: rendered.title, content: rendered.content });
+                            const res = await previewDocumentAction(instance.id, payload.documentType);
+                            if (res.success && res.title && res.content) {
+                              setPreviewItem({ title: res.title, content: res.content });
+                            }
                           }}
                           className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-zinc-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                         >
@@ -597,9 +600,10 @@ export default function OnboardingCommandCenter({
                       {act.actionType === "GENERATE_COMMUNICATION" && (
                         <button
                           onClick={async () => {
-                            const { generateClientCommunication } = await import("@/lib/onboarding/ai-engine");
-                            const comm = await generateClientCommunication(instance.id, payload.type || "WELCOME");
-                            setPreviewItem({ title: comm.subject, content: comm.body });
+                            const res = await previewCommunicationAction(instance.id, payload.type || "WELCOME");
+                            if (res.success && res.title && res.content) {
+                              setPreviewItem({ title: res.title, content: res.content });
+                            }
                           }}
                           className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-zinc-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                         >

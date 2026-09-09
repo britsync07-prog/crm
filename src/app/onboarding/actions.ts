@@ -544,3 +544,29 @@ export async function activateClientAction(onboardingId: string) {
     return { success: false, error: err.message || "Failed to activate client" };
   }
 }
+
+/**
+ * Renders a document preview safely via server action
+ */
+export async function previewDocumentAction(onboardingId: string, documentType: string) {
+  try {
+    const rendered = await renderDocumentForOnboarding(onboardingId, documentType);
+    return { success: true, title: rendered.title, content: rendered.content };
+  } catch (err: any) {
+    console.error("[previewDocumentAction] Error:", err);
+    return { success: false, error: err.message || "Failed to preview document" };
+  }
+}
+
+/**
+ * Renders a communication preview safely via server action
+ */
+export async function previewCommunicationAction(onboardingId: string, type: string) {
+  try {
+    const comm = await generateClientCommunication(onboardingId, type as any);
+    return { success: true, title: comm.subject, content: comm.body };
+  } catch (err: any) {
+    console.error("[previewCommunicationAction] Error:", err);
+    return { success: false, error: err.message || "Failed to preview communication" };
+  }
+}
