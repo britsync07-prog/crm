@@ -214,3 +214,28 @@ export async function toggleTaskStatus(taskId: string, currentStatus: string) {
   revalidatePath("/tasks");
   revalidatePath("/customers");
 }
+
+export async function updateDealStageAction(dealId: string, stage: string) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+
+  const deal = await prisma.deal.update({
+    where: { id: dealId },
+    data: { stage },
+  });
+
+  // If deal is Won, trigger automated onboarding initiation
+  let onboardingResult = null;
+  if (stage.toLowerCase().includes("won")) {
+    try {
+      const { startOnboardingForDealAction } = await import("./onboarding/actions");
+      onboardingResult = await startOnboardingForDealAction(dealId);
+    } catch (err) {
+      console.error("Failed to auto-trigger onboarding for won deal:", err);
+    }
+  }
+
+  revalidatePath("/onboarding");
+  revalidatePath("/customers");
+  return { success: true, deal, onboardingResult };
+}

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { logInteraction, createTask } from "@/app/actions";
 import TaskToggle from "@/components/TaskToggle";
 import CustomerAIActions from "./CustomerAIActions";
+import { Zap, CheckCircle2, AlertTriangle, ArrowUpRight, FileSignature } from "lucide-react";
 
 interface CustomerDetailsProps {
   params: Promise<{
@@ -24,14 +25,23 @@ export default async function CustomerDetails({ params }: CustomerDetailsProps) 
         orderBy: { createdAt: "desc" },
       },
       deals: {
-        orderBy: { createdAt: "desc" }
-      }
+        orderBy: { createdAt: "desc" },
+      },
+      onboardings: {
+        include: {
+          documents: true,
+          signatureRequests: true,
+        },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 
   if (!customer) {
     notFound();
   }
+
+  const latestOnboarding = customer.onboardings[0];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20 max-w-[1600px] mx-auto">
@@ -48,6 +58,15 @@ export default async function CustomerDetails({ params }: CustomerDetailsProps) 
             <p className="text-zinc-500 font-medium mt-1">{customer.company || "Independent Customer"}</p>
           </div>
         </div>
+
+        {latestOnboarding && (
+          <Link
+            href={`/onboarding/${latestOnboarding.id}`}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#012169] hover:bg-[#c8102e] text-white text-xs font-black uppercase tracking-wider transition-all shadow-md"
+          >
+            <Zap className="w-4 h-4" /> Open Onboarding Hub
+          </Link>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-12">
@@ -97,6 +116,52 @@ export default async function CustomerDetails({ params }: CustomerDetailsProps) 
 
         {/* Middle Column (5) - Activity Timeline & Quick Actions */}
         <div className="lg:col-span-5 space-y-6">
+          {/* Client 360 Onboarding Card */}
+          {latestOnboarding && (
+            <div className="rounded-[32px] border border-blue-200 dark:border-blue-900/40 bg-gradient-to-br from-blue-50/70 to-indigo-50/50 dark:from-blue-950/30 dark:to-indigo-950/20 p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-[#012169] dark:text-blue-400" />
+                  <h2 className="text-xs font-black uppercase tracking-widest text-[#012169] dark:text-blue-400">
+                    Client Onboarding 360
+                  </h2>
+                </div>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950 text-[#012169] dark:text-blue-300">
+                  {latestOnboarding.status.replace(/_/g, " ")}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <div>
+                  <p className="font-black text-slate-900 dark:text-white text-sm">
+                    {latestOnboarding.serviceName}
+                  </p>
+                  <p className="text-[10px] text-slate-500">
+                    Health: <strong className={latestOnboarding.healthStatus === "HEALTHY" ? "text-emerald-600" : "text-amber-600"}>{latestOnboarding.healthStatus}</strong>
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-black">{latestOnboarding.progressPercentage}% Complete</span>
+                  <div className="w-24 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full mt-1 overflow-hidden">
+                    <div className="h-full bg-[#012169] rounded-full" style={{ width: `${latestOnboarding.progressPercentage}%` }} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between border-t border-blue-100 dark:border-blue-900/30 text-[11px]">
+                <span className="text-slate-500 font-medium">
+                  {latestOnboarding.documents.length} Documents &bull; {latestOnboarding.signatureRequests.filter((s: any) => s.status === "SIGNED").length} Signed
+                </span>
+                <Link
+                  href={`/onboarding/${latestOnboarding.id}`}
+                  className="font-bold text-[#012169] dark:text-blue-400 hover:underline flex items-center gap-1"
+                >
+                  View Details <ArrowUpRight className="w-3 h-3" />
+                </Link>
+              </div>
+            </div>
+          )}
+
           <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-zinc-950">
             <h2 className="text-sm font-black uppercase tracking-widest text-[#012169] flex gap-4 mb-6 italic">
               Record Event
@@ -208,7 +273,7 @@ export default async function CustomerDetails({ params }: CustomerDetailsProps) 
             </div>
           </div>
 
-          <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-zinc-950">
+          <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-sm font-black uppercase tracking-widest text-[#012169] italic">Associated Deals</h2>
               <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">+ Link</span>

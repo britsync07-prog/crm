@@ -17,12 +17,14 @@ import {
   Calendar as CalendarIcon,
   Menu,
   X,
+  UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
   { name: "Unified Inbox", href: "/inbox", icon: Mail },
   { name: "Leads", href: "/leads", icon: UserPlus },
+  { name: "Onboarding", href: "/onboarding", icon: UserCheck, matchPrefix: true },
   { name: "Billing & Finance", href: "/billing", icon: CreditCard },
   { name: "Team Hub", href: "/team", icon: Users2, matchPrefix: true },
   { name: "Calls & Meetings", href: "/calls", icon: Video },
@@ -110,7 +112,9 @@ export default function Sidebar() {
     pathname.startsWith("/features/") ||
     pathname.startsWith("/solutions/") ||
     pathname.startsWith("/vision/") ||
-    pathname.startsWith("/admin");
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/onboarding/portal/") ||
+    pathname.startsWith("/onboarding/sign/");
 
   if (isMarketingRoute) {
     return null;

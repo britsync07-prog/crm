@@ -20,9 +20,11 @@ export default function TopNavbar({ session }: { session: any }) {
     pathname.startsWith("/features/") || 
     pathname.startsWith("/solutions/") || 
     pathname.startsWith("/vision/") || 
-    pathname.startsWith("/admin");
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/onboarding/portal/") ||
+    pathname.startsWith("/onboarding/sign/");
 
-  // Hide TopNavbar on marketing routes
+  // Hide TopNavbar on marketing / client onboarding portal routes
   if (isMarketingRoute) {
     return null;
   }

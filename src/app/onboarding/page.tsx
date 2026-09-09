@@ -1,126 +1,331 @@
 import { prisma } from "@/lib/db";
-import { startOnboardingSession } from "@/app/onboarding-actions";
+import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import Link from "next/link";
-import { MessageCircle, Sparkles, UserCheck, Timer } from "lucide-react";
+import {
+  Users,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  Clock,
+  ArrowUpRight,
+  Plus,
+  ShieldCheck,
+  TrendingUp,
+  FileSignature,
+  FileText,
+  CreditCard,
+  Zap,
+} from "lucide-react";
+import { startOnboardingForDealAction } from "./actions";
 
-export default async function OnboardingPage() {
-  const sessions = await prisma.onboardingSession.findMany({
+export const dynamic = "force-dynamic";
+
+export default async function OnboardingHubPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ health?: string; status?: string; search?: string }>;
+}) {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  const { health, status, search } = await searchParams;
+
+  const whereClause: any = {};
+  if (health) whereClause.healthStatus = health;
+  if (status) whereClause.status = status;
+  if (search) {
+    whereClause.OR = [
+      { serviceName: { contains: search } },
+      { client: { name: { contains: search } } },
+      { client: { company: { contains: search } } },
+    ];
+  }
+
+  const instances = await prisma.onboardingInstance.findMany({
+    where: whereClause,
     include: {
-      messages: { orderBy: { createdAt: "desc" }, take: 1 },
+      client: true,
+      deal: true,
+      template: true,
+      actions: { select: { id: true, status: true, requiresApproval: true } },
+      documents: { select: { id: true, status: true } },
+      signatureRequests: { select: { id: true, status: true } },
     },
     orderBy: { updatedAt: "desc" },
   });
 
-  const leads = await prisma.lead.findMany({
-    where: { status: "New" },
+  // Calculate high-level metrics
+  const totalCount = await prisma.onboardingInstance.count();
+  const healthyCount = await prisma.onboardingInstance.count({ where: { healthStatus: "HEALTHY" } });
+  const atRiskCount = await prisma.onboardingInstance.count({ where: { healthStatus: "AT_RISK" } });
+  const blockedCount = await prisma.onboardingInstance.count({ where: { healthStatus: "BLOCKED" } });
+  const awaitingClientCount = await prisma.onboardingInstance.count({ where: { status: "WAITING_CLIENT" } });
+  const awaitingApprovalCount = await prisma.onboardingInstance.count({ where: { status: "WAITING_HUMAN_APPROVAL" } });
+  const readyForActivationCount = await prisma.onboardingInstance.count({ where: { status: "READY_FOR_ACTIVATION" } });
+  const completedCount = await prisma.onboardingInstance.count({ where: { status: "COMPLETED" } });
+
+  // Get won deals ready for onboarding
+  const wonDeals = await prisma.deal.findMany({
+    where: {
+      OR: [{ stage: "Won" }, { stage: "Closed Won" }],
+      onboardings: { none: {} },
+    },
+    include: { customer: true, lead: true },
     take: 5,
   });
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
+    <div className="space-y-10 max-w-[1400px] mx-auto pb-24 animate-in fade-in duration-500">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 uppercase italic">Onboarding Hub</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">AI-driven client onboarding and engagement chat boxes.</p>
-        </div>
-        <div className="flex gap-4">
-          <div className="px-6 py-4 rounded-3xl bg-zinc-900 text-white flex items-center gap-3">
-            <UserCheck className="w-6 h-6 text-green-500" />
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Avg. Time</p>
-              <p className="text-sm font-bold">14.2 Hours</p>
-            </div>
+          <div className="flex items-center gap-3 mb-1">
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#012169] dark:text-blue-400 flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5" /> AI Operations Engine
+            </span>
           </div>
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-zinc-50 uppercase italic">
+            Onboarding <span className="text-[#012169] dark:text-blue-400">Hub</span>
+          </h1>
+          <p className="text-xs md:text-sm text-slate-500 dark:text-zinc-400 font-medium mt-1">
+            Autonomous client preparation with mandatory human oversight. AI prepares, humans approve, CRM executes.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Link
+            href="/onboarding/admin"
+            className="px-5 py-2.5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 text-xs font-black uppercase tracking-wider text-slate-700 dark:text-zinc-200 hover:bg-slate-50 transition-all shadow-sm"
+          >
+            Template Settings
+          </Link>
         </div>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        {/* Left: New Clients to Onboard */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-zinc-900/50">
-            <h2 className="text-xs font-black uppercase tracking-widest text-[#012169] mb-6 flex items-center gap-2">
-              <Timer className="w-4 h-4" /> Ready for Onboarding
-            </h2>
-            <div className="space-y-4">
-              {leads.map((lead) => (
-                <div key={lead.id} className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold">{lead.name}</p>
-                    <p className="text-[10px] font-black uppercase text-zinc-400">{lead.company || "Independent"}</p>
-                  </div>
-                  <form action={async () => {
-                    "use server";
-                    await startOnboardingSession(lead.id);
-                  }}>
-                    <button type="submit" className="bg-[#012169] text-white p-2 rounded-xl hover:bg-[#c8102e] transition-colors">
-                      <MessageCircle className="w-4 h-4" />
-                    </button>
-                  </form>
-                </div>
-              ))}
-              {leads.length === 0 && <p className="text-xs text-zinc-500 italic py-4">No new leads to onboard.</p>}
+      {/* KPI Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        {[
+          { label: "Total Active", count: totalCount, color: "text-slate-900 dark:text-white" },
+          { label: "Healthy", count: healthyCount, color: "text-emerald-500" },
+          { label: "At Risk", count: atRiskCount, color: "text-amber-500" },
+          { label: "Blocked", count: blockedCount, color: "text-red-500" },
+          { label: "Awaiting Approval", count: awaitingApprovalCount, color: "text-purple-500" },
+          { label: "Awaiting Client", count: awaitingClientCount, color: "text-blue-500" },
+          { label: "Ready to Activate", count: readyForActivationCount, color: "text-indigo-500" },
+          { label: "Completed", count: completedCount, color: "text-teal-500" },
+        ].map((m) => (
+          <div
+            key={m.label}
+            className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-slate-200 dark:border-white/5 shadow-sm space-y-1"
+          >
+            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 line-clamp-1 truncate">
+              {m.label}
+            </p>
+            <p className={`text-2xl font-black ${m.color}`}>{m.count}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Uninitiated Won Deals Alert (if any) */}
+      {wonDeals.length > 0 && (
+        <div className="p-6 rounded-3xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-900/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#012169] text-white flex items-center justify-center shrink-0 shadow-md">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                {wonDeals.length} Won Deal{wonDeals.length > 1 ? "s" : ""} Ready for Onboarding
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
+                Deals marked as Won can be instantly converted into an AI-coordinated onboarding workflow.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {wonDeals.map((deal) => (
+              <form
+                key={deal.id}
+                action={async () => {
+                  "use server";
+                  await startOnboardingForDealAction(deal.id);
+                }}
+              >
+                <button
+                  type="submit"
+                  className="bg-[#012169] hover:bg-[#c8102e] text-white px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all shadow cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Start: {deal.customer?.company || deal.name}
+                </button>
+              </form>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Active Onboardings Table & Filter Suite */}
+      <div className="bg-white dark:bg-zinc-900/60 border border-slate-200 dark:border-white/5 rounded-[32px] p-6 md:p-8 shadow-sm space-y-6">
+        {/* Table Filters */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-white/5 pb-6">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Filter Health:</span>
+            <div className="flex items-center gap-1.5">
+              <Link
+                href="/onboarding"
+                className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+                  !health ? "bg-[#012169] text-white" : "bg-slate-100 dark:bg-white/5 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                All
+              </Link>
+              <Link
+                href="/onboarding?health=HEALTHY"
+                className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+                  health === "HEALTHY" ? "bg-emerald-600 text-white" : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                }`}
+              >
+                Healthy
+              </Link>
+              <Link
+                href="/onboarding?health=AT_RISK"
+                className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+                  health === "AT_RISK" ? "bg-amber-600 text-white" : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                }`}
+              >
+                At Risk
+              </Link>
+              <Link
+                href="/onboarding?health=BLOCKED"
+                className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+                  health === "BLOCKED" ? "bg-red-600 text-white" : "bg-red-50 text-red-700 hover:bg-red-100"
+                }`}
+              >
+                Blocked
+              </Link>
             </div>
           </div>
 
-          <div className="p-6 rounded-[32px] bg-gradient-to-br from-blue-600 to-purple-700 text-white shadow-xl relative overflow-hidden">
-            <Sparkles className="absolute -right-4 -top-4 w-24 h-24 opacity-10" />
-            <h3 className="text-sm font-black uppercase tracking-widest mb-2 italic">Gemini Co-pilot</h3>
-            <p className="text-xs font-medium opacity-90 leading-relaxed">
-              Gemini is monitoring all chat boxes. It will automatically flag sessions where the client seems confused or unhappy.
-            </p>
+          <div className="text-xs font-medium text-slate-400">
+            Showing {instances.length} active onboarding{instances.length === 1 ? "" : "s"}
           </div>
         </div>
 
-        {/* Right: Active Chat Boxes */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="grid gap-6 sm:grid-cols-2">
-            {sessions.map((session) => (
-              <div key={session.id} className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-lg dark:border-white/5 dark:bg-zinc-900/50 relative group">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-[#012169] flex items-center justify-center text-white font-black">
-                      CB
-                    </div>
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-widest">Chat Box #{session.id.slice(-4)}</p>
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                        <span className="text-[10px] font-bold text-zinc-500">Active</span>
+        {/* Pipeline List */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-white/5 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                <th className="pb-4">Client & Company</th>
+                <th className="pb-4">Service & Template</th>
+                <th className="pb-4">Status & Stage</th>
+                <th className="pb-4">Health Status</th>
+                <th className="pb-4">Progress</th>
+                <th className="pb-4">Pending Approvals</th>
+                <th className="pb-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+              {instances.map((inst) => {
+                const pendingApprovalCount = inst.actions.filter(
+                  (a) => a.status === "PENDING_APPROVAL" && a.requiresApproval
+                ).length;
+
+                return (
+                  <tr key={inst.id} className="group hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors">
+                    <td className="py-4">
+                      <div className="font-bold text-slate-900 dark:text-white text-sm">
+                        {inst.client.company || inst.client.name}
+                      </div>
+                      <div className="text-[11px] text-slate-400">{inst.client.name} &bull; {inst.client.email}</div>
+                    </td>
+
+                    <td className="py-4">
+                      <div className="font-bold text-slate-800 dark:text-zinc-200">
+                        {inst.serviceName}
+                      </div>
+                      <div className="text-[10px] font-medium text-slate-400">
+                        {inst.template?.name || "Standard Template"}
+                      </div>
+                    </td>
+
+                    <td className="py-4">
+                      <span className="inline-block px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-blue-50 dark:bg-blue-950/40 text-[#012169] dark:text-blue-300 border border-blue-100 dark:border-blue-900/30">
+                        {inst.status.replace(/_/g, " ")}
                       </span>
-                    </div>
-                  </div>
-                  <Link href={`/onboarding/${session.id}`} className="text-[10px] font-black uppercase tracking-widest text-[#012169] hover:underline">
-                    Expand
-                  </Link>
-                </div>
+                    </td>
 
-                <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-white/5 h-32 overflow-hidden relative">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter mb-2">Latest Message</p>
-                  <p className="text-xs font-medium text-zinc-600 dark:text-zinc-300 line-clamp-3 italic">
-                    &quot;{session.messages[0]?.content || "Waiting for interaction..."}&quot;
-                  </p>
-                  <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-zinc-50 dark:from-zinc-950 to-transparent"></div>
-                </div>
+                    <td className="py-4">
+                      <div className="flex items-center gap-1.5">
+                        {inst.healthStatus === "HEALTHY" && (
+                          <span className="flex items-center gap-1 text-emerald-600 font-bold text-[11px]">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Healthy
+                          </span>
+                        )}
+                        {inst.healthStatus === "AT_RISK" && (
+                          <span className="flex items-center gap-1 text-amber-600 font-bold text-[11px]" title={inst.healthReason || ""}>
+                            <AlertTriangle className="w-3.5 h-3.5" /> At Risk
+                          </span>
+                        )}
+                        {inst.healthStatus === "BLOCKED" && (
+                          <span className="flex items-center gap-1 text-red-600 font-bold text-[11px]" title={inst.healthReason || ""}>
+                            <XCircle className="w-3.5 h-3.5" /> Blocked
+                          </span>
+                        )}
+                      </div>
+                      {inst.healthReason && inst.healthStatus !== "HEALTHY" && (
+                        <div className="text-[10px] text-slate-400 line-clamp-1 max-w-[200px]">
+                          {inst.healthReason}
+                        </div>
+                      )}
+                    </td>
 
-                <div className="mt-6 flex items-center justify-between">
-                  <div className="flex -space-x-2">
-                    <div className="w-6 h-6 rounded-full bg-zinc-200 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[8px] font-black">AI</div>
-                    <div className="w-6 h-6 rounded-full bg-[#012169] border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[8px] font-black text-white">SA</div>
-                  </div>
-                  <button
-                    className="rounded-xl bg-zinc-900 dark:bg-zinc-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white dark:text-zinc-950 hover:scale-105 transition-all"
-                  >
-                    Take Over
-                  </button>
-                </div>
-              </div>
-            ))}
-            {sessions.length === 0 && (
-              <div className="col-span-2 py-20 text-center rounded-[40px] border-4 border-dashed border-zinc-100 dark:border-white/5">
-                <p className="text-sm font-black uppercase tracking-[0.3em] text-zinc-300">No active chat boxes</p>
-              </div>
-            )}
-          </div>
+                    <td className="py-4">
+                      <div className="w-28 space-y-1">
+                        <div className="flex justify-between text-[10px] font-bold text-slate-500">
+                          <span>{inst.progressPercentage}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-[#012169] dark:bg-blue-500 rounded-full transition-all duration-500"
+                            style={{ width: `${inst.progressPercentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="py-4">
+                      {pendingApprovalCount > 0 ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300">
+                          {pendingApprovalCount} Awaiting Review
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-medium">Clear</span>
+                      )}
+                    </td>
+
+                    <td className="py-4 text-right">
+                      <Link
+                        href={`/onboarding/${inst.id}`}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-[#012169] hover:text-white text-slate-700 dark:text-zinc-200 text-xs font-black uppercase tracking-wider transition-all"
+                      >
+                        Open <ArrowUpRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {instances.length === 0 && (
+            <div className="py-20 text-center space-y-3">
+              <Users className="w-10 h-10 mx-auto text-slate-300 dark:text-zinc-600" />
+              <p className="text-sm font-black uppercase tracking-wider text-slate-400">
+                No onboarding instances match this filter.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

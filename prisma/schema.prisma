@@ -51,6 +51,7 @@ model User {
   memberProfile       OrganizationMember?
   invitedMembers      OrganizationMember[] @relation("InvitedBy")
   mcpAccessTokens     McpAccessToken[]
+  ownedOnboardings    OnboardingInstance[] @relation("OnboardingOwner")
 }
 
 model McpAccessToken {
@@ -253,6 +254,7 @@ model Customer {
    projects        Project[]
   tasks           Task[]         @relation("CustomerTasks")
   tags            Tag[]          @relation("CustomerToTag")
+  onboardings         OnboardingInstance[]
 }
 
 model Lead {
@@ -348,6 +350,7 @@ model Deal {
   lead          Lead?     @relation(fields: [leadId], references: [id])
   stageModel    Stage?    @relation(fields: [stageId], references: [id])
   user          User      @relation(fields: [userId], references: [id])
+  onboardings         OnboardingInstance[]
 }
 
 model Project {
@@ -742,4 +745,217 @@ model PricingOffer {
   appliesToPlanSlug String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+
+// ============================================================================
+// AI-POWERED CLIENT ONBOARDING ENGINE
+// ============================================================================
+
+model OnboardingInstance {
+  id                    String                   @id @default(cuid())
+  clientId              String
+  opportunityId         String?
+  serviceName           String                   @default("AI Automation Implementation")
+  templateId            String?
+  status                String                   @default("INITIALISING") // INITIALISING, WAITING_INTERNAL_INFORMATION, AI_PLANNING, WAITING_HUMAN_APPROVAL, WAITING_CLIENT, IN_PROGRESS, AT_RISK, BLOCKED, READY_FOR_ACTIVATION, COMPLETED, CANCELLED
+  healthStatus          String                   @default("HEALTHY") // HEALTHY, AT_RISK, BLOCKED
+  healthReason          String?
+  progressPercentage    Int                      @default(0)
+  onboardingOwnerId     String?
+  commercialDetails     String?                  // JSON string: price, duration, paymentTerms, startDate, accountManager, notes
+  analysisJson          String?                  // JSON string: known, missing, verification, optional
+  planJson              String?                  // JSON string: commercial, legal, operational, communication
+  secureToken           String                   @unique @default(cuid())
+  tokenExpiresAt        DateTime
+  startedAt             DateTime                 @default(now())
+  targetCompletionDate  DateTime?
+  completedAt           DateTime?
+  invoiceId             String?
+  invoiceStatus         String?                  @default("DRAFT")
+  invoiceAmount         Float?                   @default(0)
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  client                Customer                 @relation(fields: [clientId], references: [id])
+  deal                  Deal?                    @relation(fields: [opportunityId], references: [id])
+  template              ServiceOnboardingTemplate? @relation(fields: [templateId], references: [id])
+  owner                 User?                    @relation("OnboardingOwner", fields: [onboardingOwnerId], references: [id])
+  actions               AIAction[]
+  documents             Document[]
+  responses             ClientResponse[]
+  communications        OnboardingCommunication[]
+  signatureRequests     SignatureRequest[]
+  auditEvents           OnboardingAuditEvent[]
+}
+
+model ServiceOnboardingTemplate {
+  id                        String               @id @default(cuid())
+  name                      String
+  code                      String               @unique // AI_AUTOMATION, CYBERSECURITY, TALENT_BRIDGE, etc.
+  description               String?
+  isActive                  Boolean              @default(true)
+  requiredDocumentsJson     String               @default("[]") // Array of doc types: WELCOME_LETTER, NDA, SERVICE_AGREEMENT, DPA
+  requiredInformationJson   String               @default("[]") // Internal & client question definitions
+  requiredSignaturesJson    String               @default("[]") // Document types requiring digital signature
+  paymentRequirementsJson   String               @default("{}") // e.g. { advancePercent: 50, terms: "Net 14" }
+  complianceRequirementsJson String              @default("[]") // e.g. ["GDPR_DPA", "CONFIDENTIALITY"]
+  communicationSequenceJson String               @default("[]") // email templates sequence
+  completionConditionsJson  String               @default("[]") // conditions for completion
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
+  instances                 OnboardingInstance[]
+}
+
+model AIAction {
+  id                String              @id @default(cuid())
+  onboardingId      String
+  actionType        String              // GENERATE_DOCUMENT, CREATE_INVOICE, REQUEST_SIGNATURE, GENERATE_COMMUNICATION, CREATE_TASK, SCHEDULE_FOLLOWUP, UPDATE_STATUS, FLAG_EXCEPTION, GENERATE_SOP, GENERATE_PROJECT_BRIEF, ACTIVATE_CLIENT
+  description       String
+  payload           String              // JSON payload
+  riskLevel         String              @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  requiresApproval  Boolean             @default(true)
+  status            String              @default("PENDING_APPROVAL") // PENDING_APPROVAL, APPROVED, REJECTED, EXECUTED, FAILED
+  approvedByUserId  String?
+  approvedAt        DateTime?
+  rejectionReason   String?
+  executedAt        DateTime?
+  executionResult   String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  onboarding        OnboardingInstance  @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+}
+
+model DocumentTemplate {
+  id                String              @id @default(cuid())
+  name              String
+  type              String              @unique // WELCOME_LETTER, NDA, SERVICE_AGREEMENT, TERMS, PRIVACY_NOTICE, DPA, INVOICE, PROJECT_BRIEF, IMPLEMENTATION_SOP, REQUIREMENTS_DOCUMENT, KICKOFF_DOCUMENT, PAYMENT_REMINDER, OTHER
+  content           String              // Standard template with {{mustache}} interpolation variables
+  variablesJson     String              @default("[]")
+  requiresApproval  Boolean             @default(true)
+  requiresSignature Boolean             @default(false)
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  documents         Document[]
+}
+
+model Document {
+  id                String              @id @default(cuid())
+  onboardingId      String
+  clientId          String
+  templateId        String?
+  documentType      String
+  title             String
+  status            String              @default("DRAFT") // DRAFT, AI_GENERATED, UNDER_REVIEW, CHANGES_REQUESTED, APPROVED, SENT, VIEWED, SIGNED, REJECTED, SUPERSEDED, EXPIRED
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  onboarding        OnboardingInstance  @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  template          DocumentTemplate?   @relation(fields: [templateId], references: [id])
+  versions          DocumentVersion[]
+  signatureRequests SignatureRequest[]
+}
+
+model DocumentVersion {
+  id                String              @id @default(cuid())
+  documentId        String
+  versionNumber     Int                 @default(1)
+  content           String              // Rendered content snapshot
+  generatedBy       String              @default("AI")
+  generatedAt       DateTime            @default(now())
+  approvedBy        String?
+  approvedAt        DateTime?
+  sentAt            DateTime?
+  signedAt          DateTime?
+  supersededBy      String?
+  fileUrl           String?
+  createdAt         DateTime            @default(now())
+
+  document          Document            @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}
+
+model SignatureRequest {
+  id                String              @id @default(cuid())
+  onboardingId      String
+  documentId        String
+  title             String
+  status            String              @default("DRAFT") // NOT_REQUIRED, DRAFT, READY, SENT, VIEWED, PARTIALLY_SIGNED, SIGNED, DECLINED, EXPIRED
+  token             String              @unique @default(cuid())
+  expiresAt         DateTime
+  completedAt       DateTime?
+  auditCertificate  String?             // JSON containing IP, user-agent, timestamp, document hash, verification seal
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  onboarding        OnboardingInstance  @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  document          Document            @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  signatories       Signatory[]
+}
+
+model Signatory {
+  id                  String            @id @default(cuid())
+  signatureRequestId  String
+  name                String
+  email               String
+  role                String            @default("Client Signer")
+  status              String            @default("PENDING") // PENDING, SIGNED, DECLINED
+  signedAt            DateTime?
+  signatureType       String?           // DRAWN, TYPED
+  signatureData       String?           // Base64 image or typed signature representation
+  ipAddress           String?
+  userAgent           String?
+  consentGiven        Boolean           @default(false)
+  consentTimestamp    DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  signatureRequest    SignatureRequest  @relation(fields: [signatureRequestId], references: [id], onDelete: Cascade)
+}
+
+model ClientResponse {
+  id                String              @id @default(cuid())
+  onboardingId      String
+  clientId          String
+  questionKey       String
+  questionLabel     String
+  response          String
+  responseType      String              @default("text") // text, choice, boolean, file, verification
+  submittedAt       DateTime            @default(now())
+  source            String              @default("PORTAL") // PORTAL, INTERNAL
+  verified          Boolean             @default(true)
+
+  onboarding        OnboardingInstance  @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+}
+
+model OnboardingCommunication {
+  id                String              @id @default(cuid())
+  onboardingId      String
+  type              String              // WELCOME, SIGNATURE_REQUEST, REQUIREMENTS_REQUEST, PAYMENT_REMINDER, KICKOFF, PROGRESS_UPDATE, COMPLETION, DELAY_NOTICE
+  subject           String
+  body              String
+  recipientEmail    String
+  status            String              @default("PENDING_APPROVAL") // PENDING_APPROVAL, APPROVED, SENT, FAILED
+  approvedBy        String?
+  approvedAt        DateTime?
+  sentAt            DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  onboarding        OnboardingInstance  @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+}
+
+model OnboardingAuditEvent {
+  id                String              @id @default(cuid())
+  onboardingId      String
+  actorId           String              // User ID, or "AI", or "CLIENT", or "SYSTEM"
+  actorType         String              // USER, AI, CLIENT, SYSTEM
+  action            String              // INSTANCE_CREATED, INTERNAL_DETAILS_SUBMITTED, PLAN_GENERATED, ACTION_APPROVED, etc.
+  details           String
+  metadataJson      String?
+  ipAddress         String?
+  createdAt         DateTime            @default(now())
+
+  onboarding        OnboardingInstance  @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
 }
