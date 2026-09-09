@@ -18,6 +18,7 @@ import {
   Zap,
 } from "lucide-react";
 import { startOnboardingForDealAction } from "./actions";
+import QuickOnboardModal from "@/components/onboarding/QuickOnboardModal";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,12 @@ export default async function OnboardingHubPage({
     take: 5,
   });
 
+  const eligibleCustomers = await prisma.customer.findMany({
+    select: { id: true, name: true, company: true, email: true },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+
   return (
     <div className="space-y-10 max-w-[1400px] mx-auto pb-24 animate-in fade-in duration-500">
       {/* Page Header */}
@@ -94,6 +101,7 @@ export default async function OnboardingHubPage({
         </div>
 
         <div className="flex items-center gap-3">
+          <QuickOnboardModal customers={eligibleCustomers} />
           <Link
             href="/onboarding/admin"
             className="px-5 py-2.5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 text-xs font-black uppercase tracking-wider text-slate-700 dark:text-zinc-200 hover:bg-slate-50 transition-all shadow-sm"

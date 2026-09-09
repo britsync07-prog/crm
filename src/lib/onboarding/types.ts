@@ -125,10 +125,35 @@ export interface HealthCheckResult {
   healthReason: string;
   exceptions: Array<{
     type: string;
-    severity: "HIGH" | "MEDIUM" | "LOW";
+    severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
     description: string;
     recommendedAction: string;
   }>;
   recommendedNextAction: string;
   progressPercentage: number;
 }
+
+export interface OnboardingExceptionRecord {
+  id: string;
+  onboardingId: string;
+  type: string;
+  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  description: string;
+  recommendedAction: string;
+  status: "OPEN" | "IN_REVIEW" | "RESOLVED" | "DISMISSED";
+  assignedTo?: string | null;
+  detectedAt: Date;
+  resolvedAt?: Date | null;
+  resolvedBy?: string | null;
+  resolutionNotes?: string | null;
+}
+
+export interface AIPermissionItem {
+  id: string;
+  actionKey: string;
+  actionName: string;
+  aiAllowed: boolean;
+  humanApprovalRequired: boolean;
+  description?: string | null;
+}
+

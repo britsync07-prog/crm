@@ -239,3 +239,42 @@ export async function updateDealStageAction(dealId: string, stage: string) {
   revalidatePath("/customers");
   return { success: true, deal, onboardingResult };
 }
+
+export async function createDealAction(formData: FormData) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+
+  const name = formData.get("name") as string;
+  const value = Number(formData.get("value")) || 0;
+  const stage = (formData.get("stage") as string) || "Won";
+  const probability = Number(formData.get("probability")) || (stage.toLowerCase().includes("won") ? 100 : 50);
+  const customerId = (formData.get("customerId") as string) || null;
+  const leadId = (formData.get("leadId") as string) || null;
+
+  const deal = await prisma.deal.create({
+    data: {
+      userId: session.id,
+      name: name || "New Project Deal",
+      value,
+      stage,
+      probability,
+      customerId,
+      leadId,
+    },
+  });
+
+  let onboardingResult = null;
+  if (stage.toLowerCase().includes("won")) {
+    try {
+      const { startOnboardingForDealAction } = await import("./onboarding/actions");
+      onboardingResult = await startOnboardingForDealAction(deal.id);
+    } catch (err) {
+      console.error("Failed to auto-trigger onboarding for won deal:", err);
+    }
+  }
+
+  revalidatePath("/onboarding");
+  if (customerId) revalidatePath(`/customers/${customerId}`);
+  if (leadId) revalidatePath(`/leads/${leadId}`);
+  return { success: true, deal, onboardingResult };
+}

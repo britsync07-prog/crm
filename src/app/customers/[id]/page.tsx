@@ -5,6 +5,8 @@ import { logInteraction, createTask } from "@/app/actions";
 import TaskToggle from "@/components/TaskToggle";
 import CustomerAIActions from "./CustomerAIActions";
 import { Zap, CheckCircle2, AlertTriangle, ArrowUpRight, FileSignature } from "lucide-react";
+import DealStageSelect from "@/components/DealStageSelect";
+import CreateDealModal from "@/components/CreateDealModal";
 
 interface CustomerDetailsProps {
   params: Promise<{
@@ -162,6 +164,21 @@ export default async function CustomerDetails({ params }: CustomerDetailsProps) 
             </div>
           )}
 
+          {!latestOnboarding && (
+            <div className="rounded-[32px] border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 p-5 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase text-slate-800 dark:text-white">AI Client Onboarding</p>
+                <p className="text-[11px] text-slate-500">No active onboarding journey. Start an automated workflow.</p>
+              </div>
+              <Link
+                href="/onboarding"
+                className="px-4 py-2 rounded-xl bg-[#012169] text-white text-xs font-black uppercase tracking-wider hover:bg-[#c8102e] transition-all shrink-0"
+              >
+                Start Onboarding
+              </Link>
+            </div>
+          )}
+
           <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-zinc-950">
             <h2 className="text-sm font-black uppercase tracking-widest text-[#012169] flex gap-4 mb-6 italic">
               Record Event
@@ -276,18 +293,18 @@ export default async function CustomerDetails({ params }: CustomerDetailsProps) 
           <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-sm font-black uppercase tracking-widest text-[#012169] italic">Associated Deals</h2>
-              <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">+ Link</span>
+              <CreateDealModal customerId={customer.id} defaultName={customer.company || customer.name} />
             </div>
             <div className="space-y-3">
               {customer.deals.map((deal) => (
-                <div key={deal.id} className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 group hover:border-blue-700/30 transition-all cursor-pointer">
+                <div key={deal.id} className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 group hover:border-blue-700/30 transition-all">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">{deal.name}</p>
                     <span className="text-[10px] font-black uppercase text-zinc-400 bg-zinc-200 dark:bg-white/10 px-2 py-0.5 rounded">{deal.probability}%</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-[#012169]">{deal.stage}</span>
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
                     <span className="text-sm font-black text-green-500">${deal.value.toLocaleString()}</span>
+                    <DealStageSelect dealId={deal.id} currentStage={deal.stage} />
                   </div>
                 </div>
               ))}

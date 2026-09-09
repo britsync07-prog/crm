@@ -9,6 +9,7 @@ import {
   renderDocumentForOnboarding,
   calculateOnboardingHealth,
   generateClientCommunication,
+  generateClientOnboardingSummary,
 } from "@/lib/onboarding/ai-engine";
 import { findMatchingTemplate } from "@/lib/onboarding/service-templates";
 import { logOnboardingAudit } from "@/lib/onboarding/audit";
@@ -122,6 +123,46 @@ export async function startOnboardingForDealAction(dealId: string, templateCode?
   } catch (err: any) {
     console.error("[startOnboardingForDealAction] Error:", err);
     return { success: false, error: err.message || "Failed to start onboarding" };
+  }
+}
+
+/**
+ * Initiates an onboarding workflow directly for a customer, creating a won deal if none exists.
+ */
+export async function startOnboardingForCustomerAction(
+  customerId: string,
+  serviceName: string = "AI Automation Implementation",
+  dealValue: number = 10000
+) {
+  try {
+    const session = await getEffectiveSession();
+    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+    if (!customer) return { success: false, error: "Customer not found" };
+
+    // Check if customer already has an active onboarding
+    const existing = await prisma.onboardingInstance.findFirst({
+      where: { clientId: customerId, status: { not: "COMPLETED" } },
+    });
+    if (existing) {
+      return { success: true, onboardingId: existing.id, isExisting: true };
+    }
+
+    // Create a Won deal for this customer
+    const deal = await prisma.deal.create({
+      data: {
+        userId: customer.userId || session?.id || "admin",
+        customerId: customer.id,
+        name: `${customer.company || customer.name} - ${serviceName}`,
+        value: dealValue,
+        stage: "Won",
+        probability: 100,
+      },
+    });
+
+    return await startOnboardingForDealAction(deal.id);
+  } catch (err: any) {
+    console.error("[startOnboardingForCustomerAction] Error:", err);
+    return { success: false, error: err.message || "Failed to start onboarding for customer" };
   }
 }
 
@@ -570,3 +611,142 @@ export async function previewCommunicationAction(onboardingId: string, type: str
     return { success: false, error: err.message || "Failed to preview communication" };
   }
 }
+
+/**
+ * Generates or retrieves live AI summary for the onboarding instance (Section 35)
+ */
+export async function getLiveAiSummaryAction(onboardingId: string) {
+  try {
+    const summary = await generateClientOnboardingSummary(onboardingId);
+    return { success: true, summary };
+  } catch (err: any) {
+    console.error("[getLiveAiSummaryAction] Error:", err);
+    return { success: false, error: err.message || "Failed to generate AI summary" };
+  }
+}
+
+/**
+ * Resolves an open onboarding exception with documented human notes (Section 24)
+ */
+export async function resolveExceptionAction(exceptionId: string, resolutionNotes: string) {
+  try {
+    const session = await getEffectiveSession();
+    if (!session) throw new Error("Unauthorized");
+
+    const exception = await prisma.onboardingException.update({
+      where: { id: exceptionId },
+      data: {
+        status: "RESOLVED",
+        resolvedAt: new Date(),
+        resolvedBy: session.id,
+        resolutionNotes: resolutionNotes || "Resolved by reviewer",
+      },
+      include: { onboarding: true },
+    });
+
+    await logOnboardingAudit({
+      onboardingId: exception.onboardingId,
+      actorId: session.id,
+      actorType: "USER",
+      action: "EXCEPTION_RESOLVED",
+      details: `Exception "${exception.type}" resolved: ${resolutionNotes}`,
+      metadata: { exceptionId, type: exception.type },
+    });
+
+    await calculateOnboardingHealth(exception.onboardingId);
+
+    safeRevalidate(`/onboarding/${exception.onboardingId}`);
+    return { success: true };
+  } catch (err: any) {
+    console.error("[resolveExceptionAction] Error:", err);
+    return { success: false, error: err.message || "Failed to resolve exception" };
+  }
+}
+
+/**
+ * Regenerates an AI action proposal (Section 10 & 37)
+ */
+export async function regenerateActionAction(actionId: string) {
+  try {
+    const session = await getEffectiveSession();
+    if (!session) throw new Error("Unauthorized");
+
+    const action = await prisma.aIAction.findUnique({
+      where: { id: actionId },
+    });
+    if (!action) return { success: false, error: "Action not found" };
+
+    const payload = JSON.parse(action.payload || "{}");
+
+    // Reset status to PENDING_APPROVAL and log regeneration
+    await prisma.aIAction.update({
+      where: { id: actionId },
+      data: {
+        status: "PENDING_APPROVAL",
+        rejectionReason: null,
+        executionResult: null,
+        executedAt: null,
+        approvedAt: null,
+        approvedByUserId: null,
+      },
+    });
+
+    await logOnboardingAudit({
+      onboardingId: action.onboardingId,
+      actorId: session.id,
+      actorType: "USER",
+      action: "ACTION_REGENERATED",
+      details: `Regenerated action "${action.description}". Reset to pending approval.`,
+    });
+
+    safeRevalidate(`/onboarding/${action.onboardingId}`);
+    return { success: true };
+  } catch (err: any) {
+    console.error("[regenerateActionAction] Error:", err);
+    return { success: false, error: err.message || "Failed to regenerate action" };
+  }
+}
+
+/**
+ * Retrieves all AI permission matrix items (Section 24 & 29)
+ */
+export async function getAIPermissionsAction() {
+  try {
+    const permissions = await prisma.aIPermissionSetting.findMany({
+      orderBy: { actionName: "asc" },
+    });
+    return { success: true, permissions };
+  } catch (err: any) {
+    console.error("[getAIPermissionsAction] Error:", err);
+    return { success: false, error: err.message, permissions: [] };
+  }
+}
+
+/**
+ * Updates an AI permission rule (Section 24 & 29)
+ */
+export async function updateAIPermissionAction(
+  actionKey: string,
+  aiAllowed: boolean,
+  humanApprovalRequired: boolean
+) {
+  try {
+    const session = await getEffectiveSession();
+    if (!session) throw new Error("Unauthorized");
+
+    const updated = await prisma.aIPermissionSetting.update({
+      where: { actionKey },
+      data: {
+        aiAllowed,
+        humanApprovalRequired,
+      },
+    });
+
+    safeRevalidate("/onboarding/admin");
+    return { success: true, permission: updated };
+  } catch (err: any) {
+    console.error("[updateAIPermissionAction] Error:", err);
+    return { success: false, error: err.message || "Failed to update permission" };
+  }
+}
+

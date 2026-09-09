@@ -561,6 +561,50 @@ export async function calculateOnboardingHealth(onboardingId: string): Promise<H
     });
   }
 
+  // Check 5: Overdue invoice
+  if (instance.invoiceStatus === "OVERDUE") {
+    exceptions.push({
+      type: "PAYMENT_OVERDUE",
+      severity: "CRITICAL",
+      description: "Advance deposit invoice is overdue. Payment is required before work commences.",
+      recommendedAction: "Dispatch payment reminder or contact finance team.",
+    });
+  }
+
+  // Check 6: Unresponsive client (> 4 days in WAITING_CLIENT without responses)
+  if (instance.status === "WAITING_CLIENT" && instance.responses.length === 0 && hoursSinceStart > 96) {
+    exceptions.push({
+      type: "CLIENT_UNRESPONSIVE",
+      severity: "HIGH",
+      description: "Client has not initiated or completed portal questions after 4 days.",
+      recommendedAction: "Send friendly follow-up check-in email.",
+    });
+  }
+
+  // Sync active exceptions to OnboardingException table
+  for (const ex of exceptions) {
+    const existingEx = await prisma.onboardingException.findFirst({
+      where: {
+        onboardingId,
+        type: ex.type,
+        status: { in: ["OPEN", "IN_REVIEW"] },
+      },
+    });
+
+    if (!existingEx) {
+      await prisma.onboardingException.create({
+        data: {
+          onboardingId,
+          type: ex.type,
+          severity: ex.severity as any,
+          description: ex.description,
+          recommendedAction: ex.recommendedAction,
+          status: "OPEN",
+        },
+      });
+    }
+  }
+
   // Calculate Progress Percentage
   let progress = 10; // Started
   if (instance.commercialDetails) progress += 20; // Internal info provided
@@ -579,13 +623,13 @@ export async function calculateOnboardingHealth(onboardingId: string): Promise<H
   let healthStatus: "HEALTHY" | "AT_RISK" | "BLOCKED" = "HEALTHY";
   let healthReason = "Onboarding is progressing smoothly according to target timeline.";
 
-  if (exceptions.some((e) => e.severity === "HIGH")) {
+  if (exceptions.some((e) => e.severity === "HIGH" || e.severity === "CRITICAL")) {
     healthStatus = "AT_RISK";
-    healthReason = exceptions.find((e) => e.severity === "HIGH")?.description || "High priority item requires attention.";
+    healthReason = exceptions.find((e) => e.severity === "HIGH" || e.severity === "CRITICAL")?.description || "High priority item requires attention.";
   }
-  if (exceptions.length >= 3 || instance.status === "BLOCKED") {
+  if (exceptions.length >= 3 || instance.status === "BLOCKED" || exceptions.some((e) => e.severity === "CRITICAL")) {
     healthStatus = "BLOCKED";
-    healthReason = "Multiple critical bottlenecks are preventing onboarding completion.";
+    healthReason = "Critical bottlenecks are preventing onboarding completion.";
   }
 
   let recommendedNextAction = "Proceed with scheduled onboarding milestones.";
@@ -620,7 +664,7 @@ export async function calculateOnboardingHealth(onboardingId: string): Promise<H
 }
 
 /**
- * 7. AI Summary Generator: Produces live 360 executive brief for Client 360 view
+ * 7. AI Summary Generator: Produces live 360 executive brief for Client 360 view (Section 35)
  */
 export async function generateClientOnboardingSummary(onboardingId: string): Promise<string> {
   const instance = await prisma.onboardingInstance.findUnique({
@@ -630,6 +674,7 @@ export async function generateClientOnboardingSummary(onboardingId: string): Pro
       documents: { select: { title: true, status: true } },
       signatureRequests: { select: { title: true, status: true } },
       responses: true,
+      exceptions: { where: { status: "OPEN" } },
     },
   });
 
@@ -643,30 +688,29 @@ export async function generateClientOnboardingSummary(onboardingId: string): Pro
   const pendingSign = instance.signatureRequests.filter((s) => s.status !== "SIGNED").map((s) => s.title);
   const priceStr = commercial.price ? `£${commercial.price.toLocaleString()}` : "To be confirmed";
 
-  const prompt = `Write a crisp, professional 4-5 line executive summary for this client onboarding:
-  Client: ${instance.client.name} (${instance.client.company})
-  Service: ${instance.serviceName}
-  Price: ${priceStr} over ${commercial.duration || "TBD"}
-  Health Status: ${instance.healthStatus} (${instance.healthReason || "Healthy"})
-  Signed Documents: ${signed.join(", ") || "None yet"}
-  Pending Items: ${pendingSign.join(", ") || "None"}
-  Invoice Status: ${instance.invoiceStatus || "Draft"}
-  Progress: ${instance.progressPercentage}%
-  
-  Format like:
-  "[Company] purchased [Service] for [Price] over [Duration].
-  Agreement and NDA: [status].
-  Invoice: [status].
-  Outstanding: [bottleneck or none].
-  Recommended Next Action: [action]."`;
+  // Extract client systems & objective from responses if available
+  const systemsResp = instance.responses.find((r) => r.questionKey.toLowerCase().includes("system"));
+  const objectiveResp = instance.responses.find((r) => r.questionKey.toLowerCase().includes("objective") || r.questionKey.toLowerCase().includes("outcome"));
 
-  const fallbackSummary = `${instance.client.company || instance.client.name} purchased ${instance.serviceName} for ${priceStr} over ${commercial.duration || "3 months"}. ` +
-    `Agreements: ${signed.length > 0 ? signed.join(", ") + " signed" : "Pending execution"}. ` +
-    `Deposit Invoice: ${instance.invoiceStatus || "DRAFT"}. ` +
-    `Outstanding: ${pendingSign.length > 0 ? pendingSign.join(", ") : "None"}. ` +
-    `Health: ${instance.healthStatus}. Next action: ${instance.healthReason || "Monitor progress"}.`;
+  const companyName = instance.client.company || instance.client.name;
+  const agreementStatus = signed.length > 0 ? `${signed.join(" and ")} signed.` : "Agreements awaiting signature.";
+  const invoiceStatus = instance.invoiceStatus === "PAID" ? "Invoice paid." : instance.invoiceStatus === "SENT" ? `Invoice issued (£${(instance.invoiceAmount || 0).toLocaleString()}).` : "Invoice in draft.";
+  const toolsInfo = systemsResp ? `Client currently uses ${systemsResp.response}.` : "Client tech stack not yet confirmed.";
+  const objectiveInfo = objectiveResp ? `Project objective:\n${objectiveResp.response}` : "Project objective: Standard service deployment.";
+  const outstanding = instance.exceptions.length > 0
+    ? instance.exceptions.map((e) => e.description).join("; ")
+    : pendingSign.length > 0
+    ? `Pending signatures: ${pendingSign.join(", ")}`
+    : "None. Ready for kickoff.";
+  const nextAction = instance.exceptions.length > 0
+    ? instance.exceptions[0].recommendedAction
+    : instance.healthStatus === "HEALTHY"
+    ? "Proceed to project activation."
+    : "Review blockers in AI Approval Centre.";
 
-  return callLLM(prompt, fallbackSummary);
+  const structuredSummary = `${companyName} purchased ${instance.serviceName}\nfor ${priceStr} over ${commercial.duration || "3 months"}.\n\n${agreementStatus}\n${invoiceStatus}\n\n${toolsInfo}\n\n${objectiveInfo}\n\nOutstanding:\n${outstanding}\n\nOnboarding health:\n${instance.healthStatus}\n\nRecommended next action:\n${nextAction}`;
+
+  return structuredSummary;
 }
 
 /**

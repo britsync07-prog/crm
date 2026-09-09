@@ -34,6 +34,7 @@ export default async function OnboardingDetailPage({
         include: { signatories: true },
       },
       responses: { orderBy: { submittedAt: "desc" } },
+      exceptions: { orderBy: { detectedAt: "desc" } },
     },
   });
 

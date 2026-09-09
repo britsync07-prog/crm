@@ -2,9 +2,10 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Settings, Shield, FileText, Check, Plus, Sliders } from "lucide-react";
+import { ArrowLeft, Settings, Shield, FileText, Check, Plus, Sliders, Clock, AlertTriangle } from "lucide-react";
 import { listServiceTemplates } from "@/lib/onboarding/service-templates";
 import { ensureDocumentTemplates } from "@/lib/onboarding/document-templates";
+import AIPermissionMatrixEditor from "@/components/onboarding/AIPermissionMatrixEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,9 @@ export default async function OnboardingAdminPage() {
   const templates = await listServiceTemplates();
   const docTemplates = await prisma.documentTemplate.findMany({
     orderBy: { type: "asc" },
+  });
+  const permissions = await prisma.aIPermissionSetting.findMany({
+    orderBy: { actionName: "asc" },
   });
 
   return (
@@ -131,6 +135,55 @@ export default async function OnboardingAdminPage() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* AI Permission Matrix Section (Section 24 & 29) */}
+      <div className="pt-6 border-t border-slate-200 dark:border-white/5">
+        <AIPermissionMatrixEditor initialPermissions={permissions} />
+      </div>
+
+      {/* Follow-up & Escalation Cadence Section (Section 17 & 21) */}
+      <div className="space-y-4 pt-6 border-t border-slate-200 dark:border-white/5">
+        <div>
+          <span className="text-[10px] font-black uppercase tracking-widest text-[#012169]">
+            Cadence Automation (Section 17 & 21)
+          </span>
+          <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white mt-0.5 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-[#012169]" />
+            Automated Follow-up & Escalation Milestones
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">
+            Standard engine escalation intervals. Delays are automatically detected and flagged into the Exception Engine.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-slate-200 dark:border-white/5 space-y-1">
+            <span className="text-[10px] font-black uppercase text-blue-600">Day 0</span>
+            <h4 className="text-xs font-black text-slate-900 dark:text-white">Initial Dispatch</h4>
+            <p className="text-[11px] text-slate-500">Welcome & secure onboarding link generated.</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-slate-200 dark:border-white/5 space-y-1">
+            <span className="text-[10px] font-black uppercase text-blue-600">Day 2</span>
+            <h4 className="text-xs font-black text-slate-900 dark:text-white">Friendly Reminder</h4>
+            <p className="text-[11px] text-slate-500">AI drafts friendly progress check-in email.</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-slate-200 dark:border-white/5 space-y-1">
+            <span className="text-[10px] font-black uppercase text-amber-600">Day 5</span>
+            <h4 className="text-xs font-black text-slate-900 dark:text-white">Second Reminder</h4>
+            <p className="text-[11px] text-slate-500">Signature / deposit follow-up prepared.</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-slate-200 dark:border-white/5 space-y-1">
+            <span className="text-[10px] font-black uppercase text-amber-600">Day 7</span>
+            <h4 className="text-xs font-black text-slate-900 dark:text-white">Internal Escalation</h4>
+            <p className="text-[11px] text-slate-500">Account manager notified of milestone risk.</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-red-200 dark:border-red-900/40 bg-red-50/30 space-y-1">
+            <span className="text-[10px] font-black uppercase text-red-600">Day 10</span>
+            <h4 className="text-xs font-black text-red-800 dark:text-red-300">🔴 Onboarding Blocked</h4>
+            <p className="text-[11px] text-red-700 dark:text-red-400">Flagged as critical exception for leadership.</p>
+          </div>
         </div>
       </div>
     </div>

@@ -787,6 +787,7 @@ model OnboardingInstance {
   communications        OnboardingCommunication[]
   signatureRequests     SignatureRequest[]
   auditEvents           OnboardingAuditEvent[]
+  exceptions            OnboardingException[]
 }
 
 model ServiceOnboardingTemplate {
@@ -959,3 +960,33 @@ model OnboardingAuditEvent {
 
   onboarding        OnboardingInstance  @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
 }
+
+model OnboardingException {
+  id                String              @id @default(cuid())
+  onboardingId      String
+  type              String              // MISSING_INFORMATION, PAYMENT_OVERDUE, SIGNATURE_DECLINED, SIGNATURE_EXPIRED, DOCUMENT_REJECTED, SCOPE_CHANGE, PRICE_CHANGE, DEADLINE_RISK, CLIENT_UNRESPONSIVE, INTERNAL_TASK_OVERDUE, COMPLIANCE_BLOCK
+  severity          String              @default("HIGH") // LOW, MEDIUM, HIGH, CRITICAL
+  description       String
+  recommendedAction String
+  status            String              @default("OPEN") // OPEN, IN_REVIEW, RESOLVED, DISMISSED
+  assignedTo        String?
+  detectedAt        DateTime            @default(now())
+  resolvedAt        DateTime?
+  resolvedBy        String?
+  resolutionNotes   String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  onboarding        OnboardingInstance  @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+}
+
+model AIPermissionSetting {
+  id                    String          @id @default(cuid())
+  actionKey             String          @unique // READ_CRM_DATA, SUMMARISE_MEETING, CREATE_INTERNAL_TASKS, GENERATE_WELCOME, GENERATE_NDA, GENERATE_AGREEMENT, GENERATE_INVOICE, SEND_CONTRACT, REQUEST_SIGNATURE, SEND_PAYMENT_REMINDER, CHANGE_PRICE, CHANGE_CONTRACT, ACTIVATE_CLIENT, CREATE_FOLLOWUP
+  actionName            String
+  aiAllowed             Boolean         @default(true)
+  humanApprovalRequired Boolean         @default(true)
+  description           String?
+  updatedAt             DateTime        @updatedAt
+}
+

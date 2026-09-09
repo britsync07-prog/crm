@@ -5,6 +5,8 @@ import { convertLeadToCustomer, logInteraction, createTask, updateLeadStatus } f
 import TaskToggle from "@/components/TaskToggle";
 import LeadAIActions from "./LeadAIActions";
 import { LEAD_STAGES } from "@/lib/crm-lifecycle";
+import DealStageSelect from "@/components/DealStageSelect";
+import CreateDealModal from "@/components/CreateDealModal";
 
 interface LeadDetailsProps {
   params: Promise<{
@@ -246,18 +248,18 @@ export default async function LeadDetails({ params }: LeadDetailsProps) {
           <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-zinc-950">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-sm font-black uppercase tracking-widest text-[#012169] italic">Associated Deals</h2>
-              <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">+ Link</span>
+              <CreateDealModal leadId={lead.id} defaultName={lead.company || lead.name} />
             </div>
             <div className="space-y-3">
               {lead.deals.map((deal) => (
-                <div key={deal.id} className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 group hover:border-blue-700/30 transition-all cursor-pointer">
+                <div key={deal.id} className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 group hover:border-blue-700/30 transition-all">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">{deal.name}</p>
                     <span className="text-[10px] font-black uppercase text-zinc-400 bg-zinc-200 dark:bg-white/10 px-2 py-0.5 rounded">{deal.probability}%</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-[#012169]">{deal.stage}</span>
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
                     <span className="text-sm font-black text-green-500">${deal.value.toLocaleString()}</span>
+                    <DealStageSelect dealId={deal.id} currentStage={deal.stage} />
                   </div>
                 </div>
               ))}
