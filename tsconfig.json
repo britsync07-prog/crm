@@ -38,6 +38,7 @@
   ],
   "exclude": [
     "node_modules",
-    "socket.io"
+    "socket.io",
+    "scripts"
   ]
 }
