@@ -1,0 +1,2881 @@
+Exactly. I would make the AI ask the internal team first, not the client. That is the key to making this genuinely fast.
+
+The workflow should feel like an AI onboarding conversation, not a traditional onboarding form.
+
+The ideal flow
+Step 1 — Deal becomes "Won"
+
+Salesperson clicks:
+
+Convert to Client
+
+The CRM creates the client and activates the AI Onboarding Assistant.
+
+The AI already knows most things from the CRM:
+
+Company
+Contact
+Lead source/campaign
+Service/product
+Sales notes
+Meeting notes
+Proposal
+Quoted price, if available
+Previous communications
+
+Then it asks the internal user only for information it cannot reliably determine.
+
+Step 2 — AI asks the salesperson a few questions
+
+Instead of a 30-field form:
+
+AI: I have enough information to start onboarding ABC Ltd. I need 5 details:
+
+1. Project value?
+£________
+
+2. Project duration?
+○ One-off
+○ 1 month
+○ 3 months
+○ 6 months
+○ 12 months
+○ Custom
+
+3. Payment terms?
+○ Full upfront
+○ Monthly
+○ 50/50
+○ Custom
+
+4. Planned start date?
+📅 18 September
+
+5. Who will manage this client?
+[Select team member]
+
+Then:
+
+Anything else that is different from your standard service?
+
+[Optional]
+
+And that's it.
+
+Start Onboarding →
+
+The AI takes over.
+
+Step 3 — AI builds the onboarding plan
+
+It should dynamically decide what is required.
+
+For example:
+
+Client purchased:
+
+AI Automation Implementation
+£6,000
+3 months
+Monthly support included
+
+The AI determines:
+
+Required
+
+Commercial
+
+Service agreement
+Invoice
+Payment terms
+
+Legal
+
+NDA
+Terms
+DPA, if applicable
+
+Operational
+
+Client requirements
+Existing systems
+Access requirements
+Implementation plan
+Kick-off meeting
+
+Communication
+
+Welcome
+Signature request
+Payment communication
+Requirements request
+Kick-off confirmation
+
+It creates everything.
+
+Step 4 — Client gets a very small onboarding experience
+
+This is where I'd make your system different.
+
+Do NOT send them a huge form.
+
+Send:
+
+Welcome to Ascentra
+
+We're ready to begin your project.
+
+It will take approximately 3 minutes to complete the first step.
+
+Let's get started →
+
+Then use one question at a time.
+
+Screen 1
+
+What would you like us to achieve?
+
+[Type your answer]
+
+Next →
+
+Screen 2
+
+Which systems do you currently use?
+
+☑ Xero
+☑ HubSpot
+☐ Salesforce
+☐ Microsoft 365
+☐ Other
+
+Next →
+
+Screen 3
+
+Who should we contact for this project?
+
+Name: ______
+Email: ______
+Phone: ______
+
+Screen 4
+
+Do you have any existing documents or processes you'd like us to use?
+
+📎 Upload files
+
+Skip for now →
+
+Done.
+
+The AI should adapt the questions
+
+This is the really important part.
+
+Suppose they answer:
+
+"We want to automate our lead qualification."
+
+The AI can understand that.
+
+It doesn't need to ask:
+
+"What is your lead qualification objective?"
+
+It already knows.
+
+Instead it might ask:
+
+Where do your leads currently come from?
+
+○ Website
+○ Facebook
+○ LinkedIn
+○ Email
+○ Other
+
+Then based on their answer:
+
+Where are new leads currently recorded?
+
+If they choose HubSpot:
+
+We'll use HubSpot as the starting point.
+
+Do you want us to automate:
+
+☑ Lead capture
+☑ Lead qualification
+☑ Follow-up
+☐ Reporting
+
+This makes the onboarding feel intelligent rather than bureaucratic.
+
+Use "progressive disclosure"
+
+This is the UX principle I'd use throughout your CRM.
+
+Don't ask for everything at once.
+
+Ask:
+
+What is necessary now?
+
+Then ask the next question only when the answer creates a reason for it.
+
+For example:
+
+Do you process personal data?
+
+No
+
+→ Don't ask about DPA.
+
+If:
+
+Yes
+
+→ Then ask the relevant data-processing questions.
+
+Similarly:
+
+Do you need API integration?
+
+No
+
+→ Don't ask for API credentials.
+
+Yes
+
+→ Ask which system.
+
+Then:
+
+Which system?
+
+HubSpot
+
+→ Show HubSpot-specific requirements.
+
+This can reduce a 40-question onboarding form to perhaps 5–10 questions for many clients.
+
+AI should also reuse information
+
+This is critical.
+
+If the client already told your salesperson:
+
+"We use Xero."
+
+Don't ask the client:
+
+"Which accounting system do you use?"
+
+Instead show:
+
+We understand you currently use Xero. Is that correct?
+
+Yes / Change
+
+That's much faster.
+
+Same with:
+
+Company name
+Address
+Website
+Contact
+Service
+Project objective
+Budget
+Timeline
+Number of users
+
+The CRM should never ask a question twice.
+
+I'd also add "Save & Continue Later"
+
+Clients are busy.
+
+If they stop halfway:
+
+You're 60% complete.
+
+We've saved your progress.
+
+[Continue onboarding]
+
+No need to restart.
+
+And let the client use their phone
+
+Since your signing system is already yours, make the whole experience mobile-first.
+
+They should be able to:
+
+Open link → answer questions → upload document → sign agreement → finish
+
+without creating an account or sitting at a computer.
+
+The final experience should look something like this
+DEAL WON
+   ↓
+AI reads CRM
+   ↓
+AI asks INTERNAL USER
+5-7 missing commercial details
+   ↓
+Human submits
+   ↓
+AI creates personalised onboarding plan
+   ↓
+AI generates documents
+   ↓
+AI prepares communications
+   ↓
+┌──────────────────────────────┐
+│      HUMAN APPROVAL GATE     │
+│                              │
+│ Approve / Edit / Regenerate  │
+└──────────────┬───────────────┘
+               ↓
+        Client receives link
+               ↓
+      ┌────────────────────┐
+      │  3–5 min onboarding │
+      │                    │
+      │ Question → Answer  │
+      │ Question → Answer  │
+      │ Upload if needed   │
+      └─────────┬──────────┘
+                ↓
+          Documents signed
+                ↓
+          Invoice/payment
+                ↓
+       AI checks everything
+                ↓
+        ONBOARDING COMPLETE
+                ↓
+           ACTIVE CLIENT
+And I would add one killer feature:
+AI should tell the internal team what it still needs — rather than making them understand the process.
+
+For example:
+
+ABC Ltd is 92% ready for activation.
+
+✅ Agreement signed
+✅ NDA signed
+✅ Invoice paid
+✅ Client requirements received
+✅ Implementation owner assigned
+❌ API access missing
+
+AI recommendation: Request HubSpot API access from client.
+
+[Generate request] → [Review] → [Send]
+
+That is the difference between a CRM with "AI features" and a CRM where AI actually operates the onboarding process.
+
+My recommendation would be to design this around three separate AI conversations:
+
+1. Internal AI → Sales/Operations
+"Give me the missing commercial details."
+
+2. AI → Client
+"Give me only the information I need, one step at a time."
+
+3. AI → Human approver
+"I've prepared everything. Here's what I want to send and why."
+
+That structure will keep the system fast for the client, extremely light for your staff, and still controlled by humans where it matters.
+
+Lets finalise the onboarding system so i can share the full development plan to my dev to start building. We will use that only for us. Not for public use
+
+Absolutely. Since this is an internal CRM system only, I would build it for operational efficiency rather than trying to make it a polished public SaaS onboarding platform.
+
+Below is the version I would give directly to your developer. The important point is that AI prepares and coordinates the entire process, but a human approval gate remains before anything external is sent or any legally/commercially significant action is executed.
+
+AI-Powered Internal Client Onboarding System
+Development Specification — V1
+1. Core objective
+
+When a lead becomes a client, the CRM should automatically start an AI-powered onboarding workflow.
+
+The system should:
+
+Understand what the client purchased.
+Ask the internal team only for missing commercial/project information.
+Determine what onboarding steps are required.
+Generate the required documents.
+Generate client communications.
+Collect only necessary information from the client.
+Handle digital signatures through our existing signing system.
+Connect with the existing invoicing system.
+Track compliance and completion.
+Automatically prepare follow-ups.
+Maintain a complete audit trail.
+Require human approval before external communication or significant execution.
+Core philosophy
+
+AI does the work. Human approves the work. CRM records the work.
+
+2. Conversion trigger
+
+When:
+
+Lead → Opportunity → Won/Client
+
+the CRM should automatically create:
+
+Client Record
+Client
+├── Company information
+├── Contacts
+├── Services purchased
+├── Commercial information
+├── Documents
+├── Agreements
+├── Invoices
+├── Communication history
+├── Onboarding
+├── Projects
+├── Support
+└── Audit history
+
+The existing CRM data should be reused.
+
+Never ask the user/client for information already available in the CRM unless verification is required.
+
+3. AI Onboarding Initiation
+
+Immediately after conversion, the AI analyses the available information:
+
+Lead record
+Opportunity
+Campaign
+Service/product
+Proposal
+Sales notes
+Meeting notes
+Previous communications
+Price
+Existing client information
+
+Then AI identifies missing information.
+
+Internal AI prompt interface
+
+Instead of a large form:
+
+I'm ready to onboard ABC Ltd.
+
+I have most of the information.
+
+I need 5 details:
+
+Project value: £6,000
+Duration: 3 months
+Payment: Monthly
+Start date: 18 September
+Account manager: [Select]
+
+Anything unusual about this client or agreement?
+
+[Optional text]
+
+Start AI Onboarding
+
+The number of questions should be dynamic.
+
+If CRM already contains price and duration, don't ask again.
+
+4. Service Onboarding Templates
+
+This should be the foundation of the system.
+
+Create an internal:
+
+Service Onboarding Template Engine
+
+Every service/product can have its own configuration.
+
+Example:
+
+AI Automation
+TalentBridge
+Cybersecurity
+Management Consultancy
+Digital Product
+Training
+Enterprise Service
+Custom Service
+
+Each template defines:
+
+Documents required
+
+Example:
+
+Welcome Letter
+NDA
+Service Agreement
+Terms & Conditions
+Privacy Notice
+DPA
+Invoice
+Implementation SOP
+Project Brief
+Information required
+Company information
+Project objective
+Technical requirements
+Contacts
+Access requirements
+Data requirements
+etc.
+Signatures required
+NDA → Client
+Agreement → Client
+DPA → Client
+Commercial requirements
+Price
+Duration
+Payment terms
+Start date
+Renewal
+Workflow
+Agreement
+→ Signature
+→ Invoice
+→ Payment
+→ Requirements
+→ Kickoff
+→ Activation
+
+This means developers don't need to create a new workflow every time you introduce a service.
+
+5. AI Onboarding Planner
+
+After receiving the missing internal information, AI creates an:
+
+Onboarding Plan
+
+Example:
+
+Client: ABC Ltd
+Service: AI Automation
+Value: £6,000
+Duration: 3 months
+
+AI-generated plan
+
+Commercial
+
+Generate invoice
+Prepare payment terms
+
+Legal
+
+NDA
+Service Agreement
+DPA
+
+Client information
+
+Requirements
+Current systems
+Project contacts
+Access requirements
+
+Operational
+
+Implementation SOP
+Project brief
+Kickoff meeting
+
+Communication
+
+Welcome
+Signature request
+Payment communication
+Requirements request
+Kickoff confirmation
+
+AI should also explain:
+
+DPA required because this service involves processing client personal data.
+
+6. Document Generation Engine
+
+The CRM needs a central:
+
+Document Template Library
+
+Do not allow AI to freely invent important legal documents.
+
+Instead:
+
+Approved Template
+       +
+Client Data
+       +
+Service Data
+       +
+Jurisdiction
+       +
+Commercial Terms
+       ↓
+AI-generated document
+
+Examples:
+
+NDA
+Service agreement
+Terms & Conditions
+DPA
+Privacy documents
+Welcome letter
+Project brief
+SOP
+Invoice
+Payment reminder
+Kickoff document
+7. Document version control
+
+Every generated document must have:
+
+Document ID
+Client
+Document type
+Version
+Generated by
+Generated date
+Approved by
+Approval date
+Status
+
+Statuses:
+
+Draft
+AI Generated
+Human Review
+Changes Requested
+Approved
+Sent
+Signed
+Rejected
+Superseded
+Expired
+
+Never silently overwrite an approved document.
+
+If changed:
+
+Version 1 → Version 2 → Version 3
+
+8. Human Approval Centre
+
+This is one of the most important components.
+
+Create:
+
+AI Approval Inbox
+
+Example:
+
+ABC Ltd
+
+AI has prepared 11 actions.
+
+Documents: 6
+
+Welcome Letter — Ready
+NDA — Ready
+Service Agreement — Ready
+DPA — Ready
+Invoice — Ready
+
+Communications: 5
+
+Welcome email
+Signature request
+Requirements request
+Payment email
+Kickoff email
+
+Each item:
+
+Preview | Edit | Regenerate | Approve | Reject
+
+9. Approval rules
+
+Different actions should have different approval levels.
+
+Mandatory human approval
+Contracts
+NDA
+DPA
+Terms
+Legal documents
+Invoices
+Signature requests
+Important client communications
+Price changes
+Scope changes
+Refunds
+Cancellation
+Service activation
+Can potentially be automated
+Internal task creation
+Internal notifications
+Internal status changes
+Progress calculations
+Reminder scheduling
+AI summaries
+
+However, make the automation configurable.
+
+10. Client onboarding interface
+
+The client should not receive a huge questionnaire.
+
+The system generates a secure onboarding link.
+
+The client sees:
+
+Welcome to [Company]
+
+We're ready to begin.
+
+This should take approximately 3 minutes.
+
+Start →
+
+Then:
+
+Question 1
+
+What is the main outcome you want from this project?
+
+Answer box.
+
+Question 2
+
+Which systems do you currently use?
+
+Selectable options.
+
+Question 3
+
+Who should we contact regarding implementation?
+
+Contact details.
+
+Question 4
+
+Do you have existing documents/processes you'd like us to review?
+
+Upload.
+
+Then finish.
+
+11. Progressive questioning
+
+This is essential.
+
+The AI should decide the next question based on previous answers.
+
+Example:
+
+Do you need system integration?
+       │
+       ├── NO → Continue
+       │
+       └── YES
+             ↓
+        Which system?
+             ↓
+          HubSpot
+             ↓
+        What access?
+
+Don't ask unnecessary questions.
+
+Rule:
+
+Never ask the client for information that is not required for the purchased service or compliance process.
+
+12. Information already known
+
+If CRM already knows:
+
+Company = ABC Ltd
+
+show:
+
+Company name: ABC Ltd
+
+Is this correct?
+
+✓ Yes
+✎ Change
+
+Rather than asking:
+
+"What is your company name?"
+
+This makes onboarding much faster.
+
+13. Save and continue
+
+Client can leave and return later.
+
+The system stores progress.
+
+Example:
+
+Onboarding: 60% complete
+
+[Continue]
+
+No need to restart.
+
+14. Digital signature integration
+
+Integrate the existing internal signing system.
+
+Required workflow:
+
+Document approved
+       ↓
+Generate signature request
+       ↓
+Secure signing link
+       ↓
+Client opens on device
+       ↓
+Reviews document
+       ↓
+Signs
+       ↓
+Signature verification
+       ↓
+Signed document stored in CRM
+       ↓
+Audit record
+       ↓
+Workflow continues
+
+The signing system should support:
+
+Mobile
+Desktop
+Tablet
+Typed signature
+Drawn signature
+Signature fields
+Date
+Name
+Checkbox/consent
+Multiple signatories where required
+
+The CRM should know:
+
+Unsigned / Sent / Viewed / Partially Signed / Signed / Declined / Expired
+
+15. Invoice integration
+
+Use the existing CRM invoicing module.
+
+Example:
+
+Agreement approved
+       ↓
+Invoice generated
+       ↓
+Human approval
+       ↓
+Invoice sent
+       ↓
+Payment status monitored
+
+Payment states:
+
+Not Created
+Draft
+Approved
+Sent
+Viewed
+Partially Paid
+Paid
+Overdue
+Cancelled
+
+Payment events should trigger onboarding workflows.
+
+16. Communication engine
+
+Create a central:
+
+AI Communication Centre
+
+AI generates:
+
+Welcome emails
+Signature requests
+Missing-information requests
+Payment reminders
+Follow-ups
+Kickoff messages
+Progress updates
+Delay notifications
+Completion messages
+Renewal reminders
+
+Every communication should show:
+
+AI-generated
+
+Reason: Client has not provided required project information for 3 days.
+
+Recommended action: Send reminder.
+
+Then:
+
+Edit → Approve → Send
+
+17. Follow-up automation
+
+Example:
+
+Client hasn't completed onboarding
+
+Day 0
+
+Initial request.
+
+Day 2
+
+AI prepares friendly reminder.
+
+Day 5
+
+Second reminder.
+
+Day 7
+
+Internal escalation.
+
+Day 10
+
+AI flags:
+
+🔴 Onboarding blocked
+
+This should be configurable per service.
+
+18. AI Onboarding Health
+
+Each client receives an onboarding score.
+
+Example:
+
+84% — 🟢 Healthy
+Legal          100%
+Commercial     100%
+Information     70%
+Operations      80%
+Client response 90%
+
+AI should identify the blocker.
+
+Current blocker: API access not provided.
+
+Recommended action: Request API access.
+
+[Generate message]
+
+19. Onboarding dashboard
+
+Management should have:
+
+All Onboarding
+Total: 32
+
+🟢 Healthy       22
+🟡 At Risk        7
+🔴 Blocked        3
+
+Filters:
+
+Service
+Account manager
+Campaign
+Client
+Date
+Status
+Payment
+Compliance
+Overdue
+20. Client onboarding timeline
+
+Every event should appear chronologically.
+
+Example:
+
+08 Sep 14:20
+Deal converted to client
+
+08 Sep 14:21
+AI onboarding initiated
+
+08 Sep 14:23
+Internal details completed
+
+08 Sep 14:24
+6 documents generated
+
+08 Sep 14:35
+Documents approved by John
+
+08 Sep 14:36
+Signature request sent
+
+08 Sep 16:02
+NDA signed
+
+09 Sep 09:10
+Agreement signed
+
+09 Sep 09:15
+Invoice sent
+
+10 Sep 13:20
+Payment received
+
+10 Sep 13:21
+Client questionnaire completed
+
+11 Sep 10:00
+Kickoff scheduled
+21. Onboarding completion criteria
+
+Don't allow someone to simply click:
+
+"Complete onboarding."
+
+Instead the system calculates completion.
+
+Example:
+
+Required documents       ✓
+Required signatures      ✓
+Payment                  ✓
+Client information       ✓
+Compliance               ✓
+Internal tasks            ✓
+Project setup            ✓
+
+Then:
+
+✅ ONBOARDING COMPLETE
+
+Automatically create:
+
+ACTIVE CLIENT
+
+and move the client into:
+
+Delivery / Project / Support
+
+22. Exception management
+
+This is where AI becomes really useful.
+
+The AI shouldn't only follow the happy path.
+
+It should detect:
+
+Client hasn't responded
+Payment overdue
+Document rejected
+Contract changed
+Client requested different scope
+Missing information
+Signature expired
+Internal task overdue
+Project start date approaching
+Compliance requirement missing
+
+Then:
+
+🔴 Exception detected
+
+Client requested a change to the agreed project scope.
+
+This may affect pricing and contract terms.
+
+Recommended action: Human review required.
+
+This prevents AI from blindly continuing.
+
+23. Audit trail
+
+Every important action must be logged.
+
+Who
+What
+When
+Why
+Previous value
+New value
+AI/Human
+Document version
+Approval status
+
+For example:
+
+08/09/26 18:42
+Service Agreement v2 approved
+Approved by: Operations Manager
+Generated by: AI
+Previous version: v1
+
+This is particularly important for legal/commercial documents.
+
+24. AI permissions
+
+I recommend building an AI Permission Matrix into the CRM.
+
+Action	AI	Human approval
+Read CRM data	✓	—
+Summarise meeting	✓	—
+Create internal tasks	✓	—
+Generate welcome	✓	✓
+Generate NDA	✓	✓
+Generate agreement	✓	✓
+Generate invoice	✓	✓
+Send contract	—	✓
+Request signature	—	✓
+Send payment reminder	Configurable	Configurable
+Change price	—	✓
+Change contract	—	✓
+Activate client	—	✓/rules
+Create follow-up	✓	Configurable
+
+The permission system should be configurable rather than hardcoded.
+
+25. Data model
+
+Your developer should create dedicated entities/tables for:
+
+Client
+Client Contact
+Opportunity
+Service
+Service Onboarding Template
+Onboarding Instance
+Onboarding Step
+Onboarding Requirement
+Document
+Document Template
+Document Version
+Approval
+Signature Request
+Invoice
+Payment
+Client Response
+Communication
+Communication Template
+AI Action
+AI Recommendation
+Exception
+Audit Event
+
+The most important relationship is:
+
+Client
+   ↓
+Onboarding Instance
+   ↓
+Onboarding Steps
+   ↓
+Documents / Signatures / Payments / Communications
+26. AI action architecture
+
+I would make AI actions structured rather than allowing the AI to directly manipulate everything.
+
+For example:
+
+AI Recommendation
+
+Action:
+GENERATE_DOCUMENT
+
+Document:
+SERVICE_AGREEMENT
+
+Client:
+ABC Ltd
+
+Template:
+AI_AUTOMATION_V3
+
+Variables:
+price = £6,000
+duration = 3 months
+start_date = 18/09/2026
+payment_terms = monthly
+
+Requires approval:
+YES
+
+Then the CRM executes the action only after approval.
+
+This is much safer than giving the AI unrestricted database access.
+
+27. The overall user experience
+
+Your employee should ultimately see something as simple as:
+
+ABC Ltd
+
+AI Onboarding — 87%
+
+🟢 Commercial
+🟢 Compliance
+🟢 Agreement
+🟢 Payment
+🟡 Client information
+🟢 Internal setup
+
+AI says:
+
+I've prepared 8 actions.
+
+3 require your approval.
+
+The client has completed 80% of onboarding.
+
+One item is outstanding: API access.
+
+[Review AI Actions]
+
+28. The ideal complete workflow
+LEAD
+ ↓
+CAMPAIGN
+ ↓
+MEETING
+ ↓
+OPPORTUNITY
+ ↓
+WON
+ ↓
+CLIENT CREATED
+ ↓
+AI READS ALL EXISTING DATA
+ ↓
+AI IDENTIFIES MISSING INTERNAL DETAILS
+ ↓
+INTERNAL USER ANSWERS 3–7 QUESTIONS
+ ↓
+AI CREATES ONBOARDING PLAN
+ ↓
+AI GENERATES DOCUMENTS
+ ↓
+AI GENERATES CLIENT COMMUNICATIONS
+ ↓
+AI CREATES INVOICE
+ ↓
+━━━━━━━━━━━━━━━━━━━━━━
+ HUMAN APPROVAL GATE
+━━━━━━━━━━━━━━━━━━━━━━
+ ↓
+APPROVED ITEMS SENT
+ ↓
+CLIENT ONBOARDING PORTAL
+ ↓
+PROGRESSIVE QUESTIONS
+ ↓
+DOCUMENT UPLOAD
+ ↓
+DIGITAL SIGNATURE
+ ↓
+PAYMENT
+ ↓
+AI MONITORS PROGRESS
+ ↓
+AUTOMATIC FOLLOW-UP PREPARATION
+ ↓
+EXCEPTIONS ESCALATED
+ ↓
+ALL REQUIREMENTS COMPLETE
+ ↓
+HUMAN FINAL APPROVAL
+ ↓
+ACTIVE CLIENT
+ ↓
+DELIVERY
+ ↓
+SUPPORT
+ ↓
+RENEWAL / UPSELL
+29. What I would call V1
+
+Don't try to build every AI capability at once.
+
+Phase 1 — Core engine
+
+Build:
+
+Client conversion trigger
+Service templates
+AI missing-information questions
+Onboarding instance
+Document templates
+AI document generation
+Approval centre
+Client onboarding link
+Progressive questions
+Digital signatures
+Invoice integration
+Communication generation
+Audit trail
+Onboarding dashboard
+Phase 2 — Intelligence
+
+Add:
+
+AI onboarding health score
+AI exception detection
+Automated follow-up recommendations
+AI document checking
+AI meeting-note extraction
+AI onboarding summaries
+Intelligent question generation
+Better service-specific workflows
+Phase 3 — Autonomous operations
+
+Eventually:
+
+AI manages the onboarding unless it encounters something requiring human judgement.
+
+That's the end goal.
+
+The human shouldn't be doing the onboarding. The human should be supervising the AI onboarding operation.
+
+One architectural decision I strongly recommend
+
+Build the system around this object:
+
+ONBOARDING INSTANCE
+
+Not around documents.
+
+A client may have 8 documents, 4 signatures, 2 invoices, 12 questions and 20 communications.
+
+Those are all components of one onboarding instance.
+
+That gives you a single source of truth:
+
+"Where exactly is this client in the journey, and what needs to happen next?"
+
+And the AI becomes the intelligence sitting on top of that state.
+
+If your developer builds the Onboarding Instance + Service Template + AI Action + Human Approval architecture correctly, you can later add virtually any new service to the CRM without rebuilding the onboarding system from scratch.
+
+Give me a prompt for developing the onboarding system itself
+
+Yes. I’d give your developer one master development prompt that tells them to build the actual internal system, not just design the concept.
+
+You can paste the following directly into Claude Code, Cursor, OpenCode, or give it to your development team.
+
+MASTER DEVELOPMENT PROMPT
+Build an AI-Powered Internal Client Onboarding System
+
+You are a senior full-stack architect and developer. You are building an internal AI-powered client onboarding module inside our existing CRM.
+
+This is NOT a public SaaS product. It is an internal operational system used by our team to convert won opportunities into fully onboarded clients with as little manual work as possible.
+
+The system must be designed around this principle:
+
+AI prepares, organises, checks and recommends. Humans approve. The CRM executes and records.
+
+The goal is to reduce manual onboarding work dramatically while maintaining human control, legal/commercial oversight, security and a complete audit trail.
+
+1. PRIMARY OBJECTIVE
+
+When a lead/opportunity is converted into a client, the CRM must automatically initiate an AI-powered onboarding workflow.
+
+The system should:
+
+Read existing CRM information.
+Determine what information is already known.
+Identify only the information still missing.
+Ask the internal team for missing commercial/project details.
+Build a service-specific onboarding plan.
+Generate required documents.
+Generate required client communications.
+Generate the invoice through the existing CRM invoicing system.
+Prepare digital signature requests through our existing signing system.
+Present all externally significant actions to a human for approval.
+Send approved communications/documents.
+Give the client a simple, mobile-friendly onboarding experience.
+Ask the client only necessary questions.
+Use progressive questioning instead of a large questionnaire.
+Monitor onboarding progress.
+Detect delays, missing information and exceptions.
+Prepare follow-ups.
+Maintain a complete audit history.
+Automatically mark onboarding complete when all mandatory requirements are satisfied.
+Move the client into the normal active-client/delivery/support workflow.
+2. IMPORTANT DESIGN PRINCIPLE
+
+DO NOT build this as a large onboarding form.
+
+DO NOT ask the client 20–50 questions at once.
+
+DO NOT ask the client for information already available in the CRM.
+
+DO NOT allow AI to independently send contracts, legal documents, invoices or important commercial communications.
+
+Instead use:
+
+CRM data
+    ↓
+AI analysis
+    ↓
+Missing information
+    ↓
+Internal AI questions
+    ↓
+Onboarding plan
+    ↓
+AI-generated actions
+    ↓
+Human approval
+    ↓
+Client interaction
+    ↓
+Digital signature/payment
+    ↓
+AI monitoring
+    ↓
+Completion
+3. ONBOARDING INSTANCE
+
+Create a central entity called:
+
+OnboardingInstance
+
+Every client onboarding must have one.
+
+Example:
+
+OnboardingInstance
+    id
+    client_id
+    opportunity_id
+    service_id
+    template_id
+    status
+    health_status
+    progress_percentage
+    onboarding_owner
+    started_at
+    target_completion_date
+    completed_at
+    created_at
+    updated_at
+
+Statuses:
+
+NOT_STARTED
+INITIALISING
+WAITING_INTERNAL_INFORMATION
+AI_PLANNING
+WAITING_HUMAN_APPROVAL
+WAITING_CLIENT
+IN_PROGRESS
+AT_RISK
+BLOCKED
+READY_FOR_ACTIVATION
+COMPLETED
+CANCELLED
+
+Health:
+
+HEALTHY
+AT_RISK
+BLOCKED
+
+The OnboardingInstance is the central object connecting:
+
+Documents
+Questions
+Client responses
+Signatures
+Invoices
+Payments
+Communications
+Tasks
+Approvals
+Exceptions
+Audit events
+4. CONVERSION TRIGGER
+
+When an opportunity changes to:
+
+WON
+
+automatically:
+
+Create/update Client.
+Attach opportunity to Client.
+Identify purchased service/product.
+Select appropriate Service Onboarding Template.
+Create OnboardingInstance.
+Start AI analysis.
+
+Do not duplicate existing client/contact information.
+
+5. AI INITIAL ANALYSIS
+
+The AI should receive structured context from the CRM:
+
+Client information
+Contact information
+Opportunity information
+Campaign
+Lead source
+Product/service
+Proposal
+Sales notes
+Meeting notes
+Quoted price
+Duration
+Existing communications
+Existing documents
+Existing client history
+
+The AI should determine:
+
+Known information
+
+What is already known and reliable.
+
+Missing information
+
+What is genuinely required before onboarding can begin.
+
+Verification information
+
+What is known but should be confirmed.
+
+Optional information
+
+What would be useful but is not required.
+
+The AI must NOT ask unnecessary questions.
+
+6. INTERNAL AI QUESTIONING
+
+Before contacting the client, AI should ask the internal user for missing commercial/project information.
+
+Example:
+
+ABC Ltd is ready for onboarding.
+
+I already have:
+
+✓ Client information
+✓ Service
+✓ Proposal
+✓ Project objective
+✓ Contact information
+
+I need:
+
+1. Project price
+2. Duration
+3. Payment terms
+4. Start date
+5. Account manager
+
+Anything unusual about the agreement?
+[Optional]
+
+Use appropriate UI controls:
+
+Currency field
+Date picker
+Dropdown
+Radio buttons
+Multi-select
+Short text
+Long text only where necessary
+
+Do not make this a generic form.
+
+The AI should dynamically generate the questions.
+
+7. SERVICE ONBOARDING TEMPLATE ENGINE
+
+Create:
+
+ServiceOnboardingTemplate
+
+A template defines how a particular service/product is onboarded.
+
+Example:
+
+Service
+    ↓
+Onboarding Template
+    ├── Required documents
+    ├── Required information
+    ├── Required signatures
+    ├── Payment requirements
+    ├── Compliance requirements
+    ├── Client questions
+    ├── Internal tasks
+    ├── Communication sequence
+    └── Completion conditions
+
+Templates must be configurable by authorised administrators.
+
+Do NOT hardcode onboarding logic for individual services.
+
+Example templates:
+
+AI Automation
+Cybersecurity
+TalentBridge
+Management Consultancy
+Training
+Digital Product
+Enterprise Service
+Custom Service
+
+The architecture must allow new services to be added without rewriting the onboarding engine.
+
+8. AI ONBOARDING PLANNER
+
+After internal information is supplied, AI creates an onboarding plan.
+
+Example:
+
+Client:
+ABC Ltd
+
+Service:
+AI Automation
+
+Price:
+£6,000
+
+Duration:
+3 months
+
+Start:
+18 September
+
+AI determines:
+
+Commercial
+Invoice
+Payment terms
+Legal
+NDA
+Service Agreement
+Terms
+DPA if applicable
+Operational
+Requirements
+System information
+Access requirements
+Implementation SOP
+Kickoff
+Communication
+Welcome
+Signature request
+Requirements request
+Payment communication
+Kickoff communication
+
+Each action must become an explicit workflow object.
+
+9. AI ACTION ENGINE
+
+Create:
+
+AIAction
+
+Example:
+
+AIAction
+    id
+    onboarding_id
+    action_type
+    description
+    payload
+    risk_level
+    requires_approval
+    status
+    created_at
+    approved_at
+    approved_by
+    executed_at
+
+Action types:
+
+GENERATE_DOCUMENT
+GENERATE_COMMUNICATION
+CREATE_INVOICE
+REQUEST_SIGNATURE
+REQUEST_INFORMATION
+CREATE_TASK
+SCHEDULE_FOLLOWUP
+UPDATE_STATUS
+FLAG_EXCEPTION
+GENERATE_SOP
+GENERATE_PROJECT_BRIEF
+
+AI must NOT directly execute sensitive actions.
+
+Instead:
+
+AI proposes action
+        ↓
+Human approval
+        ↓
+CRM executes
+10. HUMAN APPROVAL CENTRE
+
+Create a dedicated internal screen:
+
+AI Approval Centre
+
+Show all actions requiring approval.
+
+Example:
+
+ABC Ltd
+
+AI prepared 9 actions.
+
+Documents:
+✓ Welcome Letter
+✓ NDA
+✓ Service Agreement
+✓ DPA
+✓ Invoice
+
+Communications:
+✓ Welcome email
+✓ Signature request
+✓ Requirements request
+✓ Kickoff email
+
+Each item must provide:
+
+Preview
+Edit
+Regenerate
+Approve
+Reject
+
+The human should also be able to:
+
+Approve All
+
+when appropriate.
+
+Every approval must be recorded.
+
+11. APPROVAL LEVELS
+
+Implement configurable approval requirements.
+
+Always require human approval:
+Contracts
+NDA
+DPA
+Terms
+Legal documents
+Invoices
+Signature requests
+Scope changes
+Price changes
+Refunds
+Important commercial communications
+Client activation
+Potentially automated:
+Internal tasks
+Internal notifications
+Progress calculation
+Internal summaries
+Non-sensitive status updates
+Reminder preparation
+
+Never bypass mandatory approval rules.
+
+12. DOCUMENT GENERATION SYSTEM
+
+Create:
+
+DocumentTemplate
+
+and:
+
+Document
+
+and:
+
+DocumentVersion
+
+Document generation must work like:
+
+Approved Template
+        +
+CRM Data
+        +
+Service Data
+        +
+Commercial Data
+        +
+AI-generated client-specific information
+        ↓
+Generated Document
+
+Document types:
+
+WELCOME_LETTER
+NDA
+SERVICE_AGREEMENT
+TERMS
+PRIVACY_NOTICE
+DPA
+INVOICE
+PROJECT_BRIEF
+IMPLEMENTATION_SOP
+REQUIREMENTS_DOCUMENT
+KICKOFF_DOCUMENT
+PAYMENT_REMINDER
+OTHER
+
+For legal documents, AI must populate approved templates rather than freely invent legal language.
+
+13. DOCUMENT VERSION CONTROL
+
+Every document needs:
+
+document_id
+client_id
+onboarding_id
+document_type
+template_id
+version
+status
+generated_by
+generated_at
+approved_by
+approved_at
+sent_at
+signed_at
+superseded_by
+
+Statuses:
+
+DRAFT
+AI_GENERATED
+UNDER_REVIEW
+CHANGES_REQUESTED
+APPROVED
+SENT
+VIEWED
+SIGNED
+REJECTED
+SUPERSEDED
+EXPIRED
+
+Never overwrite an approved version.
+
+14. CLIENT ONBOARDING PORTAL
+
+Create a lightweight secure client onboarding interface.
+
+The client should NOT need to navigate the CRM.
+
+They receive a secure onboarding link.
+
+Example:
+
+Welcome to [Company]
+
+We're ready to begin your project.
+
+This should take approximately 3 minutes.
+
+[Start]
+
+The client should be able to:
+
+Answer questions
+Confirm existing information
+Upload files
+Review documents
+Sign documents
+See progress
+Save and continue later
+Complete onboarding on mobile
+15. PROGRESSIVE QUESTIONING
+
+This is mandatory.
+
+The AI must decide the next question based on:
+
+Service
+Previous answers
+Existing CRM data
+Compliance requirements
+Project requirements
+
+Example:
+
+Do you require integration?
+
+NO
+    ↓
+Skip integration questions.
+
+YES
+    ↓
+Which system?
+
+HubSpot
+    ↓
+Ask HubSpot-specific information.
+
+Never show a huge questionnaire.
+
+16. INFORMATION REUSE
+
+If the CRM already knows:
+
+Company = ABC Ltd
+Website = abc.com
+CRM = HubSpot
+Contact = John Smith
+
+the client should see:
+
+We have your company listed as:
+
+ABC Ltd
+
+✓ Correct
+✎ Change
+
+The system should follow:
+
+Never ask twice unless verification is required.
+
+17. CLIENT RESPONSE ENTITY
+
+Create:
+
+ClientResponse
+
+Store:
+
+question_id
+client_id
+onboarding_id
+response
+response_type
+submitted_at
+source
+verified
+
+AI should be able to use previous responses when deciding what to ask next.
+
+18. DIGITAL SIGNATURE INTEGRATION
+
+We already have our own DocuSign-style digital signing capability.
+
+Integrate it into onboarding.
+
+Required states:
+
+NOT_REQUIRED
+DRAFT
+READY
+SENT
+VIEWED
+PARTIALLY_SIGNED
+SIGNED
+DECLINED
+EXPIRED
+
+Workflow:
+
+Document approved
+        ↓
+Signature request created
+        ↓
+Secure signing link
+        ↓
+Client opens on device
+        ↓
+Client reviews
+        ↓
+Client signs
+        ↓
+Signature completed
+        ↓
+Signed document stored
+        ↓
+Audit event created
+        ↓
+Next onboarding step triggered
+
+Support:
+
+Mobile
+Tablet
+Desktop
+Multiple signatories
+Signature fields
+Date fields
+Name fields
+Consent/checkbox fields
+Typed signature
+Drawn signature
+
+Use the existing signing infrastructure rather than creating another signing system.
+
+19. INVOICE INTEGRATION
+
+Use the existing CRM invoicing system.
+
+Possible workflow:
+
+Agreement approved
+        ↓
+AI prepares invoice
+        ↓
+Human approves
+        ↓
+Invoice issued
+        ↓
+Payment monitored
+
+Payment states:
+
+DRAFT
+APPROVED
+SENT
+VIEWED
+PARTIALLY_PAID
+PAID
+OVERDUE
+CANCELLED
+
+Payment events must be available to the onboarding workflow engine.
+
+20. COMMUNICATION ENGINE
+
+Create:
+
+Communication
+
+and:
+
+CommunicationTemplate
+
+AI can generate:
+
+Welcome
+Signature request
+Requirements request
+Missing information reminder
+Payment reminder
+Kickoff confirmation
+Progress update
+Completion message
+Delay notification
+Follow-up
+
+Every external communication should initially enter:
+
+WAITING_FOR_APPROVAL
+
+unless the action is explicitly configured as safe for automatic sending.
+
+21. FOLLOW-UP ENGINE
+
+The workflow engine should monitor deadlines.
+
+Example:
+
+Day 0
+Initial request
+
+Day 2
+AI prepares reminder
+
+Day 5
+AI prepares second reminder
+
+Day 7
+Internal escalation
+
+Day 10
+Onboarding marked BLOCKED
+
+These intervals must be configurable per service/template.
+
+22. AI ONBOARDING MONITOR
+
+AI should continuously evaluate the onboarding state.
+
+It should identify:
+
+Missing client information
+Missing signatures
+Missing documents
+Payment delays
+Internal task delays
+Approaching deadlines
+Client inactivity
+Contract changes
+Scope changes
+Other exceptions
+
+Example:
+
+AI ALERT
+
+ABC Ltd
+
+Onboarding Health: AT RISK
+
+Reason:
+Client has not supplied required API access for 4 days.
+
+Recommended action:
+Request API access.
+
+[Generate message]
+[Review]
+23. ONBOARDING HEALTH SCORE
+
+Calculate a health status from:
+
+Commercial
+Legal
+Compliance
+Client information
+Documents
+Payment
+Internal tasks
+Client responsiveness
+Deadline risk
+
+Display:
+
+HEALTHY
+AT_RISK
+BLOCKED
+
+Also display the exact reason.
+
+Do not make the score a meaningless percentage.
+
+The user must be able to understand:
+
+Why is this client at risk?
+
+24. EXCEPTION ENGINE
+
+Create:
+
+OnboardingException
+
+Examples:
+
+MISSING_INFORMATION
+PAYMENT_OVERDUE
+SIGNATURE_DECLINED
+SIGNATURE_EXPIRED
+DOCUMENT_REJECTED
+SCOPE_CHANGE
+PRICE_CHANGE
+DEADLINE_RISK
+CLIENT_UNRESPONSIVE
+INTERNAL_TASK_OVERDUE
+COMPLIANCE_BLOCK
+
+Each exception should have:
+
+severity
+description
+detected_at
+recommended_action
+status
+assigned_to
+resolved_at
+resolved_by
+
+AI may recommend a solution but must not make sensitive decisions automatically.
+
+25. COMPLETION ENGINE
+
+Do not allow users to manually declare onboarding complete without validation.
+
+The system must check required conditions.
+
+Example:
+
+Required documents       ✓
+Required signatures      ✓
+Required information     ✓
+Payment                  ✓
+Compliance               ✓
+Internal tasks           ✓
+Project setup            ✓
+
+Then:
+
+READY_FOR_ACTIVATION
+
+A human can give final approval.
+
+Then:
+
+ACTIVE CLIENT
+26. ONBOARDING TIMELINE
+
+Every action must appear in a chronological timeline.
+
+Example:
+
+08 Sep 14:20
+Opportunity converted to client
+
+08 Sep 14:21
+AI onboarding initiated
+
+08 Sep 14:24
+Internal information completed
+
+08 Sep 14:25
+AI generated 6 documents
+
+08 Sep 14:40
+Documents approved
+
+08 Sep 14:41
+Signature request sent
+
+08 Sep 16:02
+NDA signed
+
+09 Sep 09:15
+Agreement signed
+
+09 Sep 09:20
+Invoice issued
+
+10 Sep 13:20
+Payment received
+
+10 Sep 14:00
+Client requirements completed
+
+11 Sep 10:00
+Onboarding completed
+
+Timeline events must be immutable audit records.
+
+27. AUDIT SYSTEM
+
+Create:
+
+AuditEvent
+
+Every significant action must record:
+
+event_id
+client_id
+onboarding_id
+user_id
+actor_type
+action
+timestamp
+old_value
+new_value
+document_version
+metadata
+
+Actor types:
+
+HUMAN
+AI
+SYSTEM
+CLIENT
+
+Examples:
+
+AI generated agreement
+Human approved agreement
+System sent agreement
+Client viewed agreement
+Client signed agreement
+AI detected missing information
+Human rejected document
+28. AI CONTEXT
+
+The AI should have controlled access to relevant CRM information.
+
+Create a structured context object rather than sending the entire database blindly.
+
+Example:
+
+ClientContext
+
+Client
+Contacts
+Opportunity
+Products
+Services
+Proposal
+Meeting notes
+Sales notes
+Documents
+Previous communication
+Invoices
+Payments
+Onboarding state
+Previous responses
+
+Use permissions so AI only receives information necessary for the task.
+
+29. AI SAFETY / PERMISSIONS
+
+The AI must operate under explicit permissions.
+
+Example:
+
+READ_CRM_DATA
+GENERATE_DOCUMENT
+GENERATE_COMMUNICATION
+CREATE_INTERNAL_TASK
+CREATE_INVOICE_DRAFT
+CREATE_SIGNATURE_REQUEST_DRAFT
+RECOMMEND_ACTION
+UPDATE_PROGRESS
+DETECT_EXCEPTION
+
+Separate these from:
+
+SEND_EXTERNAL_COMMUNICATION
+SEND_CONTRACT
+ISSUE_INVOICE
+REQUEST_SIGNATURE
+CHANGE_PRICE
+CHANGE_CONTRACT
+ACTIVATE_CLIENT
+
+Sensitive actions require human approval.
+
+30. ADMIN SETTINGS
+
+Create an internal administration area where authorised users can configure:
+
+Services
+Service name
+Description
+Price model
+Onboarding template
+Documents
+Templates
+Versions
+Required approval
+Required signature
+Questions
+Question
+Type
+Required/optional
+Conditional logic
+Communication
+Templates
+Follow-up timing
+Approval requirements
+Compliance
+Required documents
+Required confirmations
+Service-specific requirements
+Workflow
+Steps
+Conditions
+Dependencies
+Escalations
+31. SECURITY
+
+This is an internal system but must still follow strong security practices.
+
+Implement:
+
+Role-based access control
+Secure client onboarding links
+Expiring tokens
+Authentication where appropriate
+Encryption in transit
+Encryption at rest
+Document access controls
+Audit logging
+Secure file uploads
+Access expiration
+No sensitive data in URLs
+CSRF protection
+Rate limiting
+Input validation
+Permission checks server-side
+
+Never rely solely on frontend permissions.
+
+32. GDPR / DATA GOVERNANCE
+
+The system should support appropriate GDPR/data governance controls.
+
+Implement architecture for:
+
+Data minimisation
+Purpose limitation
+Access control
+Audit history
+Retention policies
+Document retention
+Data export
+Data deletion where legally appropriate
+Consent/acknowledgement records where applicable
+
+Do not automatically assume that every client needs the same compliance documents.
+
+The service onboarding template should determine applicable requirements, with human oversight.
+
+33. INTERNAL DASHBOARD
+
+Create:
+
+AI Onboarding Dashboard
+
+Display:
+
+Total onboarding
+Healthy
+At Risk
+Blocked
+Awaiting Client
+Awaiting Approval
+Awaiting Payment
+Ready for Activation
+Completed
+
+Filters:
+
+Client
+Service
+Campaign
+Account Manager
+Onboarding Owner
+Status
+Health
+Date
+Payment
+34. CLIENT 360 INTEGRATION
+
+Once onboarding is complete, the OnboardingInstance should remain permanently connected to the Client record.
+
+Client 360 should show:
+
+Client
+    ↓
+Lead history
+    ↓
+Opportunity
+    ↓
+Onboarding
+    ↓
+Documents
+    ↓
+Contracts
+    ↓
+Invoices
+    ↓
+Payments
+    ↓
+Projects
+    ↓
+Support
+    ↓
+Communications
+    ↓
+Renewals
+
+Do not create duplicate client records when they purchase additional services.
+
+35. AI SUMMARY
+
+At any time, the CRM should be able to generate:
+
+Client Onboarding Summary
+
+Example:
+
+ABC Ltd purchased AI Automation Implementation
+for £6,000 over 3 months.
+
+Agreement and NDA signed.
+Invoice paid.
+
+Client currently uses HubSpot and Xero.
+
+Project objective:
+Automate lead qualification and CRM entry.
+
+Outstanding:
+HubSpot API access.
+
+Onboarding health:
+AT RISK
+
+Recommended next action:
+Request API access.
+
+This summary should be generated from live CRM data.
+
+36. TECHNICAL REQUIREMENTS
+
+Before coding:
+
+Inspect the existing CRM architecture.
+Identify current database structure.
+Identify existing authentication.
+Identify existing client/contact entities.
+Identify existing opportunity/deal entities.
+Identify existing service/product entities.
+Identify existing invoicing system.
+Identify existing document/file storage.
+Identify existing communication system.
+Identify existing digital signing system.
+Identify existing notification system.
+Identify existing AI/API infrastructure.
+
+DO NOT duplicate functionality that already exists.
+
+Extend existing systems wherever practical.
+
+37. API-FIRST DESIGN
+
+Create clean internal APIs/services for:
+
+POST /onboarding/start
+GET /onboarding/{id}
+POST /onboarding/{id}/internal-details
+POST /onboarding/{id}/generate-plan
+GET /onboarding/{id}/actions
+POST /onboarding/actions/{id}/approve
+POST /onboarding/actions/{id}/reject
+POST /onboarding/actions/{id}/regenerate
+POST /onboarding/{id}/client-link
+GET /onboarding/{id}/progress
+POST /onboarding/{id}/complete
+
+Use appropriate REST/API conventions based on the existing CRM architecture.
+
+Do not blindly implement these exact endpoints if the existing application follows a different architecture. Adapt them consistently.
+
+38. ASYNCHRONOUS JOBS
+
+AI generation, document generation, email preparation, file processing and monitoring should not block the main UI.
+
+Use the existing job/queue infrastructure if available.
+
+Potential jobs:
+
+AI_ANALYSE_ONBOARDING
+GENERATE_DOCUMENT
+GENERATE_COMMUNICATION
+CHECK_ONBOARDING
+CHECK_DEADLINES
+GENERATE_FOLLOWUP
+PROCESS_SIGNATURE_EVENT
+PROCESS_PAYMENT_EVENT
+CALCULATE_HEALTH
+DETECT_EXCEPTION
+
+Jobs must be idempotent where possible.
+
+39. ERROR HANDLING
+
+If an AI action fails:
+
+Do not silently fail.
+
+Show:
+
+AI action failed.
+
+Action:
+Generate Service Agreement
+
+Reason:
+Required project duration is missing.
+
+Required action:
+Provide project duration.
+
+[Complete Information]
+
+If an external service fails:
+
+Signature service unavailable.
+
+Action has NOT been sent.
+
+Retry available.
+
+Never mark an action complete unless execution was actually confirmed.
+
+40. TESTING
+
+Create automated tests for:
+
+Workflow
+Won opportunity creates onboarding.
+Correct template selected.
+Missing information detected.
+Plan generated.
+AI
+AI doesn't ask known questions.
+AI asks required questions.
+Conditional questions work.
+AI actions are structured.
+Approval
+Unapproved sensitive actions cannot execute.
+Approved actions execute correctly.
+Rejected actions don't execute.
+Documents
+Correct template selected.
+Correct client variables inserted.
+Versioning works.
+Signature
+Signature events update onboarding.
+Signed document stored correctly.
+Invoice
+Invoice status synchronises.
+Client portal
+Client can resume onboarding.
+Conditional questions work.
+Responses save correctly.
+Security
+Client cannot access another client's onboarding.
+Internal users only see authorised clients.
+Expired links cannot be used.
+41. DEVELOPMENT PRIORITY
+
+Build in this order:
+
+PHASE 1
+
+Core:
+
+OnboardingInstance
+Service templates
+Conversion trigger
+Internal AI questioning
+AI onboarding plan
+Action engine
+Approval centre
+PHASE 2
+
+Documents:
+
+Template library
+AI document generation
+Version control
+Document approval
+PHASE 3
+
+Client experience:
+
+Secure onboarding link
+Progressive questions
+File upload
+Save/resume
+Mobile interface
+PHASE 4
+
+Commercial/legal:
+
+Digital signature integration
+Invoice integration
+Payment events
+PHASE 5
+
+Communication:
+
+AI communication generation
+Approval
+Follow-up engine
+Reminder system
+PHASE 6
+
+Intelligence:
+
+Health score
+Exception detection
+AI recommendations
+AI summaries
+Deadline monitoring
+PHASE 7
+
+Management:
+
+Dashboard
+Analytics
+Audit system
+Service template administration
+AI permission management
+42. DO NOT OVERBUILD V1
+
+V1 should focus on making this workflow work perfectly:
+
+WON DEAL
+   ↓
+AI asks internal user for missing details
+   ↓
+AI creates onboarding plan
+   ↓
+AI generates documents
+   ↓
+Human approves
+   ↓
+Client receives simple onboarding link
+   ↓
+Client answers progressive questions
+   ↓
+Client signs required documents
+   ↓
+Invoice/payment
+   ↓
+AI monitors
+   ↓
+Human resolves exceptions
+   ↓
+CLIENT ACTIVATED
+
+Do not build unnecessary public-facing functionality.
+
+Do not build a separate CRM.
+
+Do not build another invoicing system.
+
+Do not build another e-signature platform.
+
+Integrate with existing CRM components.
+
+43. FINAL UX PRINCIPLE
+
+The internal user should feel like they are working with an AI operations assistant.
+
+Not:
+
+"Complete this 30-field onboarding form."
+
+Instead:
+
+AI: ABC Ltd is ready for onboarding. I already have most information. I need five details before I can prepare everything.
+
+Then:
+
+AI: I've prepared 9 actions. Three require your approval.
+
+Then:
+
+AI: The client has completed onboarding except for API access. I've prepared a request for your approval.
+
+Then:
+
+AI: Everything required is complete. Client is ready for activation.
+
+The human's job becomes:
+
+Answer → Review → Approve → Handle Exceptions
+
+The AI's job becomes:
+
+Analyse → Prepare → Generate → Monitor → Recommend → Coordinate
+
+The CRM's job becomes:
+
+Execute → Track → Store → Audit
+
+44. SUCCESS CRITERIA
+
+The system will be considered successful when a normal client can go from:
+
+Won Deal → Active Client
+
+with minimal human intervention.
+
+Target:
+
+Internal setup: under 2 minutes
+Client onboarding: 3–10 minutes for a normal client
+No duplicate questions
+No unnecessary forms
+All required documents generated automatically
+All sensitive external actions require approval
+Digital signing works from mobile
+Invoice integrates automatically
+Follow-ups are automatically prepared
+Every action has an audit record
+Exceptions are clearly surfaced
+New services can be onboarded by creating a new template rather than rebuilding the system
+MOST IMPORTANT RULE
+
+Do not build a collection of disconnected onboarding features.
+
+Build a single AI-driven Onboarding Engine where:
+
+Client + Service + Template + Workflow + AI Actions + Human Approval + Client Responses + Documents + Signatures + Invoice + Communication + Audit Trail
+
+all belong to one OnboardingInstance.
+
+The system should always be able to answer:
+
+Who is this client?
+
+What did they buy?
+
+What has already been completed?
+
+What is still required?
+
+Who needs to act?
+
+What should happen next?
+
+Can AI do it, or does it require human approval?
+
+What evidence do we have that it happened?
+
+Build the system around those questions.
