@@ -20,6 +20,8 @@ import {
 import { startOnboardingForDealAction } from "./actions";
 import QuickOnboardModal from "@/components/onboarding/QuickOnboardModal";
 
+import { ensureOnboardingDatabaseSchema } from "@/lib/onboarding/db-init";
+
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingHubPage({
@@ -29,6 +31,9 @@ export default async function OnboardingHubPage({
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
+
+  // Ensure DB tables exist
+  await ensureOnboardingDatabaseSchema();
 
   const { health, status, search } = await searchParams;
 
@@ -43,44 +48,66 @@ export default async function OnboardingHubPage({
     ];
   }
 
-  const instances = await prisma.onboardingInstance.findMany({
-    where: whereClause,
-    include: {
-      client: true,
-      deal: true,
-      template: true,
-      actions: { select: { id: true, status: true, requiresApproval: true } },
-      documents: { select: { id: true, status: true } },
-      signatureRequests: { select: { id: true, status: true } },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+  let instances: any[] = [];
+  let totalCount = 0;
+  let healthyCount = 0;
+  let atRiskCount = 0;
+  let blockedCount = 0;
+  let awaitingClientCount = 0;
+  let awaitingApprovalCount = 0;
+  let readyForActivationCount = 0;
+  let completedCount = 0;
+  let wonDeals: any[] = [];
+  let eligibleCustomers: any[] = [];
 
-  // Calculate high-level metrics
-  const totalCount = await prisma.onboardingInstance.count();
-  const healthyCount = await prisma.onboardingInstance.count({ where: { healthStatus: "HEALTHY" } });
-  const atRiskCount = await prisma.onboardingInstance.count({ where: { healthStatus: "AT_RISK" } });
-  const blockedCount = await prisma.onboardingInstance.count({ where: { healthStatus: "BLOCKED" } });
-  const awaitingClientCount = await prisma.onboardingInstance.count({ where: { status: "WAITING_CLIENT" } });
-  const awaitingApprovalCount = await prisma.onboardingInstance.count({ where: { status: "WAITING_HUMAN_APPROVAL" } });
-  const readyForActivationCount = await prisma.onboardingInstance.count({ where: { status: "READY_FOR_ACTIVATION" } });
-  const completedCount = await prisma.onboardingInstance.count({ where: { status: "COMPLETED" } });
+  try {
+    instances = await prisma.onboardingInstance.findMany({
+      where: whereClause,
+      include: {
+        client: true,
+        deal: true,
+        template: true,
+        actions: { select: { id: true, status: true, requiresApproval: true } },
+        documents: { select: { id: true, status: true } },
+        signatureRequests: { select: { id: true, status: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+    });
 
-  // Get won deals ready for onboarding
-  const wonDeals = await prisma.deal.findMany({
-    where: {
-      OR: [{ stage: "Won" }, { stage: "Closed Won" }],
-      onboardings: { none: {} },
-    },
-    include: { customer: true, lead: true },
-    take: 5,
-  });
+    totalCount = await prisma.onboardingInstance.count();
+    healthyCount = await prisma.onboardingInstance.count({ where: { healthStatus: "HEALTHY" } });
+    atRiskCount = await prisma.onboardingInstance.count({ where: { healthStatus: "AT_RISK" } });
+    blockedCount = await prisma.onboardingInstance.count({ where: { healthStatus: "BLOCKED" } });
+    awaitingClientCount = await prisma.onboardingInstance.count({ where: { status: "WAITING_CLIENT" } });
+    awaitingApprovalCount = await prisma.onboardingInstance.count({ where: { status: "WAITING_HUMAN_APPROVAL" } });
+    readyForActivationCount = await prisma.onboardingInstance.count({ where: { status: "READY_FOR_ACTIVATION" } });
+    completedCount = await prisma.onboardingInstance.count({ where: { status: "COMPLETED" } });
+  } catch (err) {
+    console.error("[OnboardingHubPage] Error loading onboarding instances:", err);
+  }
 
-  const eligibleCustomers = await prisma.customer.findMany({
-    select: { id: true, name: true, company: true, email: true },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  try {
+    wonDeals = await prisma.deal.findMany({
+      where: {
+        OR: [{ stage: "Won" }, { stage: "Closed Won" }],
+        onboardings: { none: {} },
+      },
+      include: { customer: true, lead: true },
+      take: 5,
+    });
+  } catch (err) {
+    console.error("[OnboardingHubPage] Error loading won deals:", err);
+  }
+
+  try {
+    eligibleCustomers = await prisma.customer.findMany({
+      select: { id: true, name: true, company: true, email: true },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+  } catch (err) {
+    console.error("[OnboardingHubPage] Error loading customers:", err);
+  }
 
   return (
     <div className="space-y-10 max-w-[1400px] mx-auto pb-24 animate-in fade-in duration-500">
@@ -152,7 +179,7 @@ export default async function OnboardingHubPage({
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            {wonDeals.map((deal) => (
+            {wonDeals.map((deal: any) => (
               <form
                 key={deal.id}
                 action={async () => {
@@ -234,9 +261,9 @@ export default async function OnboardingHubPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-              {instances.map((inst) => {
+              {instances.map((inst: any) => {
                 const pendingApprovalCount = inst.actions.filter(
-                  (a) => a.status === "PENDING_APPROVAL" && a.requiresApproval
+                  (a: any) => a.status === "PENDING_APPROVAL" && a.requiresApproval
                 ).length;
 
                 return (

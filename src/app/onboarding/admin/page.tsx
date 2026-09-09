@@ -7,20 +7,43 @@ import { listServiceTemplates } from "@/lib/onboarding/service-templates";
 import { ensureDocumentTemplates } from "@/lib/onboarding/document-templates";
 import AIPermissionMatrixEditor from "@/components/onboarding/AIPermissionMatrixEditor";
 
+import { ensureOnboardingDatabaseSchema } from "@/lib/onboarding/db-init";
+
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingAdminPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  await ensureDocumentTemplates();
-  const templates = await listServiceTemplates();
-  const docTemplates = await prisma.documentTemplate.findMany({
-    orderBy: { type: "asc" },
-  });
-  const permissions = await prisma.aIPermissionSetting.findMany({
-    orderBy: { actionName: "asc" },
-  });
+  // Self-heal SQLite tables if not yet created on this deployment
+  await ensureOnboardingDatabaseSchema();
+
+  let templates: any[] = [];
+  let docTemplates: any[] = [];
+  let permissions: any[] = [];
+
+  try {
+    await ensureDocumentTemplates();
+    templates = await listServiceTemplates();
+  } catch (err) {
+    console.error("[OnboardingAdminPage] Failed to load service templates:", err);
+  }
+
+  try {
+    docTemplates = await prisma.documentTemplate.findMany({
+      orderBy: { type: "asc" },
+    });
+  } catch (err) {
+    console.error("[OnboardingAdminPage] Failed to load doc templates:", err);
+  }
+
+  try {
+    permissions = await prisma.aIPermissionSetting.findMany({
+      orderBy: { actionName: "asc" },
+    });
+  } catch (err) {
+    console.error("[OnboardingAdminPage] Failed to load AI permissions:", err);
+  }
 
   return (
     <div className="space-y-10 max-w-[1400px] mx-auto pb-24 animate-in fade-in duration-300">
@@ -54,7 +77,7 @@ export default async function OnboardingAdminPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {templates.map((tpl) => {
+          {templates.map((tpl: any) => {
             const docs = JSON.parse(tpl.requiredDocumentsJson || "[]");
             const sigs = JSON.parse(tpl.requiredSignaturesJson || "[]");
             const payment = JSON.parse(tpl.paymentRequirementsJson || "{}");
@@ -108,7 +131,7 @@ export default async function OnboardingAdminPage() {
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {docTemplates.map((doc) => {
+          {docTemplates.map((doc: any) => {
             const vars = JSON.parse(doc.variablesJson || "[]");
 
             return (

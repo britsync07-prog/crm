@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "node server.js",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && node scripts/init-onboarding-db.cjs && next build",
     "start": "NODE_ENV=production node server.js",
     "lint": "eslint",
     "admin:create": "tsx scripts/create-admin.ts",
@@ -15,7 +15,7 @@
     "inbox:check": "tsx scripts/check-saved-inbox.ts",
     "inbox:body": "tsx scripts/check-saved-body.ts",
     "mcp": "tsx src/mcp/server.ts",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && node scripts/init-onboarding-db.cjs",
     "setup:livekit": "mkdir -p livekit && cd livekit && wget -qO- https://github.com/livekit/livekit/releases/download/v1.9.12/livekit_1.9.12_linux_amd64.tar.gz | tar -xz livekit-server"
   },
   "dependencies": {

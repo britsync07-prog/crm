@@ -7,6 +7,8 @@ import {
   generateClientOnboardingSummary,
 } from "@/lib/onboarding/ai-engine";
 
+import { ensureOnboardingDatabaseSchema } from "@/lib/onboarding/db-init";
+
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingDetailPage({
@@ -16,6 +18,8 @@ export default async function OnboardingDetailPage({
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
+
+  await ensureOnboardingDatabaseSchema();
 
   const { id } = await params;
 

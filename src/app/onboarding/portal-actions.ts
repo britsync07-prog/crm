@@ -7,6 +7,8 @@ import { getProgressiveQuestionsForClient, calculateOnboardingHealth } from "@/l
 import { logOnboardingAudit } from "@/lib/onboarding/audit";
 import crypto from "crypto";
 
+import { ensureOnboardingDatabaseSchema } from "@/lib/onboarding/db-init";
+
 function safeRevalidate(path: string) {
   try {
     revalidatePath(path);
@@ -18,6 +20,8 @@ function safeRevalidate(path: string) {
  */
 export async function getClientOnboardingData(token: string) {
   if (!token) return { success: false, error: "Invalid token" };
+
+  await ensureOnboardingDatabaseSchema();
 
   const instance = await prisma.onboardingInstance.findUnique({
     where: { secureToken: token },
