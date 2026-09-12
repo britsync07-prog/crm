@@ -15,8 +15,11 @@ export default function PricingPage() {
   const router = useRouter();
   const [plans, setPlans] = useState<PublicPricingPlan[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
-  const [subStatus, setSubStatus] = useState<string>("free");
+  const [subStatus, setSubStatus] = useState<string>("trial");
+  const [userPlan, setUserPlan] = useState<string | null>(null);
+  const [isTrial, setIsTrial] = useState<boolean>(true);
   const [loading, setLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/pricing")
@@ -28,7 +31,9 @@ export default function PricingPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.id) setUserId(data.id);
-        setSubStatus(data.subscriptionStatus || "free");
+        setSubStatus(data.subscriptionStatus || "trial");
+        setUserPlan(data.plan || null);
+        setIsTrial(data.isTrial ?? true);
       })
       .catch(() => {});
   }, []);
@@ -43,6 +48,7 @@ export default function PricingPage() {
       return;
     }
     setLoading(plan.slug);
+    setError(null);
     try {
       const res = await fetch("/api/stripe/create-checkout", {
         method: "POST",
@@ -50,14 +56,19 @@ export default function PricingPage() {
         body: JSON.stringify({ plan: plan.slug }),
       });
       const data = await res.json();
-      if (data.url) window.location.assign(data.url);
+      if (data.url) {
+        window.location.assign(data.url);
+      } else {
+        setError(data.error || "Failed to start checkout session.");
+      }
     } catch (err) {
       console.error(err);
+      setError("Network error initiating checkout.");
     }
     setLoading(null);
   }
 
-  const isSubscribed = subStatus === "active" || subStatus === "trialing";
+  const isSubscribed = !isTrial && subStatus === "active";
   const featuredOffer = plans.find((plan) => plan.activeOffer)?.activeOffer;
   const defaultTrialDays = plans.length ? Math.max(...plans.map((plan) => plan.trialDays), 0) : 3;
 
@@ -75,6 +86,11 @@ export default function PricingPage() {
           <p className="mx-auto max-w-2xl text-base font-medium text-zinc-400 sm:text-xl">
             Choose the plan that fits your team. Upgrade anytime.
           </p>
+          {error && (
+            <div className="mx-auto max-w-md p-3.5 rounded-2xl bg-red-950/60 border border-red-800 text-red-200 text-xs font-bold text-center">
+              {error}
+            </div>
+          )}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
@@ -155,12 +171,14 @@ export default function PricingPage() {
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : !userId ? (
                     `Start ${plan.trialDays || defaultTrialDays}-day trial`
-                  ) : isSubscribed ? (
-                    "Already subscribed"
+                  ) : isTrial ? (
+                    `Upgrade to ${plan.name}`
+                  ) : isSubscribed && plan.slug === userPlan ? (
+                    "Current Plan"
                   ) : isCustom ? (
                     "Contact sales"
                   ) : (
-                    plan.ctaLabel || "Subscribe"
+                    `Upgrade to ${plan.name}`
                   )}
                 </button>
               </div>

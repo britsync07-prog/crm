@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { logoutAction } from "@/app/auth-actions";
 import { Bell, Search, User, Clock } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import UpgradeModal from "@/components/billing/UpgradeModal";
 
 export default function TopNavbar({
   session,
@@ -13,6 +15,7 @@ export default function TopNavbar({
   subscription?: any;
 }) {
   const pathname = usePathname();
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   // Define marketing/public route prefixes
   const isMarketingRoute =
@@ -39,29 +42,32 @@ export default function TopNavbar({
   }
 
   return (
-    <header className="h-16 border-b border-blue-100 dark:border-blue-900/30 bg-white/80 dark:bg-slate-950/80 backdrop-blur px-8 flex items-center justify-between sticky top-0 z-30">
-      <div className="flex items-center gap-4 flex-1 text-zinc-900 dark:text-zinc-50">
-        <div className="relative max-w-md w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            placeholder="Search leads, customers, meetings..."
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 text-xs focus:ring-2 focus:ring-[#012169] transition-all"
-          />
+    <>
+      <header className="h-16 border-b border-blue-100 dark:border-blue-900/30 bg-white/80 dark:bg-slate-950/80 backdrop-blur px-8 flex items-center justify-between sticky top-0 z-30">
+        <div className="flex items-center gap-4 flex-1 text-zinc-900 dark:text-zinc-50">
+          <div className="relative max-w-md w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              placeholder="Search leads, customers, meetings..."
+              className="w-full pl-10 pr-4 py-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 text-xs focus:ring-2 focus:ring-[#012169] transition-all"
+            />
+          </div>
         </div>
-      </div>
 
-      <div className="flex items-center gap-5">
-        {/* Trial Countdown Pill */}
-        {subscription?.isTrial && !subscription?.isExpired && (
-          <Link
-            href="/pricing"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 text-[#012169] dark:text-blue-300 text-xs font-black uppercase tracking-wider hover:bg-blue-100 transition-colors shadow-sm"
-          >
-            <Clock className="w-3.5 h-3.5 text-[#012169] dark:text-blue-400" />
-            <span>Trial: {subscription.daysRemaining}d left</span>
-            <span className="text-[10px] text-red-600 font-bold ml-1 uppercase">Upgrade</span>
-          </Link>
-        )}
+        <div className="flex items-center gap-5">
+          {/* Trial Countdown Pill: Click to open interactive Upgrade Modal */}
+          {subscription?.isTrial && !subscription?.isExpired && (
+            <button
+              onClick={() => setIsUpgradeModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 text-[#012169] dark:text-blue-300 text-xs font-black uppercase tracking-wider hover:bg-blue-100 hover:border-blue-300 transition-all shadow-sm cursor-pointer"
+            >
+              <Clock className="w-3.5 h-3.5 text-[#012169] dark:text-blue-400" />
+              <span>Trial: {subscription.daysRemaining}d left</span>
+              <span className="text-[10px] text-red-600 dark:text-red-400 font-bold ml-1 uppercase bg-red-50 dark:bg-red-950/60 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-900">
+                Upgrade
+              </span>
+            </button>
+          )}
 
         <Link
           href="/inbox"
@@ -100,5 +106,14 @@ export default function TopNavbar({
         </div>
       </div>
     </header>
+
+      {/* Interactive Upgrade Modal */}
+      <UpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        daysRemaining={subscription?.daysRemaining ?? 3}
+        currentPlan={subscription?.plan ?? "personal"}
+      />
+    </>
   );
 }
