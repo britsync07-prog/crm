@@ -96,7 +96,7 @@ const NavContent = ({ pathname, setIsOpen }: { pathname: string; setIsOpen: (val
   </>
 );
 
-export default function Sidebar() {
+export default function Sidebar({ subscription }: { subscription?: any }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -116,7 +116,7 @@ export default function Sidebar() {
     pathname.startsWith("/onboarding/portal/") ||
     pathname.startsWith("/onboarding/sign/");
 
-  if (isMarketingRoute) {
+  if (isMarketingRoute || (subscription?.isExpired && !subscription?.isAdmin)) {
     return null;
   }
 

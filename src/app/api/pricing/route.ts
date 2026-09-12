@@ -1,7 +1,24 @@
 import { NextResponse } from "next/server";
-import { getPublicPricingPlans } from "@/lib/pricing";
+import { getPricingOffers, getPublicPricingPlans } from "@/lib/pricing";
 
 export async function GET() {
-  const plans = await getPublicPricingPlans();
-  return NextResponse.json({ plans });
+  const [plans, offers] = await Promise.all([
+    getPublicPricingPlans(),
+    getPricingOffers({ activeOnly: true }),
+  ]);
+
+  const now = Date.now();
+  const activeOffers = offers.filter((o) => {
+    const starts = new Date(o.startsAt).getTime();
+    const ends = new Date(o.endsAt).getTime();
+    return o.isActive && starts <= now && ends >= now;
+  });
+
+  const featuredOffer = activeOffers[0] || null;
+
+  return NextResponse.json({
+    plans,
+    offers: activeOffers,
+    featuredOffer,
+  });
 }

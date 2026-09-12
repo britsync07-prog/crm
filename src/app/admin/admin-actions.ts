@@ -544,24 +544,88 @@ export async function updateUserStatusAction(userId: string, status: string): Pr
   return { success: true };
 }
 
-export async function updateUserSubscriptionAction(userId: string, plan: string): Promise<{ success: boolean; error?: string }> {
-  await requireAdmin();
+export async function updateUserSubscriptionAction(
+  userId: string,
+  options: {
+    plan?: string;
+    subscriptionStatus?: string;
+    trialDaysToAdd?: number;
+    customEndDate?: string;
+    seatLimit?: number;
+  } | string
+): Promise<{ success: boolean; error?: string; message?: string }> {
+  const session = await requireAdmin();
 
-  const org = await prisma.organization.findFirst({
-    where: { ownerId: userId },
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      organizationId: true,
+      ownedOrganization: { select: { id: true, plan: true, subscriptionStatus: true, subscriptionEndDate: true } },
+      memberProfile: { select: { organization: { select: { id: true, plan: true, subscriptionStatus: true, subscriptionEndDate: true } } } },
+    },
   });
 
-  if (!org) return { success: false, error: "User has no organization" };
+  if (!user) return { success: false, error: "User not found" };
 
-  const seatLimit = plan === "free" ? 1 : plan === "personal" ? 5 : plan === "business" ? 20 : 100;
+  const org =
+    user.ownedOrganization ||
+    user.memberProfile?.organization ||
+    (user.organizationId ? await prisma.organization.findUnique({ where: { id: user.organizationId } }) : null);
+
+  if (!org) return { success: false, error: "User has no associated organization" };
+
+  const opts = typeof options === "string" ? { plan: options } : options;
+  const updateData: any = {};
+  let actionDetail = `Updated subscription for user ${userId}:`;
+
+  if (opts.plan) {
+    updateData.plan = opts.plan;
+    updateData.seatLimit = opts.plan === "personal" ? 2 : opts.plan === "business" ? 5 : 100;
+    actionDetail += ` plan=${opts.plan};`;
+  }
+
+  if (opts.seatLimit) {
+    updateData.seatLimit = opts.seatLimit;
+  }
+
+  if (opts.subscriptionStatus) {
+    updateData.subscriptionStatus = opts.subscriptionStatus;
+    actionDetail += ` status=${opts.subscriptionStatus};`;
+  }
+
+  if (opts.customEndDate) {
+    const parsedEnd = new Date(opts.customEndDate);
+    if (!Number.isNaN(parsedEnd.getTime())) {
+      updateData.subscriptionEndDate = parsedEnd;
+      actionDetail += ` endDate=${parsedEnd.toISOString()};`;
+    }
+  } else if (opts.trialDaysToAdd && opts.trialDaysToAdd > 0) {
+    const currentEnd = org.subscriptionEndDate ? new Date(org.subscriptionEndDate) : new Date();
+    const baseTime = currentEnd.getTime() > Date.now() ? currentEnd.getTime() : Date.now();
+    const newEnd = new Date(baseTime + opts.trialDaysToAdd * 24 * 60 * 60 * 1000);
+    updateData.subscriptionEndDate = newEnd;
+    updateData.subscriptionStatus = "trial";
+    actionDetail += ` trial +${opts.trialDaysToAdd}d until ${newEnd.toISOString()};`;
+  }
 
   await prisma.organization.update({
     where: { id: org.id },
-    data: { plan, seatLimit, subscriptionStatus: plan === "free" ? "free" : "active" },
+    data: updateData,
+  });
+
+  await prisma.activityLog.create({
+    data: {
+      userId: session.id,
+      action: "ADMIN_UPDATE_USER_SUBSCRIPTION",
+      details: actionDetail,
+    },
   });
 
   revalidatePath("/admin/users");
-  return { success: true };
+  revalidatePath(`/admin/users/${userId}`);
+  revalidatePath("/admin/organizations");
+  return { success: true, message: "Subscription updated successfully" };
 }
 
 export async function deleteUserAction(userId: string): Promise<{ success: boolean; error?: string }> {
@@ -792,6 +856,46 @@ export async function savePricingOfferAction(
 
   revalidatePath("/admin/pricing");
   revalidatePath("/pricing");
+  revalidatePath("/landing");
   revalidatePath("/settings/billing");
   return { success: true, error: null };
 }
+
+export async function deletePricingOfferAction(offerId: string): Promise<{ success: boolean; error: string | null }> {
+  const session = await requireAdmin();
+  if (!offerId) return { success: false, error: "Offer ID is required" };
+
+  await ensurePricingTables();
+  await prisma.$executeRawUnsafe(`DELETE FROM "PricingOffer" WHERE "id" = ?`, offerId);
+
+  await prisma.activityLog.create({
+    data: { userId: session.id, action: "ADMIN_DELETE_PRICING_OFFER", details: `Deleted offer ${offerId}` },
+  });
+
+  revalidatePath("/admin/pricing");
+  revalidatePath("/pricing");
+  revalidatePath("/landing");
+  return { success: true, error: null };
+}
+
+export async function togglePricingOfferAction(offerId: string, isActive: boolean): Promise<{ success: boolean; error: string | null }> {
+  const session = await requireAdmin();
+  if (!offerId) return { success: false, error: "Offer ID is required" };
+
+  await ensurePricingTables();
+  await prisma.$executeRawUnsafe(
+    `UPDATE "PricingOffer" SET "isActive" = ?, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = ?`,
+    isActive ? 1 : 0,
+    offerId
+  );
+
+  await prisma.activityLog.create({
+    data: { userId: session.id, action: "ADMIN_TOGGLE_PRICING_OFFER", details: `Toggled offer ${offerId} to ${isActive}` },
+  });
+
+  revalidatePath("/admin/pricing");
+  revalidatePath("/pricing");
+  revalidatePath("/landing");
+  return { success: true, error: null };
+}
+

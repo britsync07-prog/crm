@@ -43,7 +43,7 @@ const defaultPlans = [
     seatLimit: 2,
     isPopular: false,
     sortOrder: 10,
-    trialDays: 14,
+    trialDays: 3,
     features: [
       "Unlimited AI Sourcing Credits",
       "Unlimited AI Searches",
@@ -67,7 +67,7 @@ const defaultPlans = [
     seatLimit: 5,
     isPopular: true,
     sortOrder: 20,
-    trialDays: 14,
+    trialDays: 3,
     features: [
       "Unlimited AI Sourcing Credits",
       "Unlimited AI Searches",
@@ -92,7 +92,7 @@ const defaultPlans = [
     seatLimit: null,
     isPopular: false,
     sortOrder: 30,
-    trialDays: 14,
+    trialDays: 3,
     features: [
       "Everything in Business",
       "Unlimited team members",
@@ -130,7 +130,7 @@ export async function ensurePricingTables() {
       "isActive" BOOLEAN NOT NULL DEFAULT true,
       "isPopular" BOOLEAN NOT NULL DEFAULT false,
       "sortOrder" INTEGER NOT NULL DEFAULT 0,
-      "trialDays" INTEGER NOT NULL DEFAULT 14,
+      "trialDays" INTEGER NOT NULL DEFAULT 3,
       "ctaLabel" TEXT,
       "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP

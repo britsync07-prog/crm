@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
 import Sidebar from "@/components/Sidebar";
 import TopNavbar from "@/components/TopNavbar";
+import TrialGate from "@/components/auth/TrialGate";
 import { getSession } from "@/lib/auth";
+import { getUserSubscription } from "@/lib/subscription";
 import { absoluteUrl, brand, organizationJsonLd, softwareApplicationJsonLd } from "@/lib/seo";
 import "./globals.css";
+
 export const metadata: Metadata = {
   metadataBase: new URL(absoluteUrl()),
   applicationName: brand.name,
@@ -59,6 +62,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getSession();
+  const subscription = session?.id ? await getUserSubscription(session.id) : null;
 
   return (
     <html lang="en" suppressHydrationWarning className="scroll-smooth">
@@ -74,15 +78,17 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd()) }}
         />
         <Toaster position="top-right" />
-        <div className="flex min-h-screen">
-          <Sidebar />
-          <div className="flex-1 flex flex-col min-h-screen w-full">
-            <TopNavbar session={session} />
-            <main className="flex-1">
-              {children}
-            </main>
+        <TrialGate subscription={subscription}>
+          <div className="flex min-h-screen">
+            <Sidebar subscription={subscription} />
+            <div className="flex-1 flex flex-col min-h-screen w-full">
+              <TopNavbar session={session} subscription={subscription} />
+              <main className="flex-1">
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
+        </TrialGate>
       </body>
     </html>
   );

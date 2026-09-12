@@ -2,7 +2,15 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Users, Search, Loader2, Shield, Ban, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, Search, Loader2, ChevronLeft, ChevronRight, Clock, ShieldCheck, AlertCircle } from "lucide-react";
+
+interface OrgBrief {
+  id: string;
+  name: string;
+  plan: string;
+  subscriptionStatus: string;
+  subscriptionEndDate: string | null;
+}
 
 interface User {
   id: string;
@@ -13,7 +21,8 @@ interface User {
   bannedAt: string | null;
   createdAt: string;
   organizationId: string | null;
-  memberProfile: { organization: { name: string; plan: string } } | null;
+  ownedOrganization: OrgBrief | null;
+  memberProfile: { organization: OrgBrief } | null;
 }
 
 export default function AdminUsersPage() {
@@ -54,11 +63,75 @@ export default function AdminUsersPage() {
 
   const statusBadge = (status: string) => {
     switch (status) {
-      case "ACTIVE": return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-      case "BANNED": return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
-      case "SUSPENDED": return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300";
-      default: return "bg-zinc-100 text-zinc-500";
+      case "ACTIVE":
+        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+      case "BANNED":
+        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+      case "SUSPENDED":
+        return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300";
+      default:
+        return "bg-zinc-100 text-zinc-500";
     }
+  };
+
+  const subscriptionBadge = (user: User) => {
+    if (user.role === "ADMIN") {
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+          <ShieldCheck className="w-3 h-3" /> Admin
+        </span>
+      );
+    }
+
+    const org = user.ownedOrganization || user.memberProfile?.organization;
+    if (!org) {
+      return <span className="text-[10px] font-bold text-zinc-400">No Org</span>;
+    }
+
+    const now = Date.now();
+    const status = (org.subscriptionStatus || "").toLowerCase();
+    const plan = org.plan || "personal";
+
+    if (status === "active") {
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300">
+          Active ({plan})
+        </span>
+      );
+    }
+
+    if (status === "trial") {
+      const end = org.subscriptionEndDate ? new Date(org.subscriptionEndDate).getTime() : 0;
+      const msLeft = end - now;
+      const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+
+      if (daysLeft > 0) {
+        return (
+          <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+            <Clock className="w-3 h-3" /> Trial ({daysLeft}d left)
+          </span>
+        );
+      }
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300">
+          <AlertCircle className="w-3 h-3" /> Trial Expired
+        </span>
+      );
+    }
+
+    if (status === "expired" || status === "canceled" || status === "free") {
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300">
+          <AlertCircle className="w-3 h-3" /> Expired
+        </span>
+      );
+    }
+
+    return (
+      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+        {status}
+      </span>
+    );
   };
 
   return (
@@ -77,7 +150,10 @@ export default function AdminUsersPage() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
         <input
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setPage(1);
+          }}
           placeholder="Search by name or email..."
           className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-[#012169] shadow-sm"
         />
@@ -98,14 +174,19 @@ export default function AdminUsersPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-zinc-100 dark:border-zinc-800">
-                    {["User", "Email", "Role", "Status", "Organization", "Joined", ""].map((h) => (
-                      <th key={h} className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-wider text-zinc-400">{h}</th>
+                    {["User", "Email", "Role", "Status", "Organization", "Subscription", "Joined", ""].map((h) => (
+                      <th key={h} className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                        {h}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((u) => (
-                    <tr key={u.id} className="border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                    <tr
+                      key={u.id}
+                      className="border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-[#012169]/10 flex items-center justify-center">
@@ -116,14 +197,25 @@ export default function AdminUsersPage() {
                       </td>
                       <td className="px-6 py-4 text-sm text-zinc-500">{u.email}</td>
                       <td className="px-6 py-4">
-                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                          u.role === "ADMIN" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
-                        }`}>{u.role}</span>
+                        <span
+                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                            u.role === "ADMIN"
+                              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                              : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
+                          }`}
+                        >
+                          {u.role}
+                        </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${statusBadge(u.status)}`}>{u.status}</span>
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${statusBadge(u.status)}`}>
+                          {u.status}
+                        </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-zinc-500">{u.memberProfile?.organization?.name || "—"}</td>
+                      <td className="px-6 py-4 text-sm text-zinc-500">
+                        {u.ownedOrganization?.name || u.memberProfile?.organization?.name || "—"}
+                      </td>
+                      <td className="px-6 py-4">{subscriptionBadge(u)}</td>
                       <td className="px-6 py-4 text-sm text-zinc-400">{new Date(u.createdAt).toLocaleDateString()}</td>
                       <td className="px-6 py-4">
                         <Link
@@ -141,12 +233,22 @@ export default function AdminUsersPage() {
 
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-6 py-4 border-t border-zinc-100 dark:border-zinc-800">
-                <span className="text-xs text-zinc-400">Page {page} of {totalPages}</span>
+                <span className="text-xs text-zinc-400">
+                  Page {page} of {totalPages}
+                </span>
                 <div className="flex gap-2">
-                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 transition-colors">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 transition-colors"
+                  >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 transition-colors">
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 transition-colors"
+                  >
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>

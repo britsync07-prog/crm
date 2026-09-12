@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getUserSubscription } from "@/lib/subscription";
 
 export async function GET() {
   const session = await getSession();
@@ -8,30 +9,29 @@ export async function GET() {
     return NextResponse.json({ id: null });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.id },
-    select: { id: true, name: true, email: true, role: true },
-  });
+  const [user, sub] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session.id },
+      select: { id: true, name: true, email: true, role: true, organizationId: true },
+    }),
+    getUserSubscription(session.id),
+  ]);
 
-  const member = await prisma.organizationMember.findFirst({
-    where: { userId: session.id },
-    include: {
-      organization: {
-        select: {
-          plan: true,
-          subscriptionStatus: true,
-          subscriptionEndDate: true,
-          seatLimit: true,
-        },
-      },
-    },
-  });
+  if (!user) {
+    return NextResponse.json({ id: null });
+  }
 
   return NextResponse.json({
     ...user,
-    subscriptionStatus: member?.organization?.subscriptionStatus ?? "free",
-    subscriptionEndDate: member?.organization?.subscriptionEndDate ?? null,
-    plan: member?.organization?.plan ?? "free",
-    seatLimit: member?.organization?.seatLimit ?? 1,
+    subscriptionStatus: sub.subscriptionStatus,
+    subscriptionEndDate: sub.subscriptionEndDate?.toISOString() ?? null,
+    plan: sub.plan,
+    isExpired: sub.isExpired,
+    isTrial: sub.isTrial,
+    isActive: sub.isActive,
+    isAdmin: sub.isAdmin,
+    daysRemaining: sub.daysRemaining,
+    organizationId: sub.organizationId,
+    organizationName: sub.organizationName,
   });
 }

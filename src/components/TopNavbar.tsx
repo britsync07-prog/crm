@@ -1,11 +1,17 @@
 "use client";
 
 import { logoutAction } from "@/app/auth-actions";
-import { Bell, Search, User } from "lucide-react";
+import { Bell, Search, User, Clock } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 
-export default function TopNavbar({ session }: { session: any }) {
+export default function TopNavbar({
+  session,
+  subscription,
+}: {
+  session: any;
+  subscription?: any;
+}) {
   const pathname = usePathname();
 
   // Define marketing/public route prefixes
@@ -14,18 +20,21 @@ export default function TopNavbar({ session }: { session: any }) {
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/pricing" ||
+    pathname === "/contact" ||
+    pathname === "/terms" ||
+    pathname === "/privacy" ||
     pathname.startsWith("/f/") ||
-    pathname.startsWith("/meet/") || 
+    pathname.startsWith("/meet/") ||
     pathname.startsWith("/mcp/docs") ||
-    pathname.startsWith("/features/") || 
-    pathname.startsWith("/solutions/") || 
-    pathname.startsWith("/vision/") || 
+    pathname.startsWith("/features/") ||
+    pathname.startsWith("/solutions/") ||
+    pathname.startsWith("/vision/") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/onboarding/portal/") ||
     pathname.startsWith("/onboarding/sign/");
 
-  // Hide TopNavbar on marketing / client onboarding portal routes
-  if (isMarketingRoute) {
+  // Hide TopNavbar on marketing or when subscription has expired for non-admins
+  if (isMarketingRoute || (subscription?.isExpired && !subscription?.isAdmin)) {
     return null;
   }
 
@@ -41,14 +50,26 @@ export default function TopNavbar({ session }: { session: any }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-5">
+        {/* Trial Countdown Pill */}
+        {subscription?.isTrial && !subscription?.isExpired && (
+          <Link
+            href="/pricing"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 text-[#012169] dark:text-blue-300 text-xs font-black uppercase tracking-wider hover:bg-blue-100 transition-colors shadow-sm"
+          >
+            <Clock className="w-3.5 h-3.5 text-[#012169] dark:text-blue-400" />
+            <span>Trial: {subscription.daysRemaining}d left</span>
+            <span className="text-[10px] text-red-600 font-bold ml-1 uppercase">Upgrade</span>
+          </Link>
+        )}
+
         <Link
           href="/inbox"
           className="relative p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors"
           title="Open inbox"
         >
           <Bell className="w-5 h-5 text-slate-500" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-[#c8102e] rounded-full border-2 border-white dark:border-slate-950"></span>
+          <span className="absolute top-2 right-2 w-2 h-2 bg-[#c8102e] rounded-full border-2 border-white dark:border-slate-950" />
         </Link>
 
         <div className="flex items-center gap-3 border-l border-blue-100 dark:border-blue-900/30 pl-6">

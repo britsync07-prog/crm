@@ -59,7 +59,7 @@ export default function PricingPage() {
 
   const isSubscribed = subStatus === "active" || subStatus === "trialing";
   const featuredOffer = plans.find((plan) => plan.activeOffer)?.activeOffer;
-  const defaultTrialDays = plans.length ? Math.max(...plans.map((plan) => plan.trialDays), 0) : 14;
+  const defaultTrialDays = plans.length ? Math.max(...plans.map((plan) => plan.trialDays), 0) : 3;
 
   return (
     <div className="min-h-screen bg-[#030303] text-white">

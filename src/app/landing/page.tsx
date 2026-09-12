@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import LandingPromoBanner from "@/components/landing/LandingPromoBanner";
+import LandingPricingSection from "@/components/landing/LandingPricingSection";
 import { 
   CheckCircle2, 
   Zap, 
@@ -46,6 +48,7 @@ const FeatureCard = ({ icon: Icon, title, desc, tag }: any) => (
 export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-[#030303] text-zinc-100 overflow-x-hidden selection:bg-[#012169] selection:text-white font-sans antialiased">
+      <LandingPromoBanner />
       {/* Immersive Background */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-[#012169]/10 blur-[160px] rounded-full"></div>
@@ -602,115 +605,7 @@ export default function LandingPage() {
         </section>
 
         {/* Pricing Architecture */}
-        <section id="pricing" className="container mx-auto px-6 py-40 space-y-32">
-          <div className="text-center space-y-6">
-            <h2 className="text-5xl md:text-8xl font-black tracking-tighter text-white uppercase italic">The Economics.</h2>
-            <p className="text-xl text-zinc-500 max-w-2xl mx-auto font-medium tracking-tight">Choose the plan that fits your team. Upgrade anytime.</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {[
-              {
-                slug: "personal",
-                name: "Personal",
-                price: "$79",
-                seats: "2 seats",
-                best: false,
-                features: [
-                  "50,000 Contacts",
-                  "Unified Email Inbox",
-                  "Pipeline Deal Tracking",
-                  "Contact Timeline",
-                  "Task Automation",
-                  "Team Collaboration",
-                  "Email Sync (Gmail/Outlook)",
-                ],
-              },
-              {
-                slug: "business",
-                name: "Business",
-                price: "$149",
-                seats: "5 seats",
-                best: true,
-                features: [
-                  "Everything in Personal",
-                  "5 Team Members",
-                  "Advanced Pipeline Views",
-                  "AI-Powered Insights",
-                  "Custom Stages & Fields",
-                  "Activity Dashboard",
-                  "Priority Support",
-                ],
-              },
-              {
-                slug: "enterprise",
-                name: "Enterprise",
-                price: "Custom",
-                seats: "Unlimited",
-                best: false,
-                features: [
-                  "Everything in Business",
-                  "Unlimited Team Members",
-                  "SSO & SAML",
-                  "Custom Integrations",
-                  "Dedicated Success Manager",
-                  "SLA Guarantee",
-                  "24/7 Phone Support",
-                ],
-              },
-            ].map((p) => (
-              <div
-                key={p.slug}
-                className={`p-10 rounded-[40px] flex flex-col justify-between relative overflow-hidden ${
-                  p.best
-                    ? "bg-[#012169] text-white shadow-[0_40px_100px_-20px_rgba(79,70,229,0.6)] scale-105"
-                    : "bg-white/5 border border-white/10"
-                }`}
-              >
-                {p.best && (
-                  <div className="absolute top-0 right-0 p-8 opacity-10">
-                    <Sparkles className="w-32 h-32 rotate-12" />
-                  </div>
-                )}
-                <div className="space-y-8 relative z-10">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className={`text-2xl font-black italic ${p.best ? "text-white" : ""}`}>{p.name}</h3>
-                      <p className={`text-[10px] font-black uppercase tracking-widest mt-1 ${p.best ? "text-blue-200" : "text-zinc-500"}`}>{p.seats}</p>
-                    </div>
-                    {p.best && (
-                      <span className="text-[8px] font-black uppercase tracking-[0.3em] bg-white/20 px-3 py-1.5 rounded-full backdrop-blur-md">Best Value</span>
-                    )}
-                  </div>
-                  <div className="flex items-end gap-1">
-                    <span className={`text-5xl font-black ${p.best ? "text-white" : ""}`}>{p.price}</span>
-                    {p.price !== "Custom" && (
-                      <span className={`font-bold mb-2 text-sm ${p.best ? "text-blue-200" : "text-zinc-400"}`}>/mo</span>
-                    )}
-                  </div>
-                  <div className={`h-px ${p.best ? "bg-white/20" : "bg-white/10"}`} />
-                  <ul className="space-y-4">
-                    {p.features.map((f) => (
-                      <li key={f} className={`flex items-center gap-3 text-[13px] font-bold ${p.best ? "text-white" : "text-zinc-300"}`}>
-                        <CheckCircle2 className={`w-4 h-4 shrink-0 ${p.best ? "text-white" : "text-[#012169]"}`} /> {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <Link
-                  href={p.slug === "enterprise" ? "mailto:sales@britsyncai.com" : "/signup"}
-                  className={`w-full mt-10 py-5 rounded-[20px] text-center font-black uppercase tracking-[0.2em] text-[10px] transition-all ${
-                    p.best
-                      ? "bg-white text-[#012169] hover:scale-95 shadow-2xl"
-                      : "bg-[#012169] text-white hover:bg-[#012169]/90"
-                  }`}
-                >
-                  {p.slug === "enterprise" ? "Contact Sales" : "Start Free Trial"}
-                </Link>
-              </div>
-            ))}
-          </div>
-        </section>
+        <LandingPricingSection />
 
         {/* FAQ Section */}
         <section className="container mx-auto px-6 py-40 border-t border-white/5">

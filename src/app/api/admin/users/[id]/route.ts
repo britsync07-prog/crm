@@ -28,12 +28,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         select: {
           role: true,
           organization: {
-            select: { id: true, name: true, plan: true, seatLimit: true, subscriptionStatus: true },
+            select: { id: true, name: true, plan: true, seatLimit: true, subscriptionStatus: true, subscriptionEndDate: true, createdAt: true },
           },
         },
       },
       ownedOrganization: {
-        select: { id: true, name: true, plan: true, seatLimit: true, subscriptionStatus: true },
+        select: { id: true, name: true, plan: true, seatLimit: true, subscriptionStatus: true, subscriptionEndDate: true, createdAt: true },
       },
       employeeProfile: { select: { department: true, position: true, status: true } },
       activityLogs: { orderBy: { createdAt: "desc" }, take: 20 },

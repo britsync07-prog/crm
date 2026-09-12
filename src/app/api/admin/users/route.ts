@@ -37,8 +37,27 @@ export async function GET(req: NextRequest) {
         bannedAt: true,
         createdAt: true,
         organizationId: true,
+        ownedOrganization: {
+          select: {
+            id: true,
+            name: true,
+            plan: true,
+            subscriptionStatus: true,
+            subscriptionEndDate: true,
+          },
+        },
         memberProfile: {
-          select: { organization: { select: { name: true, plan: true } } },
+          select: {
+            organization: {
+              select: {
+                id: true,
+                name: true,
+                plan: true,
+                subscriptionStatus: true,
+                subscriptionEndDate: true,
+              },
+            },
+          },
         },
       },
     }),

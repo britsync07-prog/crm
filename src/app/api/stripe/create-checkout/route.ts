@@ -29,8 +29,10 @@ export async function POST(req: Request) {
         data: {
           name: `${user.name || "My"}'s Organization`,
           ownerId: user.id,
-          plan: "free",
-          seatLimit: 1,
+          plan: "personal",
+          seatLimit: 2,
+          subscriptionStatus: "trial",
+          subscriptionEndDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
         },
       });
       orgId = org.id;

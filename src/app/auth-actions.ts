@@ -88,12 +88,15 @@ export async function signupAction(prevState: any, formData: FormData) {
   }
 
   if (!user.organizationId) {
+    const trialEndDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
     const org = await prisma.organization.create({
       data: {
         name: `${name}'s Organization`,
         ownerId: user.id,
-        plan: "free",
-        seatLimit: 1,
+        plan: "personal",
+        seatLimit: 2,
+        subscriptionStatus: "trial",
+        subscriptionEndDate: trialEndDate,
       },
     });
 
