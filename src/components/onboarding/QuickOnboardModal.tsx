@@ -3,7 +3,7 @@
 import React, { useState, useTransition } from "react";
 import { startOnboardingForCustomerAction } from "@/app/onboarding/actions";
 import { useRouter } from "next/navigation";
-import { UserPlus, X, Sparkles } from "lucide-react";
+import { UserPlus, X, Sparkles, Bookmark } from "lucide-react";
 
 interface CustomerOption {
   id: string;
@@ -12,11 +12,18 @@ interface CustomerOption {
   email: string;
 }
 
-interface QuickOnboardModalProps {
-  customers: CustomerOption[];
+interface CustomTemplateOption {
+  id: string;
+  name: string;
 }
 
-const BLUEPRINTS = [
+interface QuickOnboardModalProps {
+  customers: CustomerOption[];
+  isAdmin?: boolean;
+  customTemplates?: CustomTemplateOption[];
+}
+
+const SYSTEM_BLUEPRINTS = [
   "AI Automation Implementation",
   "Cybersecurity Advisory & Audit",
   "TalentBridge Recruitment SOW",
@@ -26,22 +33,42 @@ const BLUEPRINTS = [
   "Custom Managed Service",
 ];
 
-export default function QuickOnboardModal({ customers }: QuickOnboardModalProps) {
+export default function QuickOnboardModal({
+  customers,
+  isAdmin = false,
+  customTemplates = [],
+}: QuickOnboardModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [selectedBlueprint, setSelectedBlueprint] = useState<string>(
+    isAdmin
+      ? "AI Automation Implementation"
+      : customTemplates[0]?.name || "Custom Client Onboarding"
+  );
+  const [customServiceName, setCustomServiceName] = useState("");
   const router = useRouter();
+
+  const isCustomNameSelected = selectedBlueprint === "__CUSTOM_NAME__";
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     const formData = new FormData(e.currentTarget);
     const customerId = formData.get("customerId") as string;
-    const serviceName = formData.get("serviceName") as string;
     const dealValue = Number(formData.get("dealValue")) || 10000;
+
+    let serviceName = selectedBlueprint;
+    if (isCustomNameSelected || !isAdmin) {
+      serviceName = (customServiceName || selectedBlueprint || "Custom Client Onboarding").trim();
+    }
 
     if (!customerId) {
       setError("Please select a client");
+      return;
+    }
+    if (!serviceName) {
+      setError("Please provide a service or template name");
       return;
     }
 
@@ -105,21 +132,70 @@ export default function QuickOnboardModal({ customers }: QuickOnboardModalProps)
                 </select>
               </div>
 
+              {/* SERVICE / TEMPLATE SELECTION: Strictly hide system blueprints for non-admins */}
               <div>
                 <label className="block text-[11px] font-bold uppercase text-zinc-500 mb-1">
-                  Service Blueprint
+                  {isAdmin ? "Service Blueprint / Template" : "Service / Custom Template"}
                 </label>
-                <select
-                  name="serviceName"
-                  defaultValue="AI Automation Implementation"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {BLUEPRINTS.map((b) => (
-                    <option key={b} value={b}>
-                      {b}
-                    </option>
-                  ))}
-                </select>
+
+                {isAdmin ? (
+                  /* Admin: Can choose system blueprints OR custom templates */
+                  <select
+                    value={selectedBlueprint}
+                    onChange={(e) => setSelectedBlueprint(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <optgroup label="System Blueprints (Admin Only)">
+                      {SYSTEM_BLUEPRINTS.map((b) => (
+                        <option key={b} value={b}>
+                          {b}
+                        </option>
+                      ))}
+                    </optgroup>
+                    {customTemplates.length > 0 && (
+                      <optgroup label="Custom User Templates">
+                        {customTemplates.map((t) => (
+                          <option key={t.id} value={t.name}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    <option value="__CUSTOM_NAME__">+ Enter Custom Service Name...</option>
+                  </select>
+                ) : (
+                  /* Non-Admin: NEVER sees system blueprints */
+                  customTemplates.length > 0 ? (
+                    <select
+                      value={selectedBlueprint}
+                      onChange={(e) => setSelectedBlueprint(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <optgroup label="My Custom Templates">
+                        {customTemplates.map((t) => (
+                          <option key={t.id} value={t.name}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <option value="__CUSTOM_NAME__">+ Enter Custom Service Name...</option>
+                    </select>
+                  ) : null
+                )}
+
+                {/* If non-admin has no templates or selected custom name, show text input */}
+                {(!isAdmin && customTemplates.length === 0) || isCustomNameSelected ? (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={customServiceName}
+                      onChange={(e) => setCustomServiceName(e.target.value)}
+                      placeholder="e.g. Website Development, Consulting Retainer"
+                      required
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                ) : null}
               </div>
 
               <div>

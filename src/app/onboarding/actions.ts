@@ -969,7 +969,7 @@ export async function getUserTemplatesAction() {
     const session = await getEffectiveSession();
     if (!session) return { success: false, error: "Unauthorized", templates: [], isAdmin: false };
 
-    const isAdmin = session.role === "ADMIN";
+    const isAdmin = session.role?.toUpperCase() === "ADMIN";
 
     let templates: any[] = [];
     if (isAdmin) {
@@ -1066,6 +1066,34 @@ export async function deleteCustomDocumentAction(documentId: string) {
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to delete document" };
+  }
+}
+
+/**
+ * Deletes a reusable custom template. System templates cannot be deleted.
+ */
+export async function deleteCustomTemplateAction(templateId: string) {
+  try {
+    const session = await getEffectiveSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
+    const tpl = await prisma.documentTemplate.findUnique({
+      where: { id: templateId },
+    });
+    if (!tpl) return { success: false, error: "Template not found" };
+
+    // Strict guard: NEVER allow deleting system blueprints
+    if (!tpl.type.startsWith("CUSTOM_")) {
+      return { success: false, error: "System templates cannot be deleted." };
+    }
+
+    await prisma.documentTemplate.delete({ where: { id: templateId } });
+
+    safeRevalidate("/onboarding/admin");
+    return { success: true };
+  } catch (err: any) {
+    console.error("[deleteCustomTemplateAction] Error:", err);
+    return { success: false, error: err.message || "Failed to delete template" };
   }
 }
 

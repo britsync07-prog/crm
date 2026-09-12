@@ -16,6 +16,8 @@ import {
   FileText,
   CreditCard,
   Zap,
+  Bookmark,
+  Shield,
 } from "lucide-react";
 import { startOnboardingForDealAction } from "./actions";
 import QuickOnboardModal from "@/components/onboarding/QuickOnboardModal";
@@ -109,6 +111,22 @@ export default async function OnboardingHubPage({
     console.error("[OnboardingHubPage] Error loading customers:", err);
   }
 
+  const isAdmin = session?.role?.toUpperCase() === "ADMIN";
+
+  let customTemplates: any[] = [];
+  try {
+    customTemplates = await prisma.documentTemplate.findMany({
+      where: {
+        isActive: true,
+        type: { startsWith: "CUSTOM_" },
+      },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+  } catch (err) {
+    console.error("[OnboardingHubPage] Error loading custom templates:", err);
+  }
+
   return (
     <div className="space-y-10 max-w-[1400px] mx-auto pb-24 animate-in fade-in duration-500">
       {/* Page Header */}
@@ -128,15 +146,27 @@ export default async function OnboardingHubPage({
         </div>
 
         <div className="flex items-center gap-3">
-          <QuickOnboardModal customers={eligibleCustomers} />
-          {session?.role === "ADMIN" && (
-            <Link
-              href="/onboarding/admin"
-              className="px-5 py-2.5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 text-xs font-black uppercase tracking-wider text-slate-700 dark:text-zinc-200 hover:bg-slate-50 transition-all shadow-sm"
-            >
-              Template Settings
-            </Link>
-          )}
+          <QuickOnboardModal
+            customers={eligibleCustomers}
+            isAdmin={isAdmin}
+            customTemplates={customTemplates}
+          />
+          <Link
+            href="/onboarding/admin"
+            className="px-5 py-2.5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 text-xs font-black uppercase tracking-wider text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all shadow-sm flex items-center gap-1.5"
+          >
+            {isAdmin ? (
+              <>
+                <Shield className="w-3.5 h-3.5 text-amber-500" />
+                <span>Template Studio (Admin)</span>
+              </>
+            ) : (
+              <>
+                <Bookmark className="w-3.5 h-3.5 text-blue-500" />
+                <span>My Templates</span>
+              </>
+            )}
+          </Link>
         </div>
       </div>
 
