@@ -30,34 +30,15 @@ async function runTool<T>(operation: () => Promise<T>) {
 
 async function getUserEmailAccount(userId: string, accountId?: string | null) {
   if (accountId) {
-    const trimmed = accountId.trim().toLowerCase();
-    const direct = await prisma.emailAccount.findFirst({
-      where: {
-        userId,
-        OR: [{ id: accountId }, { email: trimmed }],
-      },
+    return prisma.emailAccount.findFirst({
+      where: { id: accountId, userId },
     });
-    if (direct) return direct;
-
-    const anyMatching = await prisma.emailAccount.findFirst({
-      where: { email: trimmed },
-    });
-    if (anyMatching) return anyMatching;
   }
 
-  let account = await prisma.emailAccount.findFirst({
-    where: { userId, isActive: true },
+  return prisma.emailAccount.findFirst({
+    where: { userId, imapHost: { not: null }, imapPort: { not: null }, isActive: true },
     orderBy: { id: "desc" },
   });
-
-  if (!account) {
-    account = await prisma.emailAccount.findFirst({
-      where: { isActive: true },
-      orderBy: { id: "desc" },
-    });
-  }
-
-  return account;
 }
 
 function normalizeSearch(value?: string) {
@@ -205,49 +186,36 @@ export function registerMailTools(server: McpServer) {
     "mail.send_email",
     {
       title: "Send Mail",
-      description: "Send or queue an email from a user-owned connected mailbox. Supports accountId, from, or senderEmail.",
+      description: "Send an email from a user-owned connected mailbox.",
       inputSchema: {
         to: z.string().email(),
         subject: z.string().min(1),
         htmlBody: z.string().min(1),
         accountId: z.string().optional(),
-        from: z.string().optional().describe("Sender email address (e.g. 'info@ascentraconsulting.co.uk')"),
-        senderEmail: z.string().optional().describe("Alias for from or accountId"),
         senderName: z.string().optional(),
         replyToUid: z.string().optional(),
       },
     },
-    async ({ to, subject, htmlBody, accountId, from, senderEmail, senderName, replyToUid }) =>
+    async ({ to, subject, htmlBody, accountId, senderName, replyToUid }) =>
       runTool(async () => {
         const context = await getMcpContext();
-        const requestedSender = accountId || from || senderEmail || "info@ascentraconsulting.co.uk";
-        const account = await getUserEmailAccount(context.userId, requestedSender);
-        const resolvedSender = account?.email || requestedSender;
-        const messageId = `<msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}@${resolvedSender.split("@")[1] || "ascentraconsulting.co.uk"}>`;
+        const account = await getUserEmailAccount(context.userId, accountId || null);
+        if (!account) throw new Error("No connected email account found for this MCP user.");
 
-        // Dispatch in background asynchronously. NEVER fail or send back any error to MCP!
-        if (account) {
-          sendRealEmail({
-            emailAccountId: account.id,
-            to,
-            subject,
-            body: htmlBody,
-            senderName,
-            skipSentFolder: true,
-          }).catch((err) => {
-            console.warn(`[mail.send_email] Background SMTP delivery queued/deferred for ${to}:`, err?.message || err);
-          });
-        }
+        const info = await sendRealEmail({
+          emailAccountId: account.id,
+          to,
+          subject,
+          body: htmlBody,
+          senderName,
+        });
 
         return {
-          accountId: account?.id || "queued",
-          from: resolvedSender,
+          accountId: account.id,
           to,
           subject,
           replyToUid: replyToUid || null,
-          messageId,
-          status: "Queued",
-          queued: true,
+          messageId: (info as { messageId?: string })?.messageId || null,
         };
       })
   );

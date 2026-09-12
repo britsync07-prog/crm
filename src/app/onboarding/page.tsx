@@ -129,12 +129,14 @@ export default async function OnboardingHubPage({
 
         <div className="flex items-center gap-3">
           <QuickOnboardModal customers={eligibleCustomers} />
-          <Link
-            href="/onboarding/admin"
-            className="px-5 py-2.5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 text-xs font-black uppercase tracking-wider text-slate-700 dark:text-zinc-200 hover:bg-slate-50 transition-all shadow-sm"
-          >
-            Template Settings
-          </Link>
+          {session?.role === "ADMIN" && (
+            <Link
+              href="/onboarding/admin"
+              className="px-5 py-2.5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 text-xs font-black uppercase tracking-wider text-slate-700 dark:text-zinc-200 hover:bg-slate-50 transition-all shadow-sm"
+            >
+              Template Settings
+            </Link>
+          )}
         </div>
       </div>
 

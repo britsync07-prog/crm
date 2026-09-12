@@ -370,6 +370,52 @@ export async function approveActionAction(actionId: string) {
         },
       });
       executionResult = `Internal task created: ${payload.title}`;
+    } else if (action.actionType === "SEND_CUSTOM_DOCUMENT") {
+      const doc = await prisma.document.findUnique({
+        where: { id: payload.documentId },
+      });
+
+      if (doc) {
+        await prisma.document.update({
+          where: { id: doc.id },
+          data: { status: payload.requiresSignature ? "SENT" : "APPROVED" },
+        });
+
+        if (payload.requiresSignature) {
+          const sigReq = await prisma.signatureRequest.create({
+            data: {
+              onboardingId,
+              documentId: doc.id,
+              title: `Signature Request: ${doc.title}`,
+              status: "READY",
+              expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
+            },
+          });
+
+          await prisma.signatory.create({
+            data: {
+              signatureRequestId: sigReq.id,
+              name: payload.signerName || action.onboarding.client.name,
+              email: payload.signerEmail || action.onboarding.client.email,
+              role: "Client Authorized Signer",
+              status: "PENDING",
+            },
+          });
+
+          try {
+            await sendSystemEmail({
+              profile: "transactional",
+              to: payload.signerEmail || action.onboarding.client.email,
+              subject: `Action Required: Please review & sign ${doc.title}`,
+              html: `<p>Dear ${payload.signerName || action.onboarding.client.name},</p><p>A document (<strong>${doc.title}</strong>) is ready for your electronic review and digital signature.</p><p><a href="${process.env.NEXT_PUBLIC_APP_URL || ''}/onboarding/sign/${sigReq.token}">Click here to sign the document</a></p>`,
+            });
+          } catch (mailErr) {
+            console.warn("[OnboardingAction] Custom doc mail dispatch notice:", mailErr);
+          }
+        }
+      }
+
+      executionResult = `Custom document "${payload.title}" approved and released to client${payload.requiresSignature ? " with digital signature request" : ""}.`;
     }
 
     // Update action status to EXECUTED
@@ -420,6 +466,18 @@ export async function rejectActionAction(actionId: string, reason: string) {
         approvedByUserId: session.id,
       },
     });
+
+    if (action.actionType === "SEND_CUSTOM_DOCUMENT") {
+      try {
+        const payload = JSON.parse(action.payload || "{}");
+        if (payload.documentId) {
+          await prisma.document.update({
+            where: { id: payload.documentId },
+            data: { status: "REJECTED" },
+          });
+        }
+      } catch {}
+    }
 
     await logOnboardingAudit({
       onboardingId: action.onboardingId,
@@ -591,8 +649,25 @@ export async function activateClientAction(onboardingId: string) {
  */
 export async function previewDocumentAction(onboardingId: string, documentType: string) {
   try {
+    const doc = await prisma.document.findFirst({
+      where: {
+        onboardingId,
+        OR: [{ documentType }, { id: documentType }],
+      },
+      include: { versions: { orderBy: { versionNumber: "desc" }, take: 1 } },
+    });
+
+    if (doc && doc.versions.length > 0) {
+      return {
+        success: true,
+        title: doc.title,
+        content: doc.versions[0].content,
+        fileUrl: doc.versions[0].fileUrl || null,
+      };
+    }
+
     const rendered = await renderDocumentForOnboarding(onboardingId, documentType);
-    return { success: true, title: rendered.title, content: rendered.content };
+    return { success: true, title: rendered.title, content: rendered.content, fileUrl: null };
   } catch (err: any) {
     console.error("[previewDocumentAction] Error:", err);
     return { success: false, error: err.message || "Failed to preview document" };
@@ -747,6 +822,250 @@ export async function updateAIPermissionAction(
   } catch (err: any) {
     console.error("[updateAIPermissionAction] Error:", err);
     return { success: false, error: err.message || "Failed to update permission" };
+  }
+}
+
+/**
+ * Adds a user's custom document, manual file, or custom template to an onboarding instance.
+ * MANDATORY OVERSIGHT: Staged as PENDING_APPROVAL and creates an AIAction requiring approval
+ * before it can ever be released or sent to the client.
+ */
+export async function addCustomDocumentAction(
+  onboardingId: string,
+  data: {
+    title: string;
+    documentType?: string;
+    content: string;
+    fileUrl?: string;
+    fileName?: string;
+    fileSize?: number;
+    requiresSignature?: boolean;
+    signerName?: string;
+    signerEmail?: string;
+    saveAsTemplate?: boolean;
+    templateName?: string;
+  }
+) {
+  try {
+    const session = await getEffectiveSession();
+    if (!session) throw new Error("Unauthorized");
+
+    const instance = await prisma.onboardingInstance.findUnique({
+      where: { id: onboardingId },
+      include: { client: true },
+    });
+    if (!instance) return { success: false, error: "Onboarding instance not found" };
+
+    if (!data.title?.trim()) {
+      return { success: false, error: "Document title is required" };
+    }
+
+    // If user requested to save this as a reusable template
+    let templateId: string | null = null;
+    if (data.saveAsTemplate) {
+      const typeKey = `CUSTOM_${Date.now()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      try {
+        const tpl = await prisma.documentTemplate.create({
+          data: {
+            name: data.templateName?.trim() || data.title.trim(),
+            type: typeKey,
+            content: data.content || "",
+            variablesJson: "[]",
+            requiresApproval: true,
+            requiresSignature: Boolean(data.requiresSignature),
+            isActive: true,
+          },
+        });
+        templateId = tpl.id;
+      } catch (tplErr) {
+        console.warn("[addCustomDocumentAction] Could not save reusable template:", tplErr);
+      }
+    }
+
+    // 1. Create Document in PENDING_APPROVAL status (Client portal filters this out until APPROVED/SENT)
+    const doc = await prisma.document.create({
+      data: {
+        onboardingId,
+        clientId: instance.clientId,
+        templateId,
+        documentType: data.documentType || "CUSTOM_DOCUMENT",
+        title: data.title.trim(),
+        status: "PENDING_APPROVAL",
+      },
+    });
+
+    // 2. Create DocumentVersion with content and optional file attachment
+    const actorLabel = (session as any).name ? `${(session as any).name} (${session.email})` : session.email || "User";
+    const initialContent = data.content?.trim() || (data.fileName ? `[Attached File: ${data.fileName}]` : "Custom Document Content");
+
+    await prisma.documentVersion.create({
+      data: {
+        documentId: doc.id,
+        versionNumber: 1,
+        content: initialContent,
+        generatedBy: actorLabel,
+        fileUrl: data.fileUrl || null,
+      },
+    });
+
+    // 3. Create mandatory AIAction requiring approval before sending
+    const actionPayload = JSON.stringify({
+      documentId: doc.id,
+      title: doc.title,
+      documentType: doc.documentType,
+      requiresSignature: Boolean(data.requiresSignature),
+      signerName: data.signerName || instance.client.name,
+      signerEmail: data.signerEmail || instance.client.email,
+      fileName: data.fileName || null,
+      fileUrl: data.fileUrl || null,
+    });
+
+    const action = await prisma.aIAction.create({
+      data: {
+        onboardingId,
+        actionType: "SEND_CUSTOM_DOCUMENT",
+        description: `Review and approve custom document/file "${doc.title}" for ${instance.client.name} before sending`,
+        payload: actionPayload,
+        riskLevel: data.requiresSignature ? "CRITICAL" : "HIGH",
+        requiresApproval: true,
+        status: "PENDING_APPROVAL",
+      },
+    });
+
+    // 4. Log Audit Event
+    await logOnboardingAudit({
+      onboardingId,
+      actorId: session.id,
+      actorType: "USER",
+      action: "CUSTOM_DOCUMENT_ADDED_PENDING_APPROVAL",
+      details: `User added custom document "${doc.title}". Staged for mandatory human approval before sending.`,
+      metadata: { documentId: doc.id, actionId: action.id },
+    });
+
+    await calculateOnboardingHealth(onboardingId);
+
+    safeRevalidate(`/onboarding/${onboardingId}`);
+    safeRevalidate("/onboarding");
+
+    return {
+      success: true,
+      documentId: doc.id,
+      actionId: action.id,
+      message: "Document created in DRAFT and queued for approval. It will not be sent to the client until approved.",
+    };
+  } catch (err: any) {
+    console.error("[addCustomDocumentAction] Error:", err);
+    return { success: false, error: err.message || "Failed to add custom document" };
+  }
+}
+
+/**
+ * Retrieves reusable templates.
+ * Standard users ONLY see custom user-created templates.
+ * System blueprints are strictly visible to ADMINS.
+ */
+export async function getUserTemplatesAction() {
+  try {
+    const session = await getEffectiveSession();
+    if (!session) return { success: false, error: "Unauthorized", templates: [], isAdmin: false };
+
+    const isAdmin = session.role === "ADMIN";
+
+    let templates: any[] = [];
+    if (isAdmin) {
+      // Admins see all templates (both system blueprints and custom templates)
+      templates = await prisma.documentTemplate.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+      });
+    } else {
+      // Non-admins ONLY see custom user templates
+      templates = await prisma.documentTemplate.findMany({
+        where: {
+          isActive: true,
+          type: { startsWith: "CUSTOM_" },
+        },
+        orderBy: { name: "asc" },
+      });
+    }
+
+    return { success: true, templates, isAdmin };
+  } catch (err: any) {
+    console.error("[getUserTemplatesAction] Error:", err);
+    return { success: false, error: err.message || "Failed to load templates", templates: [], isAdmin: false };
+  }
+}
+
+/**
+ * Creates a reusable user template.
+ */
+export async function createCustomTemplateAction(data: {
+  name: string;
+  content: string;
+  requiresSignature?: boolean;
+}) {
+  try {
+    const session = await getEffectiveSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
+    if (!data.name?.trim()) return { success: false, error: "Template name is required" };
+
+    const typeKey = `CUSTOM_${Date.now()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+    const template = await prisma.documentTemplate.create({
+      data: {
+        name: data.name.trim(),
+        type: typeKey,
+        content: data.content || "",
+        requiresApproval: true,
+        requiresSignature: Boolean(data.requiresSignature),
+        isActive: true,
+      },
+    });
+
+    return { success: true, template };
+  } catch (err: any) {
+    console.error("[createCustomTemplateAction] Error:", err);
+    return { success: false, error: err.message || "Failed to create template" };
+  }
+}
+
+/**
+ * Deletes a custom document if it hasn't been signed.
+ */
+export async function deleteCustomDocumentAction(documentId: string) {
+  try {
+    const session = await getEffectiveSession();
+    if (!session) throw new Error("Unauthorized");
+
+    const doc = await prisma.document.findUnique({
+      where: { id: documentId },
+    });
+    if (!doc) return { success: false, error: "Document not found" };
+
+    if (doc.status === "SIGNED") {
+      return { success: false, error: "Cannot delete a signed document" };
+    }
+
+    // Clean up associated unapproved actions
+    const actions = await prisma.aIAction.findMany({
+      where: { onboardingId: doc.onboardingId, status: "PENDING_APPROVAL" },
+    });
+    for (const a of actions) {
+      try {
+        const p = JSON.parse(a.payload || "{}");
+        if (p.documentId === documentId) {
+          await prisma.aIAction.delete({ where: { id: a.id } });
+        }
+      } catch {}
+    }
+
+    await prisma.document.delete({ where: { id: documentId } });
+
+    safeRevalidate(`/onboarding/${doc.onboardingId}`);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to delete document" };
   }
 }
 

@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function OnboardingAdminPage() {
   const session = await getSession();
   if (!session) redirect("/login");
+  if (session.role !== "ADMIN") redirect("/onboarding");
 
   // Self-heal SQLite tables if not yet created on this deployment
   await ensureOnboardingDatabaseSchema();

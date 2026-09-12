@@ -61,6 +61,8 @@ export default async function OnboardingDetailPage({
       internalQuestions={internalQuestions}
       auditEvents={auditEvents}
       aiSummary={aiSummary}
+      isAdmin={session.role === "ADMIN"}
+      userRole={session.role}
     />
   );
 }

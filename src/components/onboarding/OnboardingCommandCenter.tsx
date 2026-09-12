@@ -23,6 +23,10 @@ import {
   Zap,
   ChevronRight,
   RefreshCw,
+  FilePlus,
+  Paperclip,
+  Download,
+  Trash2,
 } from "lucide-react";
 import {
   submitInternalDetailsAction,
@@ -36,13 +40,17 @@ import {
   regenerateActionAction,
   resolveExceptionAction,
   getLiveAiSummaryAction,
+  deleteCustomDocumentAction,
 } from "@/app/onboarding/actions";
+import AddCustomDocumentModal from "@/components/onboarding/AddCustomDocumentModal";
 
 interface OnboardingCommandCenterProps {
   instance: any;
   internalQuestions: any[];
   auditEvents: any[];
   aiSummary: string;
+  isAdmin?: boolean;
+  userRole?: string;
 }
 
 export default function OnboardingCommandCenter({
@@ -50,6 +58,8 @@ export default function OnboardingCommandCenter({
   internalQuestions,
   auditEvents,
   aiSummary: initialAiSummary,
+  isAdmin = false,
+  userRole = "USER",
 }: OnboardingCommandCenterProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "approval" | "documents" | "responses" | "exceptions" | "summary" | "audit">("overview");
   const [aiSummary, setAiSummary] = useState(initialAiSummary);
@@ -71,10 +81,11 @@ export default function OnboardingCommandCenter({
 
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
-  const [previewItem, setPreviewItem] = useState<{ title: string; content: string } | null>(null);
+  const [previewItem, setPreviewItem] = useState<{ title: string; content: string; fileUrl?: string | null } | null>(null);
   const [editingDoc, setEditingDoc] = useState<{ id: string; title: string; content: string } | null>(null);
   const [rejectPrompt, setRejectPrompt] = useState<{ actionId: string; description: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [isAddDocOpen, setIsAddDocOpen] = useState(false);
 
   const portalUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/onboarding/portal/${instance.secureToken}`;
 
@@ -713,6 +724,20 @@ export default function OnboardingCommandCenter({
                         </button>
                       )}
 
+                      {act.actionType === "SEND_CUSTOM_DOCUMENT" && (
+                        <button
+                          onClick={async () => {
+                            const res = await previewDocumentAction(instance.id, payload.documentId || payload.title);
+                            if (res.success && res.title && res.content) {
+                              setPreviewItem({ title: res.title, content: res.content, fileUrl: res.fileUrl || payload.fileUrl });
+                            }
+                          }}
+                          className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-zinc-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Preview Custom Document
+                        </button>
+                      )}
+
                       {/* Regenerate Action (Section 10 & 37) */}
                       <button
                         onClick={() => handleRegenerate(act.id)}
@@ -761,52 +786,110 @@ export default function OnboardingCommandCenter({
       {/* TAB 3: DOCUMENTS & SIGNATURES */}
       {activeTab === "documents" && (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-zinc-900/60 p-6 rounded-[32px] border border-slate-200 dark:border-white/5 shadow-sm">
-            <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
-              Generated Contracts & Digital Signatures
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Documents populated from approved templates with version history and attached digital execution certificates.
-            </p>
+          <div className="bg-white dark:bg-zinc-900/60 p-6 rounded-[32px] border border-slate-200 dark:border-white/5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#012169] dark:text-blue-400">
+                  Document Repository
+                </span>
+                {!isAdmin ? (
+                  <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-[#012169] dark:text-blue-300">
+                    User Mode &bull; Custom Files Allowed
+                  </span>
+                ) : (
+                  <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
+                    Admin Access &bull; Full Blueprint Control
+                  </span>
+                )}
+              </div>
+              <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
+                Contracts, Files & Digital Signatures
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Generated contracts, custom client files, and manual templates. All new documents must be approved before being sent to the client.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setIsAddDocOpen(true)}
+              className="bg-[#012169] hover:bg-[#c8102e] text-white px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-md cursor-pointer flex items-center gap-2 shrink-0 self-start sm:self-center"
+            >
+              <FilePlus className="w-4 h-4" /> Add Document / File
+            </button>
           </div>
 
           <div className="grid gap-4">
             {instance.documents.map((doc: any) => {
               const sigReq = instance.signatureRequests.find((s: any) => s.documentId === doc.id);
               const latestVer = doc.versions?.[0];
+              const isPending = doc.status === "PENDING_APPROVAL";
 
               return (
                 <div
                   key={doc.id}
-                  className="p-6 rounded-[28px] bg-white dark:bg-zinc-900/60 border border-slate-200 dark:border-white/5 shadow-sm space-y-4"
+                  className={`p-6 rounded-[28px] border transition-all space-y-4 ${
+                    isPending
+                      ? "bg-amber-50/30 dark:bg-amber-950/10 border-amber-200 dark:border-amber-900/30 shadow-sm"
+                      : "bg-white dark:bg-zinc-900/60 border-slate-200 dark:border-white/5 shadow-sm"
+                  }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-[#012169]">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-[#012169] dark:text-blue-400">
                           {doc.documentType.replace(/_/g, " ")}
                         </span>
                         <span className="text-[10px] font-bold text-slate-400">
                           Version {latestVer?.versionNumber || 1}
                         </span>
-                        <span
-                          className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
-                            doc.status === "SIGNED"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-blue-100 text-blue-700"
-                          }`}
-                        >
-                          {doc.status}
-                        </span>
+                        {isPending && (
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> Pending Approval (Not Sent)
+                          </span>
+                        )}
+                        {doc.status === "APPROVED" && (
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">
+                            Approved
+                          </span>
+                        )}
+                        {doc.status === "SENT" && (
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-blue-100 text-blue-700">
+                            Sent to Client
+                          </span>
+                        )}
+                        {doc.status === "SIGNED" && (
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-teal-100 text-teal-700">
+                            Signed
+                          </span>
+                        )}
+                        {doc.status === "REJECTED" && (
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-red-100 text-red-700">
+                            Rejected
+                          </span>
+                        )}
                       </div>
                       <h3 className="text-lg font-black text-slate-900 dark:text-white mt-1">
                         {doc.title}
                       </h3>
+
+                      {latestVer?.fileUrl && (
+                        <div className="pt-2">
+                          <a
+                            href={latestVer.fileUrl}
+                            download={doc.title}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-xs font-bold hover:bg-blue-100 transition-colors"
+                          >
+                            <Paperclip className="w-3.5 h-3.5" /> Attached File (Download / View)
+                          </a>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => setPreviewItem({ title: doc.title, content: latestVer?.content || "" })}
+                        onClick={() => setPreviewItem({ title: doc.title, content: latestVer?.content || "", fileUrl: latestVer?.fileUrl })}
                         className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5" /> View
@@ -817,8 +900,30 @@ export default function OnboardingCommandCenter({
                       >
                         <Edit3 className="w-3.5 h-3.5" /> Edit Content
                       </button>
+                      {isPending && (
+                        <button
+                          onClick={async () => {
+                            if (confirm(`Remove custom document "${doc.title}"?`)) {
+                              await deleteCustomDocumentAction(doc.id);
+                            }
+                          }}
+                          className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold cursor-pointer"
+                          title="Delete unapproved document"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
+
+                  {isPending && (
+                    <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>
+                        <strong>Approval Gate Active:</strong> This custom document is held in draft. It will NOT be dispatched to the client portal or sent until approved in the Approval Centre.
+                      </span>
+                    </div>
+                  )}
 
                   {sigReq && (
                     <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1116,6 +1221,22 @@ export default function OnboardingCommandCenter({
             <div className="overflow-y-auto flex-1 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-950 font-mono text-xs whitespace-pre-line text-slate-800 dark:text-zinc-200 leading-relaxed">
               {previewItem.content}
             </div>
+            {previewItem.fileUrl && (
+              <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-[#012169] dark:text-blue-300">
+                  <Paperclip className="w-4 h-4" /> Attached File
+                </div>
+                <a
+                  href={previewItem.fileUrl}
+                  download={previewItem.title}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-4 py-1.5 rounded-xl bg-[#012169] hover:bg-[#c8102e] text-white text-xs font-bold flex items-center gap-1.5 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download / View File
+                </a>
+              </div>
+            )}
             <div className="flex justify-end">
               <button
                 onClick={() => setPreviewItem(null)}
@@ -1249,6 +1370,15 @@ export default function OnboardingCommandCenter({
           </div>
         </div>
       )}
+
+      {/* ADD CUSTOM DOCUMENT & MANUAL FILE MODAL */}
+      <AddCustomDocumentModal
+        isOpen={isAddDocOpen}
+        onClose={() => setIsAddDocOpen(false)}
+        onboardingId={instance.id}
+        clientName={instance.client.name}
+        clientEmail={instance.client.email}
+      />
     </div>
   );
 }
