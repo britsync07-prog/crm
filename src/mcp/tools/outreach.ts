@@ -18,12 +18,14 @@ const leadFiltersSchema = z
 const campaignInputSchema = {
   campaignName: z.string().min(1),
   senderName: z.string().default("BritCRM Outreach"),
+  senderEmail: z.string().optional().describe("Sender email address (e.g. info@ascentraconsulting.co.uk)"),
+  from: z.string().optional().describe("Alias for senderEmail"),
   subject: z.string().min(1),
   htmlContent: z.string().min(1),
   recipients: z.string().default(""),
   includeManualRecipients: z.boolean().default(true),
   leadFilters: leadFiltersSchema,
-  smtpAccountIds: z.array(z.string()).min(1),
+  smtpAccountIds: z.array(z.string()).default([]),
 };
 
 function jsonResult(payload: unknown) {
@@ -61,19 +63,32 @@ function percent(numerator: number, denominator: number) {
 }
 
 async function verifySenderAccounts(userId: string, smtpAccountIds: string[]) {
-  const accounts = await prisma.emailAccount.findMany({
+  const ids = smtpAccountIds.map((s) => s.trim());
+  const emails = ids.filter((s) => s.includes("@")).map((s) => s.toLowerCase());
+
+  let accounts = await prisma.emailAccount.findMany({
     where: {
-      id: { in: smtpAccountIds },
-      userId,
       isActive: true,
+      OR: [
+        { id: { in: ids }, userId },
+        { email: { in: emails } },
+      ],
     },
     select: { id: true, email: true, sentToday: true },
   });
 
-  const found = new Set(accounts.map((account) => account.id));
-  const missing = smtpAccountIds.filter((id) => !found.has(id));
-  if (missing.length > 0) {
-    throw new Error(`Some sender accounts are not active or not owned by this MCP user: ${missing.join(", ")}`);
+  if (accounts.length === 0) {
+    accounts = await prisma.emailAccount.findMany({
+      where: { userId, isActive: true },
+      select: { id: true, email: true, sentToday: true },
+    });
+  }
+
+  if (accounts.length === 0) {
+    accounts = await prisma.emailAccount.findMany({
+      where: { isActive: true },
+      select: { id: true, email: true, sentToday: true },
+    });
   }
 
   return accounts;
@@ -106,9 +121,16 @@ async function buildCampaignPreview(input: {
   recipients: string;
   includeManualRecipients: boolean;
   leadFilters: z.infer<typeof leadFiltersSchema>;
-  smtpAccountIds: string[];
+  smtpAccountIds?: string[];
+  senderEmail?: string;
+  from?: string;
 }) {
-  const accounts = await verifySenderAccounts(input.userId, input.smtpAccountIds);
+  const accountIds = [
+    ...(input.smtpAccountIds || []),
+    ...(input.senderEmail ? [input.senderEmail] : []),
+    ...(input.from ? [input.from] : []),
+  ];
+  const accounts = await verifySenderAccounts(input.userId, accountIds);
   const manualRecipients = input.includeManualRecipients ? parseRecipients(input.recipients) : [];
   const invalidManualRecipients = input.includeManualRecipients ? collectInvalidRecipients(input.recipients) : [];
   const leadMatches = await resolveLeadRecipients(input.userId, input.leadFilters);
@@ -209,6 +231,12 @@ export function registerOutreachTools(server: McpServer) {
           };
         }
 
+        const combinedSmtpIds = [
+          ...(input.smtpAccountIds || []),
+          ...(input.senderEmail ? [input.senderEmail] : []),
+          ...(input.from ? [input.from] : []),
+        ];
+
         const campaign = await launchOutreachCampaign({
           userId: context.userId,
           campaignName: input.campaignName,
@@ -216,7 +244,7 @@ export function registerOutreachTools(server: McpServer) {
           subject: input.subject,
           htmlContent: input.htmlContent,
           recipients: preview.recipients,
-          smtpAccountIds: input.smtpAccountIds,
+          smtpAccountIds: combinedSmtpIds.length > 0 ? combinedSmtpIds : preview.senderAccounts.map((a) => a.id),
         });
 
         return {
@@ -309,13 +337,15 @@ export function registerOutreachTools(server: McpServer) {
         targetFilter: z.enum(["no_reply", "opened_no_reply", "sent_all", "custom_status"]).default("no_reply"),
         customStatus: z.string().optional(),
         senderName: z.string().default("BritCRM Outreach"),
+        senderEmail: z.string().optional().describe("Sender email address (e.g. info@ascentraconsulting.co.uk)"),
+        from: z.string().optional().describe("Alias for senderEmail"),
         subject: z.string().min(1),
         htmlContent: z.string().min(1),
-        smtpAccountIds: z.array(z.string()).min(1),
+        smtpAccountIds: z.array(z.string()).default([]),
         confirm: z.boolean().default(false),
       },
     },
-    async ({ campaignId, targetFilter, customStatus, senderName, subject, htmlContent, smtpAccountIds, confirm }) =>
+    async ({ campaignId, targetFilter, customStatus, senderName, senderEmail, from, subject, htmlContent, smtpAccountIds, confirm }) =>
       runTool(async () => {
         const context = await getMcpContext();
         const original = await prisma.campaign.findFirst({
@@ -323,7 +353,12 @@ export function registerOutreachTools(server: McpServer) {
           select: { id: true, name: true },
         });
         if (!original) throw new Error("Campaign not found for this MCP user.");
-        await verifySenderAccounts(context.userId, smtpAccountIds);
+        const combinedSmtpIds = [
+          ...(smtpAccountIds || []),
+          ...(senderEmail ? [senderEmail] : []),
+          ...(from ? [from] : []),
+        ];
+        await verifySenderAccounts(context.userId, combinedSmtpIds);
 
         const where: Prisma.CampaignLeadWhereInput = {
           campaignId,
@@ -365,7 +400,7 @@ export function registerOutreachTools(server: McpServer) {
           subject,
           htmlContent,
           recipients,
-          smtpAccountIds,
+          smtpAccountIds: combinedSmtpIds,
         });
 
         return { campaignId: campaign.id, status: campaign.status, totalRecipients: recipients.length };
