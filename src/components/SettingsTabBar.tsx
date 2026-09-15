@@ -2,13 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, Mail, Users, CreditCard, WalletCards } from "lucide-react";
+import { Bot, Mail, Users, CreditCard, WalletCards, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function SettingsTabBar() {
   const pathname = usePathname();
 
   const tabs = [
+    {
+      name: "Profile & Security",
+      href: "/settings/profile",
+      icon: UserCog,
+    },
     {
       name: "Email Setup",
       href: "/settings/email",

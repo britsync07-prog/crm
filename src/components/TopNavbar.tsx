@@ -96,7 +96,7 @@ export default function TopNavbar({
               {session?.role === "ADMIN" && (
                 <Link href="/admin" className="block w-full text-left px-4 py-2 text-xs text-amber-600 font-bold hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-colors">Admin Panel</Link>
               )}
-              <Link href="/settings/email" className="block w-full text-left px-4 py-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors">Profile Settings</Link>
+              <Link href="/settings/profile" className="block w-full text-left px-4 py-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors">Profile & Security</Link>
               <button onClick={() => window.open('mailto:support@britsyncai.com')} className="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors">Help & Support</button>
               <form action={logoutAction}>
                 <button type="submit" className="w-full text-left px-4 py-2 text-xs text-[#c8102e] hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors mt-2">Log out</button>

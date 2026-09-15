@@ -18,8 +18,24 @@ export async function createCategoryAction(name: string) {
   const session = await getSession();
   if (!session) throw new Error("Unauthorized");
 
+  const trimmedName = name.trim();
+  if (!trimmedName) throw new Error("Category name cannot be empty");
+
+  const existing = await prisma.category.findUnique({
+    where: {
+      userId_name: {
+        userId: session.id,
+        name: trimmedName,
+      },
+    },
+  });
+
+  if (existing) {
+    return existing;
+  }
+
   const category = await prisma.category.create({
-    data: { name, userId: session.id },
+    data: { name: trimmedName, userId: session.id },
   });
 
   revalidatePath("/leads");

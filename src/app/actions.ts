@@ -55,6 +55,37 @@ export async function createLead(formData: FormData) {
   const areaOfOperation = formData.get("areaOfOperation") as string;
   const dealFocus = formData.get("dealFocus") as string;
   const budgetRange = formData.get("budgetRange") as string;
+  let categoryId = (formData.get("categoryId") as string) || null;
+  const newCategoryName = (formData.get("newCategoryName") as string)?.trim();
+
+  if (newCategoryName && !categoryId) {
+    const existing = await prisma.category.findUnique({
+      where: {
+        userId_name: {
+          userId: session.id,
+          name: newCategoryName,
+        },
+      },
+    });
+    if (existing) {
+      categoryId = existing.id;
+    } else {
+      const created = await prisma.category.create({
+        data: {
+          name: newCategoryName,
+          userId: session.id,
+        },
+      });
+      categoryId = created.id;
+    }
+  } else if (categoryId) {
+    const cat = await prisma.category.findFirst({
+      where: { id: categoryId, userId: session.id },
+    });
+    if (!cat) {
+      categoryId = null;
+    }
+  }
 
   const lead = await prisma.lead.create({
     data: {
@@ -68,6 +99,7 @@ export async function createLead(formData: FormData) {
       dealFocus,
       budgetRange,
       status: LEAD_STAGES.NEW,
+      categoryId: categoryId || null,
     },
   });
 
@@ -156,6 +188,36 @@ export async function updateLeadStatus(formData: FormData) {
     nextStage: nextStatus as LeadStage,
     reason: "Manual status update by user",
     force: true,
+  });
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+}
+
+export async function updateLeadCategory(formData: FormData) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+
+  const leadId = formData.get("leadId") as string;
+  let categoryId = (formData.get("categoryId") as string) || null;
+  if (!leadId) return;
+
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    select: { id: true, userId: true },
+  });
+  if (!lead || lead.userId !== session.id) return;
+
+  if (categoryId) {
+    const cat = await prisma.category.findFirst({
+      where: { id: categoryId, userId: session.id },
+    });
+    if (!cat) categoryId = null;
+  }
+
+  await prisma.lead.update({
+    where: { id: leadId },
+    data: { categoryId: categoryId || null },
   });
 
   revalidatePath("/leads");

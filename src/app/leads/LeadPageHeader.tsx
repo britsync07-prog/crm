@@ -100,7 +100,7 @@ export default function LeadPageHeader({ categories, activeCategoryId }: { categ
             <Upload className="w-4 h-4" /> <span className="hidden sm:inline">Import Batch</span>
           </button>
           <Link
-            href="/leads/new"
+            href={`/leads/new${activeCategoryId ? `?categoryId=${encodeURIComponent(activeCategoryId)}` : ""}`}
             className="flex items-center gap-3 rounded-2xl bg-[#012169] px-6 sm:px-10 py-3 sm:py-5 text-[10px] font-black uppercase tracking-[0.2em] text-white hover:bg-zinc-900 transition-all shadow-2xl shadow-blue-900/20 active:scale-95"
           >
             <Plus className="w-4 h-4 stroke-[3]" /> <span className="sm:hidden">New</span><span className="hidden sm:inline">Launch New Prospect</span>

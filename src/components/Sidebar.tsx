@@ -42,7 +42,7 @@ const NavContent = ({ pathname, setIsOpen }: { pathname: string; setIsOpen: (val
           <Landmark className="w-6 h-6 text-white" />
         </div>
         <div>
- <h1 className="text-xl font-black italic tracking-tighter text-slate-900 dark:text-zinc-50 leading-none">BritCRM</h1>
+          <h1 className="text-xl font-black italic tracking-tighter text-slate-900 dark:text-zinc-50 leading-none">BritCRM</h1>
           <p className="text-[8px] font-black text-[#012169] dark:text-blue-300 uppercase tracking-[0.24em] mt-1">Built by BritSync</p>
         </div>
       </div>
@@ -80,13 +80,13 @@ const NavContent = ({ pathname, setIsOpen }: { pathname: string; setIsOpen: (val
 
     <div className="p-6 border-t border-blue-100/80 dark:border-blue-900/30">
       <Link
-        href="/settings/email"
+        href="/settings/profile"
         onClick={() => setIsOpen(false)}
         className={cn(
           "flex items-center gap-4 px-4 py-3 rounded-2xl transition-all border-2 border-transparent",
           pathname.startsWith("/settings") 
-           ? "bg-[#012169] text-white font-black italic border-[#012169]" 
-           : "text-slate-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 hover:text-slate-900"
+            ? "bg-[#012169] text-white font-black italic border-[#012169]" 
+            : "text-slate-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 hover:text-slate-900"
         )}
       >
         <Settings className="w-4.5 h-4.5" />
@@ -100,12 +100,15 @@ export default function Sidebar({ subscription }: { subscription?: any }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
+  // Define marketing/public route prefixes
   const isMarketingRoute =
     pathname === "/landing" ||
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/pricing" ||
-    pathname.startsWith("/invite/") ||
+    pathname === "/contact" ||
+    pathname === "/terms" ||
+    pathname === "/privacy" ||
     pathname.startsWith("/f/") ||
     pathname.startsWith("/meet/") ||
     pathname.startsWith("/mcp/docs") ||
@@ -116,19 +119,20 @@ export default function Sidebar({ subscription }: { subscription?: any }) {
     pathname.startsWith("/onboarding/portal/") ||
     pathname.startsWith("/onboarding/sign/");
 
+  // Hide Sidebar on marketing or when subscription has expired for non-admins
   if (isMarketingRoute || (subscription?.isExpired && !subscription?.isAdmin)) {
     return null;
   }
 
   return (
     <>
-      {/* Mobile Top Header (Fixed) */}
-      <header className="fixed top-0 left-0 right-0 h-20 bg-white/85 dark:bg-slate-950/85 backdrop-blur-xl border-b border-blue-100/80 dark:border-blue-900/30 flex items-center justify-between px-6 z-[60] lg:hidden">
+      {/* Mobile Top Header */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 h-20 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-blue-100/80 dark:border-blue-900/30 px-6 flex items-center justify-between z-40">
          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-[#012169] to-[#c8102e] rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#012169] to-[#c8102e] rounded-xl flex items-center justify-center shadow-lg">
               <Landmark className="w-5 h-5 text-white" />
             </div>
- <span className="text-sm font-black italic tracking-tighter">BritCRM</span>
+            <span className="text-sm font-black italic tracking-tighter">BritCRM</span>
          </div>
          <button 
            onClick={() => setIsOpen(true)}

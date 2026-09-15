@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, Mail, Users, CreditCard, WalletCards } from "lucide-react";
+import { Bot, Mail, Users, CreditCard, WalletCards, UserCog } from "lucide-react";
 
 export default function SettingsTabs() {
   const pathname = usePathname();
 
   const tabs = [
+    { name: "Profile & Security", href: "/settings/profile", icon: UserCog },
     { name: "Mailboxes", href: "/settings/email", icon: Mail },
     { name: "Team Hub", href: "/settings/team", icon: Users },
     { name: "MCP Agents", href: "/settings/mcp", icon: Bot },

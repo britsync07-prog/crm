@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { convertLeadToCustomer, logInteraction, createTask, updateLeadStatus } from "@/app/actions";
+import { notFound, redirect } from "next/navigation";
+import { convertLeadToCustomer, logInteraction, createTask, updateLeadStatus, updateLeadCategory } from "@/app/actions";
+import { getSession } from "@/lib/auth";
 import TaskToggle from "@/components/TaskToggle";
 import LeadAIActions from "./LeadAIActions";
 import { LEAD_STAGES } from "@/lib/crm-lifecycle";
@@ -15,22 +16,32 @@ interface LeadDetailsProps {
 }
 
 export default async function LeadDetails({ params }: LeadDetailsProps) {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
   const { id } = await params;
 
-  const lead = await prisma.lead.findUnique({
-    where: { id },
-    include: {
-      interactions: {
-        orderBy: { date: "desc" },
+  const [lead, categories] = await Promise.all([
+    prisma.lead.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        interactions: {
+          orderBy: { date: "desc" },
+        },
+        tasks: {
+          orderBy: { createdAt: "desc" },
+        },
+        deals: {
+          orderBy: { createdAt: "desc" },
+        },
       },
-      tasks: {
-        orderBy: { createdAt: "desc" }
-      },
-      deals: {
-        orderBy: { createdAt: "desc" }
-      }
-    },
-  });
+    }),
+    prisma.category.findMany({
+      where: { userId: session.id },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   if (!lead) {
     notFound();
@@ -96,6 +107,36 @@ export default async function LeadDetails({ params }: LeadDetailsProps) {
                   </button>
                 </form>
               </div>
+
+              {/* Sector / Category */}
+              <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">Sector / Category</p>
+                <span className="inline-flex items-center rounded-full bg-zinc-200 dark:bg-zinc-800 px-2 py-1 text-xs font-black uppercase text-zinc-800 dark:text-zinc-200 tracking-widest">
+                  {lead.category?.name || "Uncategorized"}
+                </span>
+                <form action={updateLeadCategory} className="mt-3 flex gap-2">
+                  <input type="hidden" name="leadId" value={lead.id} />
+                  <select
+                    name="categoryId"
+                    defaultValue={lead.categoryId || ""}
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-[10px] font-black uppercase tracking-widest dark:border-white/10 dark:bg-zinc-900"
+                  >
+                    <option value="">No Sector</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-zinc-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white dark:bg-white dark:text-zinc-900"
+                  >
+                    Save
+                  </button>
+                </form>
+              </div>
+
               <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">Email</p>
                 <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{lead.email}</p>
@@ -168,30 +209,20 @@ export default async function LeadDetails({ params }: LeadDetailsProps) {
             <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-zinc-200 dark:before:via-white/10 before:to-transparent">
               {lead.interactions.map((interaction) => (
                 <div key={interaction.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white dark:border-zinc-950 bg-blue-50 dark:bg-[#012169]/20 text-[#012169] dark:text-blue-300 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 text-[10px] font-black">
-                    {interaction.type[0].toUpperCase()}
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-zinc-100 group-[.is-active]:bg-[#012169] text-zinc-500 group-[.is-active]:text-zinc-50 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 dark:bg-zinc-900 dark:border-zinc-800">
+                    <span className="text-[10px] font-bold uppercase">{interaction.type[0]}</span>
                   </div>
-
-                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black uppercase text-zinc-900 dark:text-white">{interaction.type}</span>
-                        {interaction.sentiment && (
-                          <span className={`text-[8px] px-1.5 py-0.5 rounded-sm font-black uppercase tracking-widest ${interaction.sentiment === 'Positive' ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' :
-                              interaction.sentiment === 'Negative' ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' : 'bg-zinc-200 text-zinc-700 dark:bg-white/10 dark:text-zinc-400'
-                            }`}>
-                            {interaction.sentiment}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[9px] font-bold text-zinc-400 uppercase">{new Date(interaction.date).toLocaleDateString()}</span>
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-zinc-100 bg-white shadow-sm dark:border-white/5 dark:bg-white/5">
+                    <div className="flex items-center justify-between space-x-2 mb-1">
+                      <div className="font-bold text-zinc-900 text-xs dark:text-zinc-100">{interaction.type}</div>
+                      <time className="text-[10px] font-medium text-zinc-400">{new Date(interaction.date).toLocaleDateString()}</time>
                     </div>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400 italic">&quot;{interaction.content}&quot;</p>
+                    <div className="text-zinc-500 text-xs">{interaction.content}</div>
                   </div>
                 </div>
               ))}
               {lead.interactions.length === 0 && (
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 py-4 text-center italic relative z-10 bg-white dark:bg-zinc-950">Timeline is quiet.</p>
+                <p className="text-xs text-zinc-400 italic text-center py-4">No communications on record.</p>
               )}
             </div>
           </div>
