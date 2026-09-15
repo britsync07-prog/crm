@@ -5,13 +5,14 @@ import { usePathname } from "next/navigation";
 
 export default function NavigationProgressBar() {
   const pathname = usePathname();
+  const [prevPathname, setPrevPathname] = useState(pathname);
   const [isNavigating, setIsNavigating] = useState(false);
   const [, startTransition] = useTransition();
 
-  useEffect(() => {
-    // When the pathname changes, navigation has completed
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
     setIsNavigating(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     const handleAnchorClick = (e: MouseEvent) => {

@@ -11,7 +11,7 @@ import {
 } from "@/lib/form-meeting";
 import { ensureCustomerFromLead, upsertLeadFromFormSubmission } from "@/lib/crm-lifecycle";
 import { getMcpContext } from "../context";
-import { jsonResult, runTool } from "../utils";
+import { runTool } from "../utils";
 
 const fieldTypeSchema = z.enum(["TEXT", "TEXTAREA", "DROPDOWN", "RADIO", "CHECKBOX", "EMAIL", "PHONE"]);
 const fieldSchema = z.object({

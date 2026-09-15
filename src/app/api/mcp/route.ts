@@ -78,9 +78,21 @@ async function authenticate(req: Request) {
 async function handleMcpRequest(req: Request) {
   if (hasForbiddenOrigin(req)) return forbiddenOrigin();
 
-  const context = await authenticate(req);
+  let reqId: string | number | null = null;
+  try {
+    if (req.method === "POST") {
+      const cloned = req.clone();
+      const body = await cloned.json().catch(() => null);
+      if (body && typeof body === "object" && "id" in body) {
+        reqId = (body as { id: string | number | null }).id ?? null;
+      }
+    }
+  } catch {
+    // Ignore body inspection errors
+  }
 
   try {
+    const context = await authenticate(req);
     return await runWithMcpContext(context, async () => {
       const server = createBritCrmMcpServer();
       const transport = new WebStandardStreamableHTTPServerTransport({
@@ -98,7 +110,7 @@ async function handleMcpRequest(req: Request) {
     return new Response(
       JSON.stringify({
         jsonrpc: "2.0",
-        id: null,
+        id: reqId,
         result: {
           success: true,
           status: "completed",

@@ -351,14 +351,15 @@ function NewOfferForm({ plans }: { plans: PricingPlan[] }) {
 }
 
 function OfferForm({ offer, plans }: { offer: PricingOffer; plans: PricingPlan[] }) {
+  const [now] = useState(() => Date.now());
   const [state, action, pending] = useActionState(savePricingOfferAction, initialState);
   const [isDeleting, startDeleteTransition] = useTransition();
   const [isToggling, startToggleTransition] = useTransition();
 
   const isLive =
     offer.isActive &&
-    new Date(offer.startsAt).getTime() <= Date.now() &&
-    new Date(offer.endsAt).getTime() >= Date.now();
+    new Date(offer.startsAt).getTime() <= now &&
+    new Date(offer.endsAt).getTime() >= now;
 
   function handleDelete() {
     if (!confirm(`Are you sure you want to delete the offer "${offer.title}"?`)) return;
@@ -528,8 +529,8 @@ export default function PricingManagementClient({
   plans: PricingPlan[];
   offers: PricingOffer[];
 }) {
+  const [now] = useState(() => Date.now());
   const activeOffers = offers.filter((offer) => {
-    const now = Date.now();
     return (
       offer.isActive &&
       new Date(offer.startsAt).getTime() <= now &&

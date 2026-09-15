@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { launchOutreachCampaign, parseRecipients } from "@/lib/outreach-worker";
 import { runOutreachReplySync } from "@/lib/outreach-reply-worker";
 import { getMcpContext } from "../context";
-import { jsonResult, runTool } from "../utils";
+import { runTool } from "../utils";
 
 const leadFiltersSchema = z
   .object({
@@ -45,16 +45,21 @@ function percent(numerator: number, denominator: number) {
 }
 
 async function verifySenderAccounts(userId: string, smtpAccountIds: string[]) {
-  const ids = smtpAccountIds.map((s) => s.trim());
+  const ids = smtpAccountIds.map((s) => s.trim()).filter(Boolean);
   const emails = ids.filter((s) => s.includes("@")).map((s) => s.toLowerCase());
 
   let accounts = await prisma.emailAccount.findMany({
     where: {
+      userId,
       isActive: true,
-      OR: [
-        { id: { in: ids }, userId },
-        { email: { in: emails } },
-      ],
+      ...(ids.length > 0
+        ? {
+            OR: [
+              { id: { in: ids } },
+              { email: { in: emails } },
+            ],
+          }
+        : {}),
     },
     select: { id: true, email: true, sentToday: true },
   });
@@ -62,13 +67,6 @@ async function verifySenderAccounts(userId: string, smtpAccountIds: string[]) {
   if (accounts.length === 0) {
     accounts = await prisma.emailAccount.findMany({
       where: { userId, isActive: true },
-      select: { id: true, email: true, sentToday: true },
-    });
-  }
-
-  if (accounts.length === 0) {
-    accounts = await prisma.emailAccount.findMany({
-      where: { isActive: true },
       select: { id: true, email: true, sentToday: true },
     });
   }

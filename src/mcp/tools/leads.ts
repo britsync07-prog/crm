@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { analyzeSentimentReal, runLeadCategorizationAgent, runLeadScoringAgent } from "@/lib/ai-agents";
 import { ensureCustomerFromLead, LEAD_STAGES, transitionLeadStage } from "@/lib/crm-lifecycle";
 import { getMcpContext } from "../context";
-import { jsonResult, runTool } from "../utils";
+import { runTool } from "../utils";
 
 const emailSchema = z.string().transform((value) => {
   const match = value.match(/<([^>]+)>/);
@@ -123,8 +123,12 @@ async function assertCategoryAccess(userId: string, categoryId?: string | null, 
 }
 
 async function findUserLead(userId: string, leadId: string) {
+  const trimmed = leadId.trim();
   const lead = await prisma.lead.findFirst({
-    where: { id: leadId, userId },
+    where: {
+      userId,
+      OR: [{ id: trimmed }, { email: trimmed.toLowerCase() }],
+    },
   });
   if (!lead) throw new Error("Lead not found for this MCP user.");
   return lead;
@@ -274,7 +278,6 @@ export function registerLeadTools(server: McpServer) {
     },
     async ({ prospects, emails }) =>
       runTool(async () => {
-        const context = await getMcpContext();
         const rawItems = [...(prospects || []), ...(emails || [])];
         const normalized = rawItems.map((item) => {
           const raw = typeof item === "string" ? item : item.email;
@@ -584,9 +587,11 @@ export function registerLeadTools(server: McpServer) {
     async ({ leadId }) =>
       runTool(async () => {
         const context = await getMcpContext();
-        let lead = await prisma.lead.findFirst({
+        const trimmed = leadId.trim();
+        const lead = await prisma.lead.findFirst({
           where: {
-            OR: [{ id: leadId }, { email: leadId }],
+            userId: context.userId,
+            OR: [{ id: trimmed }, { email: trimmed.toLowerCase() }],
           },
         });
         if (lead) {
@@ -617,9 +622,11 @@ export function registerLeadTools(server: McpServer) {
     async ({ leadId, type, content, sentiment }) =>
       runTool(async () => {
         const context = await getMcpContext();
-        let lead = await prisma.lead.findFirst({
+        const trimmed = leadId.trim();
+        const lead = await prisma.lead.findFirst({
           where: {
-            OR: [{ id: leadId }, { email: leadId }],
+            userId: context.userId,
+            OR: [{ id: trimmed }, { email: trimmed.toLowerCase() }],
           },
         });
         if (!lead) {
@@ -725,7 +732,17 @@ export function registerLeadTools(server: McpServer) {
         },
       });
 
-      if (!lead) throw new Error("Lead not found for this MCP user.");
+      if (!lead) {
+        return {
+          contents: [
+            {
+              uri: uri.href,
+              mimeType: "application/json",
+              text: JSON.stringify({ error: null, lead: null, note: `Lead ${leadId} not found for this user.` }, null, 2),
+            },
+          ],
+        };
+      }
 
       return {
         contents: [

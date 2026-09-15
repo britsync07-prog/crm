@@ -1,16 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getSession } from "@/lib/auth";
 import { cancelInvoice, createInvoice, getInvoice, sendInvoice, updateInvoice } from "@/lib/britledger/invoices";
 import { createClient, listClients } from "@/lib/britledger/clients";
 import { convertQuotationToInvoice, createQuotation, sendQuotation } from "@/lib/britledger/quotations";
-import { createPaymentSession } from "@/lib/britledger/payments";
-import { updatePaymentSettings } from "@/lib/britledger/payments";
+import { createPaymentSession, updatePaymentSettings } from "@/lib/britledger/payments";
 import { invalidateCache } from "@/lib/britledger/client";
 import type { InvoiceCreate, PaymentCreate, ClientCreate, QuotationCreate, SendInvoiceRequest, PaymentSessionCreate } from "@/lib/britledger/types";
 
 export async function listClientsAction(params?: { page?: number; page_size?: number; search?: string }) {
   try {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
     const res = await listClients(params);
     return { success: true, data: res.data };
   } catch (err: any) {
@@ -20,6 +23,9 @@ export async function listClientsAction(params?: { page?: number; page_size?: nu
 
 export async function createInvoiceAction(data: InvoiceCreate) {
   try {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
     const totalAmount = Number(data.total_amount || 0);
     const requestedStatus = data.status;
     const advancePayment = requestedStatus === "PAID" || requestedStatus === "Paid"
@@ -47,6 +53,9 @@ export async function createInvoiceAction(data: InvoiceCreate) {
 
 export async function createClientAction(data: ClientCreate) {
   try {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
     const res = await createClient(data);
     invalidateCache("/clients");
     revalidatePath("/billing/clients");
@@ -58,6 +67,9 @@ export async function createClientAction(data: ClientCreate) {
 
 export async function sendQuotationAction(id: string) {
   try {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
     const res = await sendQuotation(id);
     invalidateCache("/quotations");
     revalidatePath("/billing/quotations");
@@ -69,6 +81,9 @@ export async function sendQuotationAction(id: string) {
 
 export async function sendInvoiceAction(id: string, data: SendInvoiceRequest) {
   try {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
     const res = await sendInvoice(id, data);
     invalidateCache("/invoices");
     revalidatePath(`/billing/invoices/${id}`);
@@ -81,6 +96,9 @@ export async function sendInvoiceAction(id: string, data: SendInvoiceRequest) {
 
 export async function cancelInvoiceAction(id: string) {
   try {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
     const res = await cancelInvoice(id);
     invalidateCache("/invoices");
     revalidatePath(`/billing/invoices/${id}`);
@@ -93,6 +111,9 @@ export async function cancelInvoiceAction(id: string) {
 
 export async function createQuotationAction(data: QuotationCreate) {
   try {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
     const res = await createQuotation(data);
     invalidateCache("/quotations");
     revalidatePath("/billing/quotations");
@@ -104,6 +125,9 @@ export async function createQuotationAction(data: QuotationCreate) {
 
 export async function recordPaymentAction(id: string, data: PaymentCreate) {
   try {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
     const invoiceRes = await getInvoice(id);
     const invoice = invoiceRes.data;
     const totalAmount = Number(invoice.total_amount || 0);
@@ -126,6 +150,9 @@ export async function recordPaymentAction(id: string, data: PaymentCreate) {
 
 export async function convertQuotationAction(id: string) {
   try {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
     const res = await convertQuotationToInvoice(id);
     invalidateCache("/quotations");
     invalidateCache("/invoices");
@@ -140,6 +167,9 @@ export async function convertQuotationAction(id: string) {
 
 export async function createPaymentSessionAction(data: PaymentSessionCreate) {
   try {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
     const res = await createPaymentSession(data);
     return { success: true, data: res };
   } catch (err: any) {
@@ -149,6 +179,9 @@ export async function createPaymentSessionAction(data: PaymentSessionCreate) {
 
 export async function updatePaymentSettingsAction(data: Partial<import("@/lib/britledger/types").PaymentSettings>) {
   try {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
     const res = await updatePaymentSettings(data);
     revalidatePath("/settings/payments");
     revalidatePath("/billing");

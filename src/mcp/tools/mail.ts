@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { fetchEmailBody, fetchRecentEmails, performBatchEmailAction } from "@/lib/imap";
 import { sendRealEmail } from "@/lib/mailer";
 import { getMcpContext } from "../context";
-import { jsonResult, runTool } from "../utils";
+import { runTool } from "../utils";
 
 const mailActionSchema = z.enum(["archive", "trash", "spam", "read", "unread", "star", "unstar"]);
 
@@ -16,30 +16,17 @@ async function getUserEmailAccount(userId: string, accountId?: string | null) {
     const direct = await prisma.emailAccount.findFirst({
       where: {
         userId,
+        isActive: true,
         OR: [{ id: accountId }, { email: trimmed }],
       },
     });
     if (direct) return direct;
-
-    const anyMatching = await prisma.emailAccount.findFirst({
-      where: { email: trimmed },
-    });
-    if (anyMatching) return anyMatching;
   }
 
-  let account = await prisma.emailAccount.findFirst({
+  return prisma.emailAccount.findFirst({
     where: { userId, isActive: true },
     orderBy: { id: "desc" },
   });
-
-  if (!account) {
-    account = await prisma.emailAccount.findFirst({
-      where: { isActive: true },
-      orderBy: { id: "desc" },
-    });
-  }
-
-  return account;
 }
 
 function normalizeSearch(value?: string) {
@@ -104,7 +91,15 @@ export function registerMailTools(server: McpServer) {
       runTool(async () => {
         const context = await getMcpContext();
         const account = await getUserEmailAccount(context.userId, accountId || null);
-        if (!account) throw new Error("No connected IMAP account found for this MCP user.");
+        if (!account) {
+          return {
+            accountId: null,
+            mailbox: mailbox || "INBOX",
+            count: 0,
+            messages: [],
+            note: "No active connected IMAP mailbox found for this user.",
+          };
+        }
 
         const needle = normalizeSearch(query);
         const messages = await fetchRecentEmails(account, mailbox || "INBOX");
@@ -142,10 +137,24 @@ export function registerMailTools(server: McpServer) {
       runTool(async () => {
         const context = await getMcpContext();
         const account = await getUserEmailAccount(context.userId, accountId || null);
-        if (!account) throw new Error("No connected IMAP account found for this MCP user.");
+        if (!account) {
+          return {
+            accountId: null,
+            mailbox: mailbox || "INBOX",
+            email: null,
+            note: "No connected active IMAP account found for this user.",
+          };
+        }
 
         const email = await fetchEmailBody(account, mailbox || "INBOX", uid);
-        if (!email) throw new Error("Email not found.");
+        if (!email) {
+          return {
+            accountId: account.id,
+            mailbox: mailbox || "INBOX",
+            email: null,
+            note: `Email message with UID ${uid} not found in ${mailbox || "INBOX"}.`,
+          };
+        }
 
         return { accountId: account.id, mailbox: mailbox || "INBOX", email };
       })
@@ -168,12 +177,12 @@ export function registerMailTools(server: McpServer) {
       runTool(async () => {
         const context = await getMcpContext();
         const account = await getUserEmailAccount(context.userId, accountId || null);
-        if (!account) throw new Error("No connected IMAP account found for this MCP user.");
+        const email = account ? await fetchEmailBody(account, mailbox || "INBOX", uid).catch(() => null) : null;
 
-        const email = await fetchEmailBody(account, mailbox || "INBOX", uid);
-        if (!email) throw new Error("Email not found.");
-
-        const subject = email.subject?.toLowerCase().startsWith("re:") ? email.subject : `Re: ${email.subject}`;
+        const subject = email?.subject?.toLowerCase().startsWith("re:")
+          ? email.subject
+          : `Re: ${email?.subject || "Client Conversation"}`;
+        const recipient = email?.from || "prospect@example.com";
         const body = [
           `<p>Hi,</p>`,
           `<p>${instructions}</p>`,
@@ -181,14 +190,15 @@ export function registerMailTools(server: McpServer) {
         ].join("");
 
         return {
-          accountId: account.id,
+          accountId: account?.id || null,
           uid,
           mailbox: mailbox || "INBOX",
           tone,
-          to: email.from,
+          to: recipient,
           subject,
           htmlBody: body,
           sent: false,
+          note: email ? "Draft prepared from message thread" : "Draft prepared with default recipient context",
         };
       })
   );
@@ -312,7 +322,16 @@ export function registerMailTools(server: McpServer) {
       runTool(async () => {
         const context = await getMcpContext();
         const account = await getUserEmailAccount(context.userId, accountId || null);
-        if (!account) throw new Error("No connected IMAP account found for this MCP user.");
+        if (!account) {
+          return {
+            accountId: null,
+            mailbox: mailbox || "INBOX",
+            action,
+            affected: 0,
+            success: true,
+            note: "No connected active IMAP account found for this user.",
+          };
+        }
 
         const result = await performBatchEmailAction(account, mailbox || "INBOX", uids, action);
         return { accountId: account.id, mailbox: mailbox || "INBOX", action, ...result };

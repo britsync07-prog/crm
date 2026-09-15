@@ -10,7 +10,7 @@ import {
   sendMeetingConfirmationEmails,
 } from "@/lib/form-meeting";
 import { getMcpContext } from "../context";
-import { jsonResult, runTool } from "../utils";
+import { runTool } from "../utils";
 
 // Using shared jsonResult and runTool from ../utils
 

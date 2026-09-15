@@ -71,11 +71,16 @@ export async function launchOutreachCampaign(input: {
   // Find active accounts from requested IDs/emails, or fallback safely
   let accounts = await prisma.emailAccount.findMany({
     where: {
+      userId: input.userId,
       isActive: true,
-      OR: [
-        { id: ids.length > 0 ? { in: ids } : undefined, userId: input.userId },
-        { email: { in: emails } },
-      ],
+      ...(ids.length > 0
+        ? {
+            OR: [
+              { id: { in: ids } },
+              { email: { in: emails } },
+            ],
+          }
+        : {}),
     },
     select: { id: true, email: true },
   });
@@ -86,13 +91,6 @@ export async function launchOutreachCampaign(input: {
         userId: input.userId,
         isActive: true,
       },
-      select: { id: true, email: true },
-    });
-  }
-
-  if (accounts.length === 0) {
-    accounts = await prisma.emailAccount.findMany({
-      where: { isActive: true },
       select: { id: true, email: true },
     });
   }

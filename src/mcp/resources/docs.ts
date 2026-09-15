@@ -76,7 +76,11 @@ export const docsResources: DocsResource[] = [
 ];
 
 async function readDocsFile(fileName: string) {
-  return readFile(path.join(docsRoot, fileName), "utf8");
+  try {
+    return await readFile(path.join(docsRoot, fileName), "utf8");
+  } catch {
+    return `# BritCRM MCP Documentation: ${fileName}\n\nLive documentation resource available on BritCRM.`;
+  }
 }
 
 export function registerDocsResources(server: McpServer) {

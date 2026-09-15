@@ -148,6 +148,9 @@ export async function importLeadsFromCSV(formData: FormData) {
 }
 
 export async function sendTeamMessage(formData: FormData) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+
   const content = formData.get("content") as string;
   const teamId = formData.get("teamId") as string;
   const senderName = formData.get("senderName") as string;
@@ -158,19 +161,20 @@ export async function sendTeamMessage(formData: FormData) {
     data: {
       content,
       teamId,
-      senderName,
+      senderName: senderName || session.name || session.email,
     },
   });
 
   // AI Response Trigger
-  if (content.toLowerCase().includes("@gemini")) {
-    const aiResponse = await runGeneralAIChat(content.replace(/@gemini/gi, "").trim());
+  if (content.toLowerCase().includes("@gemini") || content.toLowerCase().includes("@ai")) {
+    const prompt = content.replace(/@gemini|@ai/gi, "").trim();
+    const aiResponse = await runGeneralAIChat(prompt);
     
     await prisma.message.create({
       data: {
         content: aiResponse,
         teamId,
-        senderName: "Gemini AI",
+        senderName: "AI Assistant",
       },
     });
   }
@@ -179,6 +183,9 @@ export async function sendTeamMessage(formData: FormData) {
 }
 
 export async function addTeamMember(formData: FormData) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+
   const teamId = formData.get("teamId") as string;
   const name = formData.get("name") as string;
   const role = formData.get("role") as string;
@@ -197,6 +204,9 @@ export async function addTeamMember(formData: FormData) {
 }
 
 export async function removeTeamMember(memberId: string) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+
   await prisma.member.delete({
     where: { id: memberId },
   });

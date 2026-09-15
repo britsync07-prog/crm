@@ -2,8 +2,12 @@
 
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { getSession } from "@/lib/auth";
 
 export async function createBooking(formData: FormData) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+
   const title = formData.get("title") as string;
   const startTime = formData.get("startTime") as string;
   const leadId = formData.get("leadId") as string;
@@ -13,6 +17,7 @@ export async function createBooking(formData: FormData) {
       title,
       startTime: new Date(startTime),
       endTime: new Date(new Date(startTime).getTime() + 30 * 60 * 1000), // 30 min duration
+      userId: session.id,
       leadId: leadId || null,
     },
   });

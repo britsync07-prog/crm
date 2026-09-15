@@ -24,7 +24,7 @@ import type {
 } from "@/lib/britledger/types";
 import { generateInvoiceNumber, generateQuotationNumber } from "@/lib/britledger/utils";
 import { getMcpContext } from "../context";
-import { jsonResult, runTool } from "../utils";
+import { runTool } from "../utils";
 
 // Using shared jsonResult and runTool from ../utils
 

@@ -29,12 +29,15 @@ const eslintConfig = defineConfig([
     // Vendored / external code trees
     "socket.io/**",
     "livekit/**",
+    "public/**",
+    "scratch/**",
     // Generated client code
     "src/generated/**",
     // Local utility scripts (CommonJS)
     "server.js",
     "test-*.js",
     "prisma/*.js",
+    "scripts/**",
   ]),
 ]);
 
