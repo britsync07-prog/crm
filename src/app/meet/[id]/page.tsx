@@ -6,12 +6,23 @@ import {
     VideoConference,
     RoomAudioRenderer,
 } from "@livekit/components-react";
-import { createLocalAudioTrack, createLocalVideoTrack, LocalAudioTrack, LocalVideoTrack, Room, Track, VideoPresets } from "livekit-client";
+import {
+    createLocalAudioTrack,
+    createLocalVideoTrack,
+    LocalAudioTrack,
+    LocalVideoTrack,
+    Room,
+    Track,
+    VideoPresets,
+} from "livekit-client";
+import {
+    BackgroundProcessor,
+    type BackgroundProcessorWrapper,
+    supportsBackgroundProcessors,
+} from "@livekit/track-processors";
 import { useCallback, useEffect, useMemo, useRef, useState, use } from "react";
 import { ImageIcon, Loader2, Mic, MicOff, Sparkles, Video, VideoOff, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import "@tensorflow/tfjs-backend-webgl";
-import * as bodyPix from "@tensorflow-models/body-pix";
 
 type BackgroundMode = "none" | "blur" | "virtual";
 
@@ -29,112 +40,57 @@ function getBackgroundErrorMessage(error: unknown) {
     try {
         return JSON.stringify(error);
     } catch {
-        return "The browser could not initialize the segmentation processor.";
+        return "The browser could not initialize the background processor.";
     }
 }
 
-let bodyPixSegmenterPromise: Promise<bodyPix.BodyPix> | null = null;
-
-function getBodyPixSegmenter() {
-    bodyPixSegmenterPromise ??= bodyPix.load({
-        architecture: "MobileNetV1",
-        outputStride: 16,
-        multiplier: 0.75,
-        quantBytes: 2,
-    });
-
-    return bodyPixSegmenterPromise;
-}
-
-function createBodyPixVideoTrack(videoTrack: LocalVideoTrack, getMode: () => BackgroundMode, onError: (error: unknown) => void) {
-    const sourceVideo = document.createElement("video");
-    const canvas = document.createElement("canvas");
-    const personCanvas = document.createElement("canvas");
-    const initialSettings = videoTrack.mediaStreamTrack.getSettings();
-    canvas.width = initialSettings.width || 640;
-    canvas.height = initialSettings.height || 360;
-    personCanvas.width = canvas.width;
-    personCanvas.height = canvas.height;
-    const stream = canvas.captureStream(24);
-    const outputTrack = stream.getVideoTracks()[0];
-    const context = canvas.getContext("2d");
-    const personContext = personCanvas.getContext("2d");
-    let cancelled = false;
-    let backgroundImage: HTMLImageElement | null = null;
-
-    if (!outputTrack || !context || !personContext) {
-        outputTrack?.stop();
-        throw new Error("Could not create BodyPix video output.");
-    }
-
-    sourceVideo.srcObject = new MediaStream([videoTrack.mediaStreamTrack]);
-    sourceVideo.muted = true;
-    sourceVideo.playsInline = true;
-
-    const drawFrame = async () => {
-        if (cancelled) return;
-
-        if (sourceVideo.videoWidth > 1 && sourceVideo.videoHeight > 1 && canvas.width > 0 && canvas.height > 0) {
-            const mode = getMode();
-
-            if (canvas.width !== sourceVideo.videoWidth || canvas.height !== sourceVideo.videoHeight) {
-                canvas.width = sourceVideo.videoWidth;
-                canvas.height = sourceVideo.videoHeight;
-                personCanvas.width = canvas.width;
-                personCanvas.height = canvas.height;
-            }
-
-            try {
-                if (mode === "none") {
-                    context.drawImage(sourceVideo, 0, 0, canvas.width, canvas.height);
-                } else {
-                    const segmenter = await getBodyPixSegmenter();
-                    const segmentation = await segmenter.segmentPerson(sourceVideo, {
-                        internalResolution: "medium",
-                        segmentationThreshold: 0.65,
-                    });
-
-                    if (mode === "blur") {
-                        bodyPix.drawBokehEffect(canvas, sourceVideo, segmentation, 12, 4, false);
-                    } else {
-                        backgroundImage ??= Object.assign(new Image(), { src: virtualBackgroundPath });
-                        if (backgroundImage.complete && backgroundImage.naturalWidth > 0 && backgroundImage.naturalHeight > 0) {
-                            context.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-                        } else {
-                            context.fillStyle = "#111827";
-                            context.fillRect(0, 0, canvas.width, canvas.height);
-                        }
-                        personContext.globalCompositeOperation = "source-over";
-                        personContext.clearRect(0, 0, personCanvas.width, personCanvas.height);
-                        personContext.drawImage(sourceVideo, 0, 0, personCanvas.width, personCanvas.height);
-                        personContext.globalCompositeOperation = "destination-in";
-                        personContext.putImageData(bodyPix.toMask(segmentation, { r: 0, g: 0, b: 0, a: 255 }, { r: 0, g: 0, b: 0, a: 0 }, false), 0, 0);
-                        personContext.globalCompositeOperation = "source-over";
-                        context.drawImage(personCanvas, 0, 0, canvas.width, canvas.height);
-                    }
-                }
-            } catch (error) {
-                onError(error);
-                if (sourceVideo.videoWidth > 1 && sourceVideo.videoHeight > 1 && canvas.width > 0 && canvas.height > 0) {
-                    context.drawImage(sourceVideo, 0, 0, canvas.width, canvas.height);
-                }
-            }
-        }
-
-        window.setTimeout(drawFrame, 42);
-    };
-
-    void sourceVideo.play().then(drawFrame).catch(onError);
-
+const getAssetPaths = () => {
+    if (typeof window === "undefined") return undefined;
     return {
-        track: new LocalVideoTrack(outputTrack),
-        destroy: () => {
-            cancelled = true;
-            sourceVideo.pause();
-            sourceVideo.srcObject = null;
-            outputTrack.stop();
-        },
+        tasksVisionFileSet: `${window.location.origin}/mediapipe/wasm`,
+        modelAssetPath: `${window.location.origin}/mediapipe/selfie_segmenter.tflite`,
     };
+};
+
+async function attachBackgroundProcessor(
+    track: LocalVideoTrack,
+    mode: "blur" | "virtual"
+): Promise<BackgroundProcessorWrapper> {
+    const assetPaths = getAssetPaths();
+    let processor: BackgroundProcessorWrapper;
+
+    try {
+        processor = BackgroundProcessor(
+            mode === "blur"
+                ? {
+                    mode: "background-blur",
+                    blurRadius: 15,
+                    assetPaths,
+                }
+                : {
+                    mode: "virtual-background",
+                    imagePath: virtualBackgroundPath,
+                    assetPaths,
+                }
+        );
+        await track.setProcessor(processor);
+        return processor;
+    } catch (localErr) {
+        console.warn("Local mediapipe asset loading failed, falling back to CDN:", localErr);
+        processor = BackgroundProcessor(
+            mode === "blur"
+                ? {
+                    mode: "background-blur",
+                    blurRadius: 15,
+                }
+                : {
+                    mode: "virtual-background",
+                    imagePath: virtualBackgroundPath,
+                }
+        );
+        await track.setProcessor(processor);
+        return processor;
+    }
 }
 
 function BackgroundModeSelector({
@@ -198,25 +154,12 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     const [tracksPublished, setTracksPublished] = useState(false);
 
     const previewVideoRef = useRef<HTMLVideoElement | null>(null);
-    const backgroundModeRef = useRef(backgroundMode);
     const localVideoTrackRef = useRef<LocalVideoTrack | null>(null);
-    const sourceVideoTrackRef = useRef<LocalVideoTrack | null>(null);
     const localAudioTrackRef = useRef<LocalAudioTrack | null>(null);
-    const effectsPipelineRef = useRef<{ destroy: () => void } | null>(null);
+    const processorRef = useRef<BackgroundProcessorWrapper | null>(null);
+    const applyingBackgroundRef = useRef(false);
     const publishingRef = useRef(false);
     const room = useMemo(() => new Room(), []);
-
-    useEffect(() => {
-        backgroundModeRef.current = backgroundMode;
-    }, [backgroundMode]);
-
-    const createEffectsVideoTrack = useCallback((videoTrack: LocalVideoTrack, mode: BackgroundMode) => {
-        backgroundModeRef.current = mode;
-        const pipeline = createBodyPixVideoTrack(videoTrack, () => backgroundModeRef.current, (error) => setBackgroundError(getBackgroundErrorMessage(error)));
-        effectsPipelineRef.current = pipeline;
-        setBackgroundError(null);
-        return pipeline.track;
-    }, []);
 
     const getLivekitUrl = () => {
         const configuredUrl = (process.env.NEXT_PUBLIC_LIVEKIT_URL || "").trim();
@@ -299,7 +242,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                 setBackgroundMode(backgroundSupported ? selectedBackgroundMode : "none");
                 setToken(data.token);
                 setHasJoined(true);
-                setWaitingInfo(null); // Clear waiting if we got a token
+                setWaitingInfo(null);
                 setTracksPublished(false);
             } else {
                 setHasJoined(false);
@@ -337,8 +280,15 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     }, [fetchMeetingStatus]);
 
     useEffect(() => {
-        setBackgroundSupported(typeof window !== "undefined" && typeof window.MediaStream !== "undefined");
-        setBackgroundChecked(true);
+        if (typeof window !== "undefined") {
+            try {
+                const supported = supportsBackgroundProcessors();
+                setBackgroundSupported(supported);
+            } catch {
+                setBackgroundSupported(false);
+            }
+            setBackgroundChecked(true);
+        }
     }, []);
 
     useEffect(() => {
@@ -350,28 +300,111 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
     useEffect(() => {
         return () => {
             room.disconnect();
-            localVideoTrackRef.current?.stop();
-            effectsPipelineRef.current?.destroy();
-            if (sourceVideoTrackRef.current !== localVideoTrackRef.current) {
-                sourceVideoTrackRef.current?.stop();
+            const videoTrack = localVideoTrackRef.current;
+            if (videoTrack) {
+                if (processorRef.current) {
+                    void videoTrack.stopProcessor().catch(() => {});
+                    processorRef.current = null;
+                }
+                videoTrack.stop();
             }
             localAudioTrackRef.current?.stop();
         };
     }, [room]);
 
-    const stopCameraPreview = useCallback(() => {
-        const processedTrack = localVideoTrackRef.current;
-        const sourceTrack = sourceVideoTrackRef.current;
+    const applyBackgroundMode = useCallback(async (targetMode: BackgroundMode) => {
+        if (applyingBackgroundRef.current) return;
+        applyingBackgroundRef.current = true;
 
-        processedTrack?.stop();
-        effectsPipelineRef.current?.destroy();
-        if (sourceTrack && sourceTrack !== processedTrack) {
-            sourceTrack.stop();
+        const currentTrack = localVideoTrackRef.current || (room.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined);
+
+        try {
+            setBackgroundError(null);
+
+            if (targetMode === "none") {
+                if (processorRef.current) {
+                    try {
+                        await processorRef.current.switchTo({ mode: "disabled" });
+                    } catch {
+                        if (currentTrack) {
+                            await currentTrack.stopProcessor().catch(() => {});
+                        }
+                        processorRef.current = null;
+                    }
+                }
+                setBackgroundMode("none");
+                if (previewVideoRef.current && currentTrack) {
+                    currentTrack.attach(previewVideoRef.current);
+                    previewVideoRef.current.srcObject = new MediaStream([currentTrack.mediaStreamTrack]);
+                }
+                return;
+            }
+
+            // targetMode is "blur" or "virtual"
+            if (typeof window !== "undefined" && !supportsBackgroundProcessors()) {
+                setBackgroundError("Background blur is not supported on this device/browser.");
+                setBackgroundMode("none");
+                return;
+            }
+
+            // If processor already active on the track, switch mode instantly
+            if (processorRef.current && currentTrack) {
+                if (targetMode === "blur") {
+                    await processorRef.current.switchTo({ mode: "background-blur", blurRadius: 15 });
+                } else {
+                    await processorRef.current.switchTo({ mode: "virtual-background", imagePath: virtualBackgroundPath });
+                }
+                setBackgroundMode(targetMode);
+                if (previewVideoRef.current && processorRef.current.processedTrack) {
+                    previewVideoRef.current.srcObject = new MediaStream([processorRef.current.processedTrack]);
+                }
+                return;
+            }
+
+            // Attach new processor to the active track
+            if (currentTrack) {
+                const processor = await attachBackgroundProcessor(currentTrack, targetMode);
+                processorRef.current = processor;
+                setBackgroundMode(targetMode);
+
+                if (previewVideoRef.current && processor.processedTrack) {
+                    previewVideoRef.current.srcObject = new MediaStream([processor.processedTrack]);
+                }
+            } else {
+                setBackgroundMode(targetMode);
+            }
+        } catch (err) {
+            console.error("Failed to apply background effect:", err);
+            setBackgroundError(getBackgroundErrorMessage(err));
+            if (currentTrack && processorRef.current) {
+                try {
+                    await currentTrack.stopProcessor();
+                } catch {
+                    // ignore
+                }
+            }
+            processorRef.current = null;
+            setBackgroundMode("none");
+            if (previewVideoRef.current && currentTrack) {
+                currentTrack.attach(previewVideoRef.current);
+                previewVideoRef.current.srcObject = new MediaStream([currentTrack.mediaStreamTrack]);
+            }
+        } finally {
+            applyingBackgroundRef.current = false;
+        }
+    }, [room]);
+
+    const stopCameraPreview = useCallback(() => {
+        const videoTrack = localVideoTrackRef.current;
+        if (videoTrack) {
+            if (processorRef.current) {
+                void videoTrack.stopProcessor().catch(() => {});
+                processorRef.current = null;
+            }
+            videoTrack.stop();
         }
 
         localVideoTrackRef.current = null;
-        sourceVideoTrackRef.current = null;
-        effectsPipelineRef.current = null;
         setPreviewReady(false);
         setPreviewError(null);
         setBackgroundError(null);
@@ -384,38 +417,40 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
             setPreviewStarting(true);
             setPreviewError(null);
 
-            const sourceVideoTrack = await createLocalVideoTrack({
+            const isMobile = typeof window !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const videoTrack = await createLocalVideoTrack({
                 facingMode: "user",
-                resolution: VideoPresets.h360.resolution,
+                resolution: isMobile ? VideoPresets.h540.resolution : VideoPresets.h720.resolution,
             });
 
-            sourceVideoTrackRef.current = sourceVideoTrack;
+            localVideoTrackRef.current = videoTrack;
 
-            if (backgroundSupported) {
-                localVideoTrackRef.current = createEffectsVideoTrack(sourceVideoTrack, backgroundMode);
-            } else {
-                localVideoTrackRef.current = sourceVideoTrack;
+            if (backgroundMode !== "none" && typeof window !== "undefined" && supportsBackgroundProcessors()) {
+                try {
+                    const processor = await attachBackgroundProcessor(videoTrack, backgroundMode);
+                    processorRef.current = processor;
+                } catch (procErr) {
+                    console.warn("Could not apply background effect in startCameraPreview:", procErr);
+                    setBackgroundError(getBackgroundErrorMessage(procErr));
+                    setBackgroundMode("none");
+                }
             }
 
             setPreviewReady(true);
         } catch (error) {
             localVideoTrackRef.current?.stop();
             localVideoTrackRef.current = null;
-            effectsPipelineRef.current?.destroy();
-            effectsPipelineRef.current = null;
-            sourceVideoTrackRef.current?.stop();
-            sourceVideoTrackRef.current = null;
+            processorRef.current = null;
             setPreviewReady(false);
             setPreviewError(error instanceof Error ? error.message : "Could not start camera preview.");
         } finally {
             setPreviewStarting(false);
         }
-    }, [backgroundMode, backgroundSupported, createEffectsVideoTrack, error, hasJoined, isExpired, previewReady, previewStarting, waitingInfo]);
+    }, [backgroundMode, error, hasJoined, isExpired, previewReady, previewStarting, waitingInfo]);
 
     const handleCameraToggle = useCallback(() => {
         if (cameraEnabled) {
             setCameraEnabled(false);
-            setBackgroundMode("none");
             stopCameraPreview();
             return;
         }
@@ -444,58 +479,41 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
         if (!videoElement || !videoTrack || hasJoined) return;
 
         videoTrack.attach(videoElement);
+        const processedTrack = processorRef.current?.processedTrack || (videoTrack.getProcessor() as BackgroundProcessorWrapper | undefined)?.processedTrack;
+        if (processedTrack) {
+            videoElement.srcObject = new MediaStream([processedTrack]);
+        }
         videoElement.muted = true;
         videoElement.playsInline = true;
 
         return () => {
             videoTrack.detach(videoElement);
         };
-    }, [hasJoined, previewReady]);
+    }, [hasJoined, previewReady, backgroundMode]);
 
     const handleBackgroundModeChange = (mode: BackgroundMode) => {
-        setBackgroundMode(mode);
-        if (mode === "none") {
-            setBackgroundError(null);
-            return;
-        }
-
-        if (backgroundChecked && !backgroundSupported) {
-            setBackgroundError("Background effects are not supported in this browser.");
-        }
+        void applyBackgroundMode(mode);
     };
-
-    useEffect(() => {
-        if (!backgroundChecked || !backgroundSupported) {
-            if (backgroundChecked && backgroundMode !== "none") {
-                setBackgroundError("Background effects are not supported in this browser.");
-            }
-            return;
-        }
-
-        const applyBackground = async () => {
-            try {
-                setBackgroundError(null);
-            } catch (error) {
-                setBackgroundError(getBackgroundErrorMessage(error));
-            }
-        };
-
-        void applyBackground();
-    }, [backgroundChecked, backgroundMode, backgroundSupported, previewReady]);
 
     const ensureLocalTracks = useCallback(async () => {
         if (cameraEnabled && !localVideoTrackRef.current) {
-            const sourceVideoTrack = await createLocalVideoTrack({
+            const isMobile = typeof window !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const videoTrack = await createLocalVideoTrack({
                 facingMode: "user",
-                resolution: VideoPresets.h360.resolution,
+                resolution: isMobile ? VideoPresets.h540.resolution : VideoPresets.h720.resolution,
             });
 
-            sourceVideoTrackRef.current = sourceVideoTrack;
+            localVideoTrackRef.current = videoTrack;
 
-            if (backgroundSupported) {
-                localVideoTrackRef.current = createEffectsVideoTrack(sourceVideoTrack, backgroundMode);
-            } else {
-                localVideoTrackRef.current = sourceVideoTrack;
+            if (backgroundMode !== "none" && typeof window !== "undefined" && supportsBackgroundProcessors()) {
+                try {
+                    const processor = await attachBackgroundProcessor(videoTrack, backgroundMode);
+                    processorRef.current = processor;
+                } catch (procErr) {
+                    console.warn("Could not apply background effect in ensureLocalTracks:", procErr);
+                    setBackgroundError(getBackgroundErrorMessage(procErr));
+                    setBackgroundMode("none");
+                }
             }
         }
 
@@ -508,7 +526,7 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ id: stri
                 throw error;
             }
         }
-    }, [backgroundMode, backgroundSupported, cameraEnabled, createEffectsVideoTrack, micEnabled]);
+    }, [backgroundMode, cameraEnabled, micEnabled]);
 
     const publishLocalTracks = useCallback(async () => {
         if (tracksPublished || publishingRef.current) return;
