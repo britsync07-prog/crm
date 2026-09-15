@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { cache } from "react";
 
 export type SubscriptionStatusInfo = {
   isExpired: boolean;
@@ -13,7 +14,7 @@ export type SubscriptionStatusInfo = {
   organizationName: string | null;
 };
 
-export async function getUserSubscription(userId: string): Promise<SubscriptionStatusInfo> {
+export const getUserSubscription = cache(async function getUserSubscription(userId: string): Promise<SubscriptionStatusInfo> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -143,7 +144,7 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionS
     organizationId: org.id,
     organizationName: org.name,
   };
-}
+});
 
 export async function assertActiveSubscription(userId: string) {
   const sub = await getUserSubscription(userId);

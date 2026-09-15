@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/db";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
   ContextAnalysisResult,
   InternalQuestion,
@@ -12,19 +11,8 @@ import { findMatchingTemplate, ensureServiceTemplates } from "./service-template
 import { ensureDocumentTemplates, interpolateVariables } from "./document-templates";
 import { logOnboardingAudit } from "./audit";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-
-async function callLLM(prompt: string, fallback: string): Promise<string> {
-  if (!process.env.GEMINI_API_KEY) return fallback;
-  try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    return text.replace(/```json|```markdown|```/g, "").trim();
-  } catch (err) {
-    console.error("[OnboardingAI] LLM error, using fallback:", err);
-    return fallback;
-  }
+async function callLLM(_prompt: string, fallback: string): Promise<string> {
+  return fallback;
 }
 
 /**

@@ -13,6 +13,10 @@ const csp = `
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  serverExternalPackages: ["better-sqlite3", "bcrypt"],
+  experimental: {
+    optimizePackageImports: ["lucide-react"],
+  },
   async headers() {
     return [
       {

@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { cache } from "react";
 
 const JWT_SECRET = process.env.JWT_SECRET || "9b21b5181b46a159a5c48befd015105fb3242aad902cfb4eca5d80946ff01d79";
 const key = new TextEncoder().encode(JWT_SECRET);
@@ -38,7 +39,7 @@ export async function logout() {
   cookieStore.set("session", "", { expires: new Date(0), path: "/" });
 }
 
-export async function getSession(req?: NextRequest) {
+export const getSession = cache(async function getSession(req?: NextRequest) {
   // 1. Try to get session from Authorization header (External API) - Prioritize for speed/reliability
   if (req) {
     const authHeader = req.headers.get("Authorization");
@@ -70,7 +71,7 @@ export async function getSession(req?: NextRequest) {
   }
 
   return null;
-}
+});
 
 export async function updateSession(request: NextRequest) {
   const session = request.cookies.get("session")?.value;

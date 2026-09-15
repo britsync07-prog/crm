@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
 import Sidebar from "@/components/Sidebar";
 import TopNavbar from "@/components/TopNavbar";
+import NavigationProgressBar from "@/components/NavigationProgressBar";
 import TrialGate from "@/components/auth/TrialGate";
 import { getSession } from "@/lib/auth";
 import { getUserSubscription } from "@/lib/subscription";
@@ -67,6 +68,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="scroll-smooth">
       <body className="antialiased brit-theme min-h-screen">
+        <NavigationProgressBar />
         <script
           type="application/ld+json"
           suppressHydrationWarning
