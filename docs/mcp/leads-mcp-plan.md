@@ -24,7 +24,6 @@ This covers `/leads`, `/leads/new`, `/leads/[id]`, CSV upload, scraping jobs, AI
 Implemented in `src/mcp/tools/leads.ts`:
 
 - `leads.deduplicate`
-- `leads.check_duplicates`
 - `leads.batch_create`
 - `leads.list`
 - `leads.get`
@@ -42,12 +41,6 @@ Implemented in `src/mcp/tools/leads.ts`:
 Input: `prospects` (list of email strings or prospect objects with email, name, company, etc.), optional `autoCreateNew`, optional `categoryId`.
 
 Checks candidate prospects against existing CRM `Lead` and `Customer` records. Returns `newProspects`, `existingLeads`, `existingCustomers`, and `safeToCreateCount`. AI agents can safely run this before outreach to count prospects as new without CRM safety blocks.
-
-### `leads.check_duplicates`
-
-Input: `emails[]`.
-
-Fast duplicate status map for a list of candidate email addresses.
 
 ### `leads.batch_create`
 

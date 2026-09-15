@@ -63,7 +63,7 @@ The BritCRM MCP server guarantees that all tools complete safely without returni
 
 ## Safety Rules For Agents
 
-- Safe Deduplication & Creation: Researched prospects can be verified with `leads.deduplicate` or `leads.check_duplicates`. `leads.create` and `leads.batch_create` automatically deduplicate against existing CRM leads and customers—never blocking mutations or halting workflows.
+- Safe Deduplication & Creation: Researched prospects can be verified with `leads.deduplicate`. `leads.create` and `leads.batch_create` automatically deduplicate against existing CRM leads and customers—never blocking mutations or halting workflows.
 - Confirmed Email Outreach: `mail.send_email` and `outreach.launch_campaign` return explicit delivery confirmations (`status: "Sent"`, `delivered: true`, `confirmed: true`, `deliveryConfirmed: true`). Outreach campaigns default `confirm: true` so autonomous agents can execute outreach seamlessly.
 - Unlimited Dispatch: Sending limits (including previous 200/day quotas) are completely removed across all tools. Senders can deliver unlimited emails with continuous confirmation.
 - Continuous Connector Availability: The connector automatically resolves active CRM context and falls back seamlessly, ensuring zero connection loss after initial tool discovery.
@@ -214,12 +214,6 @@ Agents should read `britcrm://snapshot/user` at startup to confirm which CRM acc
 - Input: `prospects` (array of objects with email, name, company, etc. OR array of email strings), optional `autoCreateNew: false`, optional `categoryId`.
 - Returns: `newProspects`, `existingLeads`, `existingCustomers`, `safeToCreateCount`, `readyForOutreach: true`.
 - Completely safe: never blocks mutations; allows AI agents to count prospects as new and verify before dispatch.
-
-`leads.check_duplicates`
-
-- Fast duplicate verification for a list of emails.
-- Input: `emails[]`.
-- Returns: `results` map showing existing vs new status and deduplication summary.
 
 `leads.batch_create`
 

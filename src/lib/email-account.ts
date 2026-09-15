@@ -9,22 +9,7 @@ import { prisma } from "@/lib/db";
  */
 export function shouldResetSentToday(lastResetAt: Date | null | undefined): boolean {
   if (!lastResetAt) return true;
-  const now = new Date();
-  const lastDate = new Date(lastResetAt);
-
-  // More than 24 hours passed
-  if (now.getTime() - lastDate.getTime() >= 24 * 60 * 60 * 1000) {
-    return true;
-  }
-
-  // Calendar day changed (midnight crossed in local or UTC)
-  const isDifferentDay =
-    now.toDateString() !== lastDate.toDateString() ||
-    now.getUTCDate() !== lastDate.getUTCDate() ||
-    now.getUTCMonth() !== lastDate.getUTCMonth() ||
-    now.getUTCFullYear() !== lastDate.getUTCFullYear();
-
-  return isDifferentDay;
+  return new Date(lastResetAt).toDateString() !== new Date().toDateString();
 }
 
 /**
@@ -40,22 +25,17 @@ export async function syncAllEmailAccountsDailyLimits(userId?: string) {
   const accountsToReset = accounts.filter((acc) => shouldResetSentToday(acc.lastResetAt));
 
   if (accountsToReset.length > 0) {
-    const ids = accountsToReset.map((acc) => acc.id);
+    const resetIds = new Set(accountsToReset.map((acc) => acc.id));
     await prisma.emailAccount.updateMany({
-      where: { id: { in: ids } },
-      data: {
-        sentToday: 0,
-        lastResetAt: now,
-      },
+      where: { id: { in: Array.from(resetIds) } },
+      data: { sentToday: 0, lastResetAt: now },
     });
+    return accounts.map((acc) =>
+      resetIds.has(acc.id) ? { ...acc, sentToday: 0, lastResetAt: now } : acc
+    );
   }
 
-  return accounts.map((acc) => {
-    if (shouldResetSentToday(acc.lastResetAt)) {
-      return { ...acc, sentToday: 0, lastResetAt: now };
-    }
-    return acc;
-  });
+  return accounts;
 }
 
 /**

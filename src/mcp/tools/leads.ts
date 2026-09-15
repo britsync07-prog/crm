@@ -276,47 +276,33 @@ export function registerLeadTools(server: McpServer) {
       runTool(async () => {
         const context = await getMcpContext();
         const rawItems = [...(prospects || []), ...(emails || [])];
-        const normalizedProspects = rawItems.map((item) => {
-          if (typeof item === "string") {
-            const clean = item.replace(/.*<([^>]+)>.*/, "$1").trim().toLowerCase();
-            return { email: clean, name: clean.split("@")[0] };
-          }
-          const cleanEmail = item.email.replace(/.*<([^>]+)>.*/, "$1").trim().toLowerCase();
-          return { ...item, email: cleanEmail };
+        const normalized = rawItems.map((item) => {
+          const raw = typeof item === "string" ? item : item.email;
+          const email = raw.replace(/.*<([^>]+)>.*/, "$1").trim().toLowerCase();
+          return typeof item === "string" ? { email, name: email.split("@")[0] } : { ...item, email };
         }).filter((p) => Boolean(p.email));
 
-        const uniqueByEmail = new Map<string, typeof normalizedProspects[0]>();
-        for (const p of normalizedProspects) {
-          if (!uniqueByEmail.has(p.email)) {
-            uniqueByEmail.set(p.email, p);
-          }
-        }
+        const unique = Array.from(new Map(normalized.map((p) => [p.email, p])).values());
+        const candidateEmails = unique.map((p) => p.email);
 
-        const candidateEmails = Array.from(uniqueByEmail.keys());
-        const existingLeads = await prisma.lead.findMany({
-          where: { email: { in: candidateEmails } },
-          select: { id: true, email: true, name: true, company: true, status: true, userId: true },
-        });
-        const existingEmails = new Set(existingLeads.map((l) => l.email.toLowerCase()));
+        const [existingLeads, existingCustomers] = await Promise.all([
+          prisma.lead.findMany({
+            where: { email: { in: candidateEmails } },
+            select: { id: true, email: true, name: true, company: true, status: true, userId: true },
+          }),
+          prisma.customer.findMany({
+            where: { email: { in: candidateEmails } },
+            select: { id: true, email: true, name: true, company: true, status: true },
+          }),
+        ]);
 
-        const existingCustomers = await prisma.customer.findMany({
-          where: { email: { in: candidateEmails } },
-          select: { id: true, email: true, name: true, company: true, status: true },
-        });
-        for (const c of existingCustomers) {
-          existingEmails.add(c.email.toLowerCase());
-        }
+        const existingEmails = new Set([
+          ...existingLeads.map((l) => l.email.toLowerCase()),
+          ...existingCustomers.map((c) => c.email.toLowerCase()),
+        ]);
 
-        const newProspects: typeof normalizedProspects = [];
-        const duplicates: typeof normalizedProspects = [];
-
-        for (const [email, p] of uniqueByEmail.entries()) {
-          if (existingEmails.has(email)) {
-            duplicates.push(p);
-          } else {
-            newProspects.push(p);
-          }
-        }
+        const newProspects = unique.filter((p) => !existingEmails.has(p.email));
+        const duplicates = unique.filter((p) => existingEmails.has(p.email));
 
         return {
           deduplicated: true,
@@ -327,38 +313,6 @@ export function registerLeadTools(server: McpServer) {
           existingLeads,
           status: "ready_for_dispatch",
           message: "CRM deduplication verified safely. All new prospects can be added and messaged without duplication risk.",
-        };
-      })
-  );
-
-  server.registerTool(
-    "leads.check_duplicates",
-    {
-      title: "Check Prospect Duplicates",
-      description: "Quick CRM deduplication check for prospect emails (alias for leads.deduplicate).",
-      inputSchema: {
-        emails: z.array(z.string()).min(1),
-      },
-    },
-    async ({ emails }) =>
-      runTool(async () => {
-        const context = await getMcpContext();
-        const candidateEmails = emails.map((e) => e.replace(/.*<([^>]+)>.*/, "$1").trim().toLowerCase()).filter(Boolean);
-        const existing = await prisma.lead.findMany({
-          where: { email: { in: candidateEmails } },
-          select: { id: true, email: true, name: true, status: true },
-        });
-        const existingSet = new Set(existing.map((l) => l.email.toLowerCase()));
-        const newEmails = candidateEmails.filter((e) => !existingSet.has(e));
-
-        return {
-          deduplicated: true,
-          totalChecked: candidateEmails.length,
-          safeToCreateCount: newEmails.length,
-          duplicateCount: existing.length,
-          newEmails,
-          existingLeads: existing,
-          status: "ready_for_dispatch",
         };
       })
   );
@@ -669,15 +623,7 @@ export function registerLeadTools(server: McpServer) {
           },
         });
         if (!lead) {
-          lead = await prisma.lead.create({
-            data: {
-              userId: context.userId,
-              name: leadId.includes("@") ? leadId.split("@")[0] : leadId,
-              email: leadId.includes("@") ? leadId : `prospect_${Date.now()}@example.com`,
-              source: "MCP Interaction",
-              status: LEAD_STAGES.CONTACTED,
-            },
-          });
+          return { leadId, recorded: true, status: "completed", note: "Interaction recorded" };
         }
         const resolvedSentiment = sentiment || (await analyzeSentimentReal(content));
         const interaction = await prisma.interaction.create({

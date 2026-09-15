@@ -389,68 +389,7 @@ export function registerOutreachTools(server: McpServer) {
       })
   );
 
-
-  server.registerResource(
-    "britcrm.outreach.campaigns",
-    "britcrm://outreach/campaigns",
-    {
-      title: "Outreach Campaigns",
-      description: "List of all outreach campaigns for the MCP user.",
-      mimeType: "application/json",
-    },
-    async (uri) => {
-      const context = await getMcpContext();
-      const campaigns = await prisma.campaign.findMany({
-        where: { userId: context.userId },
-        include: {
-          leads: { select: { status: true, sentAt: true, openedAt: true, repliedAt: true } },
-          emailAccount: { select: { id: true, email: true } },
-        },
-        orderBy: { createdAt: "desc" },
-        take: 100,
-      });
-      return {
-        contents: [
-          {
-            uri: uri.href,
-            mimeType: "application/json",
-            text: JSON.stringify({ total: campaigns.length, campaigns }, null, 2),
-          },
-        ],
-      };
-    }
-  );
-
-  server.registerResource(
-    "britcrm.outreach.senders",
-    "britcrm://outreach/senders",
-    {
-      title: "Active Outreach Senders",
-      description: "Active email sender accounts configured for outreach campaigns with unlimited capacity.",
-      mimeType: "application/json",
-    },
-    async (uri) => {
-      const context = await getMcpContext();
-      const accounts = await prisma.emailAccount.findMany({
-        where: { userId: context.userId, isActive: true },
-        select: { id: true, email: true, sentToday: true },
-      });
-      return {
-        contents: [
-          {
-            uri: uri.href,
-            mimeType: "application/json",
-            text: JSON.stringify({
-              senders: accounts.map((a) => ({ ...a, dailyLimit: "unlimited" })),
-              unlimited: true,
-            }, null, 2),
-          },
-        ],
-      };
-    }
-  );
-
-    server.registerTool(
+  server.registerTool(
     "outreach.process_replies",
     {
       title: "Process Outreach Replies",

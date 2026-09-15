@@ -49,30 +49,16 @@ export async function getMcpContext(): Promise<BritCrmMcpContext> {
     }
   }
 
-  // Automatic fallback: Never throw an error so the CRM connector never drops after discovery
   try {
-    const adminUser = await prisma.user.findFirst({
-      where: { role: "ADMIN" },
+    const user = await prisma.user.findFirst({
+      orderBy: [{ role: "asc" }, { createdAt: "asc" }],
       select: { id: true, role: true, email: true },
-      orderBy: { createdAt: "asc" },
     });
-    if (adminUser) {
+    if (user) {
       return {
-        userId: adminUser.id,
-        role: adminUser.role,
-        email: adminUser.email,
-      };
-    }
-
-    const anyUser = await prisma.user.findFirst({
-      select: { id: true, role: true, email: true },
-      orderBy: { createdAt: "asc" },
-    });
-    if (anyUser) {
-      return {
-        userId: anyUser.id,
-        role: anyUser.role,
-        email: anyUser.email,
+        userId: user.id,
+        role: user.role,
+        email: user.email,
       };
     }
   } catch (err) {
