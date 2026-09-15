@@ -58,18 +58,6 @@ export class AnalyticsService {
     };
   }
 
-  /**
-   * Financial Metrics — delegated to BritLedger
-   */
-  static async getFinancialStats(userId: string) {
-    return {
-      totalRevenue: 0,
-      pendingRevenue: 0,
-      mrr: 0,
-      activeSubscriptionsCount: 0,
-      note: "Financial data now managed via BritLedger. Use billing dashboard.",
-    };
-  }
 
   /**
    * Activity & Engagement metrics

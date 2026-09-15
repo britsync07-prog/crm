@@ -12,8 +12,6 @@
     "lint": "eslint",
     "admin:create": "tsx scripts/create-admin.ts",
     "imap:check": "tsx scripts/check-imap.ts",
-    "inbox:check": "tsx scripts/check-saved-inbox.ts",
-    "inbox:body": "tsx scripts/check-saved-body.ts",
     "mcp": "tsx src/mcp/server.ts",
     "postinstall": "prisma generate && node scripts/init-onboarding-db.cjs",
     "setup:livekit": "mkdir -p livekit && cd livekit && wget -qO- https://github.com/livekit/livekit/releases/download/v1.9.12/livekit_1.9.12_linux_amd64.tar.gz | tar -xz livekit-server"
@@ -41,7 +39,6 @@
     "lucide-react": "^0.576.0",
     "mailparser": "^3.9.3",
     "next": "16.1.6",
-    "node-html-parser": "^7.1.0",
     "nodemailer": "^8.0.1",
     "puppeteer": "^24.37.5",
     "react": "19.2.3",

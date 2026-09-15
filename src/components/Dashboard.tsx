@@ -31,14 +31,12 @@ export default async function Dashboard() {
   const [
     pipelineStats,
     conversionStats,
-    financialStats,
     activityStats,
     recentLeads,
     upcomingTasks
   ] = await Promise.all([
     AnalyticsService.getPipelineStats(userId),
     AnalyticsService.getLeadConversionStats(userId),
-    AnalyticsService.getFinancialStats(userId),
     AnalyticsService.getActivityStats(userId),
     prisma.lead.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 5 }),
     (prisma as any).task.findMany({ 
@@ -125,10 +123,10 @@ export default async function Dashboard() {
         {[
           { 
             label: "Monthly Revenue (MRR)", 
-            value: `$${financialStats.mrr.toLocaleString()}`, 
+            value: "$0", 
             icon: CreditCard, 
             color: "text-green-500", 
-            trend: `${financialStats.activeSubscriptionsCount} ACTIVE NODES` 
+            trend: "BRITLEDGER SYNCED" 
           },
           { 
             label: "Pipeline Valuation", 
