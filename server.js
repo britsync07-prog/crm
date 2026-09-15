@@ -66,6 +66,8 @@ const reminderIntervalMs = Math.max(30, Number(process.env.REMINDER_WORKER_SECON
 const autoReminderEnabled = process.env.AUTO_REMINDER_WORKER !== "false";
 const outreachReplyIntervalMs = Math.max(60, Number(process.env.OUTREACH_REPLY_WORKER_SECONDS || 180)) * 1000;
 const autoOutreachReplyEnabled = process.env.AUTO_OUTREACH_REPLY_WORKER !== "false";
+const dailyResetIntervalMs = Math.max(60, Number(process.env.EMAIL_DAILY_RESET_SECONDS || 300)) * 1000;
+const autoDailyResetEnabled = process.env.AUTO_EMAIL_DAILY_RESET !== "false";
 const internalRequestHeaders = process.env.INTERNAL_CRON_SECRET
     ? { "x-internal-cron-secret": process.env.INTERNAL_CRON_SECRET }
     : process.env.GLOBAL_API_KEY
@@ -109,6 +111,7 @@ const handle = app.getRequestHandler();
 
 const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL || "file:prisma/dev.db" });
 const prisma = new PrismaClient({ adapter });
+prisma.$executeRawUnsafe('ALTER TABLE "EmailAccount" ADD COLUMN "lastResetAt" DATETIME;').catch(() => {});
 
 // Track online users per workspace: { workspaceId: Set<{ socketId, userId, name }> }
 const onlineUsers = new Map();
@@ -374,6 +377,26 @@ app.prepare().then(() => {
 
                 setTimeout(runReminderTick, 5000);
                 const timer = setInterval(runReminderTick, reminderIntervalMs);
+                if (typeof timer.unref === "function") timer.unref();
+            }
+
+            if (autoDailyResetEnabled) {
+                const dailyResetUrl = `http://127.0.0.1:${port}/api/internal/email-accounts/reset-daily`;
+                console.log(`> Email daily reset worker enabled (${Math.floor(dailyResetIntervalMs / 1000)}s interval)`);
+
+                const runDailyResetTick = async () => {
+                    try {
+                        const res = await fetch(dailyResetUrl, { headers: internalRequestHeaders });
+                        if (!res.ok) {
+                            console.warn(`[EmailDailyResetWorker] Trigger failed: ${res.status}`);
+                        }
+                    } catch (err) {
+                        console.warn("[EmailDailyResetWorker] Trigger error:", err?.message || err);
+                    }
+                };
+
+                setTimeout(runDailyResetTick, 10000);
+                const timer = setInterval(runDailyResetTick, dailyResetIntervalMs);
                 if (typeof timer.unref === "function") timer.unref();
             }
 

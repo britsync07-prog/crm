@@ -3,7 +3,14 @@ const fs = require('fs');
 
 try {
   const Database = require('better-sqlite3');
-  const dbPath = path.resolve(process.cwd(), 'prisma', 'dev.db');
+  let dbPath = path.resolve(process.cwd(), 'prisma', 'dev.db');
+  if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('file:')) {
+    const rawPath = process.env.DATABASE_URL.replace(/^file:/, '').trim();
+    const candidatePath = path.isAbsolute(rawPath) ? rawPath : path.resolve(process.cwd(), rawPath);
+    if (fs.existsSync(candidatePath) || !fs.existsSync(dbPath)) {
+      dbPath = candidatePath;
+    }
+  }
   
   if (!fs.existsSync(dbPath)) {
     console.log('[init-onboarding-db] DB file does not exist yet at:', dbPath);
@@ -267,6 +274,17 @@ try {
 
     for (const [type, name, reqApp, reqSig, vars, content] of defaultDocTemplates) {
       insertDocStmt.run('dt_' + type.toLowerCase(), type, name, reqApp, reqSig, vars, content);
+    }
+
+    // Verify EmailAccount has lastResetAt column
+    try {
+      const emailAccountTable = db.prepare('PRAGMA table_info("EmailAccount")').all();
+      if (emailAccountTable.length > 0 && !emailAccountTable.some(col => col.name === 'lastResetAt')) {
+        db.prepare('ALTER TABLE "EmailAccount" ADD COLUMN "lastResetAt" DATETIME').run();
+        console.log('[init-onboarding-db] Added lastResetAt column to EmailAccount table.');
+      }
+    } catch (colErr) {
+      console.warn('[init-onboarding-db] Notice checking EmailAccount columns:', colErr.message);
     }
 
     db.close();

@@ -15,3 +15,9 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma_v4 = prisma;
 prisma.$executeRawUnsafe("PRAGMA journal_mode = WAL;").catch((err) => {
   console.error("Failed to set WAL mode:", err);
 });
+
+// Ensure lastResetAt column exists on EmailAccount in production databases
+prisma.$executeRawUnsafe('ALTER TABLE "EmailAccount" ADD COLUMN "lastResetAt" DATETIME;').catch(() => {
+  // Ignored if column already exists or table not yet created
+});
+

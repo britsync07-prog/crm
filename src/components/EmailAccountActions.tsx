@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { deleteEmailAccount, deleteAllEmailAccounts } from "@/app/campaign-actions";
-import { Trash2, AlertTriangle } from "lucide-react";
+import { deleteEmailAccount, deleteAllEmailAccounts, resetEmailAccountCounter } from "@/app/campaign-actions";
+import { Trash2, AlertTriangle, RotateCcw } from "lucide-react";
 import { useState } from "react";
 
 export function DeleteAccountButton({ accountId, email }: { accountId: string; email: string }) {
@@ -104,3 +104,35 @@ export function RemoveAllButton({ hasAccounts }: { hasAccounts: boolean }) {
     </button>
   );
 }
+
+export function ResetCounterButton({ accountId }: { accountId: string }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  const handleReset = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm("Reset the 'Sent Today' counter back to 0 for this mailbox?")) {
+      return;
+    }
+    setLoading(true);
+    const result = await resetEmailAccountCounter(accountId);
+    if (result?.error) {
+      alert(result.error);
+    }
+    setLoading(false);
+    router.refresh();
+  };
+
+  return (
+    <button
+      onClick={handleReset}
+      disabled={loading}
+      className="inline-flex items-center justify-center p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400 hover:text-blue-600 transition-colors disabled:opacity-50"
+      title="Reset Sent Today counter to 0"
+    >
+      <RotateCcw className={`w-3 h-3 ${loading ? "animate-spin text-blue-600" : ""}`} />
+    </button>
+  );
+}
+

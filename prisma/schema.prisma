@@ -406,6 +406,7 @@ model EmailAccount {
   sentToday    Int        @default(0)
   warmupStatus Boolean    @default(false)
   isActive     Boolean    @default(true)
+  lastResetAt  DateTime?  @default(now())
   campaigns    Campaign[]
   user         User       @relation(fields: [userId], references: [id])
 }

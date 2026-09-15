@@ -2,7 +2,8 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { EmailAccountForm } from "@/components/EmailAccountForm";
-import { DeleteAccountButton, RemoveAllButton } from "@/components/EmailAccountActions";
+import { DeleteAccountButton, RemoveAllButton, ResetCounterButton } from "@/components/EmailAccountActions";
+import { syncAllEmailAccountsDailyLimits } from "@/lib/email-account";
 import { Mail, Zap, CheckCircle2 } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
@@ -11,9 +12,7 @@ export default async function EmailSettingsPage() {
   const session = await getSession();
   if (!session) redirect("/landing");
 
-  const accounts = await prisma.emailAccount.findMany({
-    where: { userId: session.id }
-  });
+  const accounts = await syncAllEmailAccountsDailyLimits(session.id);
 
   return (
     <div className="space-y-12 sm:space-y-16 max-w-7xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
@@ -55,7 +54,10 @@ export default async function EmailSettingsPage() {
                   
                   <div className="flex items-center justify-between sm:justify-end gap-10 w-full sm:w-auto border-t sm:border-t-0 border-zinc-100 dark:border-zinc-800 pt-6 sm:pt-0">
                     <div className="space-y-1">
-                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest leading-none">SENT TODAY</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest leading-none">SENT TODAY</p>
+                        <ResetCounterButton accountId={acc.id} />
+                      </div>
                       <p className="text-sm font-black tabular-nums text-zinc-900 dark:text-zinc-50">{acc.sentToday}</p>
                     </div>
                     <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 px-4 py-2 rounded-xl shadow-sm border border-zinc-100 dark:border-zinc-800">

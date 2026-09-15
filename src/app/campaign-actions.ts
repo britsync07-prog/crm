@@ -114,6 +114,26 @@ export async function deleteAllEmailAccounts() {
   }
 }
 
+export async function resetEmailAccountCounter(accountId: string) {
+  try {
+    const session = await getSession();
+    if (!session) return { error: "Unauthorized", success: false };
+
+    await prisma.emailAccount.update({
+      where: { id: accountId, userId: session.id },
+      data: {
+        sentToday: 0,
+        lastResetAt: new Date(),
+      },
+    });
+
+    revalidatePath("/settings/email");
+    return { error: null, success: true };
+  } catch (e: any) {
+    return { error: e.message ?? "Failed to reset counter", success: false };
+  }
+}
+
 export async function createCampaign(formData: FormData) {
   const session = await getSession();
   if (!session) throw new Error("Unauthorized");

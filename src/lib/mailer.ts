@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import MailComposer from "nodemailer/lib/mail-composer";
 import { prisma } from "./db";
 import { appendEmailToSentFolder } from "./imap";
+import { shouldResetSentToday } from "./email-account";
 
 type SmtpAccount = {
   host: string;
@@ -121,10 +122,15 @@ export async function sendRealEmail(config: {
     }
   }
 
-  // Track send volume for reporting only. This is not used as a send quota.
+  // Track send volume with automatic 24-hour daily reset
+  const now = new Date();
+  const needsReset = shouldResetSentToday(account.lastResetAt);
   await prisma.emailAccount.update({
     where: { id: account.id },
-    data: { sentToday: { increment: 1 } },
+    data: {
+      sentToday: needsReset ? 1 : { increment: 1 },
+      lastResetAt: needsReset ? now : (account.lastResetAt || now),
+    },
   });
 
   return info;
