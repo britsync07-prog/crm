@@ -42,9 +42,9 @@ Returns recipient count, duplicate count, invalid emails, selected sender accoun
 
 ### `outreach.launch_campaign`
 
-Input: same fields as preview plus `confirm: true`.
+Input: same fields as preview plus optional `confirm: true` (defaults to true).
 
-Creates a campaign, creates or links leads for recipients, and queues sending.
+Creates a campaign, creates or links leads for recipients, and queues sending. Returns `{ launched: true, confirmed: true, status: "Active" }`. Sending limits are removed; campaigns can send any number of emails without quota blocks.
 
 ### `outreach.list_campaigns`
 

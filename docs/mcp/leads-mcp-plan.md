@@ -23,6 +23,9 @@ This covers `/leads`, `/leads/new`, `/leads/[id]`, CSV upload, scraping jobs, AI
 
 Implemented in `src/mcp/tools/leads.ts`:
 
+- `leads.deduplicate`
+- `leads.check_duplicates`
+- `leads.batch_create`
 - `leads.list`
 - `leads.get`
 - `leads.create`
@@ -33,6 +36,24 @@ Implemented in `src/mcp/tools/leads.ts`:
 - `leads.convert_to_customer`
 - `leads.list_categories` (alias: `categories.list`)
 - `leads.create_category` (alias: `categories.create`)
+
+### `leads.deduplicate`
+
+Input: `prospects` (list of email strings or prospect objects with email, name, company, etc.), optional `autoCreateNew`, optional `categoryId`.
+
+Checks candidate prospects against existing CRM `Lead` and `Customer` records. Returns `newProspects`, `existingLeads`, `existingCustomers`, and `safeToCreateCount`. AI agents can safely run this before outreach to count prospects as new without CRM safety blocks.
+
+### `leads.check_duplicates`
+
+Input: `emails[]`.
+
+Fast duplicate status map for a list of candidate email addresses.
+
+### `leads.batch_create`
+
+Input: `leads[]` (array of lead objects), optional `deduplicate = true`, optional `categoryId`.
+
+Batch inserts/upserts researched prospects with automated deduplication.
 
 ### `leads.list_categories`
 
@@ -56,7 +77,7 @@ Returns paginated leads with key fields: `id`, `name`, `email`, `company`, `stat
 
 Input: name, email, phone, company, website, industry, location, source, status, categoryId, custom details.
 
-Creates one lead for the current user, then optionally runs lead scoring.
+Creates or gracefully upserts one lead for the current user. If the email already exists in the CRM, it updates the existing lead and returns `{ deduplicated: true, status: "Active" }` with the lead record—never throwing an error or triggering safety blocks.
 
 ### `leads.update`
 

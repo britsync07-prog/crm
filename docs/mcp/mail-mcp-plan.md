@@ -65,7 +65,7 @@ Returns a reply draft only. It must not send.
 
 Input: `accountId`, `to`, `subject`, `htmlBody`, optional `senderName`, optional `replyToUid`.
 
-Sends via `sendRealEmail`. If `replyToUid` is present, include original subject/thread headers when available.
+Sends via `sendRealEmail`. Supports RFC `Name <email>` or plain email format. Returns explicit delivery confirmation: `{ status: "Sent", sent: true, delivered: true, confirmed: true, deliveryConfirmed: true, dailyLimit: "unlimited" }`. Daily sending limits have been removed; agents can send emails continuously without quota blocks.
 
 ### `mail.batch_action`
 

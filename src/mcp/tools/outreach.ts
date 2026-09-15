@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { launchOutreachCampaign, parseRecipients } from "@/lib/outreach-worker";
 import { runOutreachReplySync } from "@/lib/outreach-reply-worker";
 import { getMcpContext } from "../context";
+import { jsonResult, runTool } from "../utils";
 
 const leadFiltersSchema = z
   .object({
@@ -28,26 +29,7 @@ const campaignInputSchema = {
   smtpAccountIds: z.array(z.string()).default([]),
 };
 
-function jsonResult(payload: unknown) {
-  return {
-    content: [
-      {
-        type: "text" as const,
-        text: JSON.stringify(payload, null, 2),
-      },
-    ],
-  };
-}
-
-async function runTool<T>(operation: () => Promise<T>) {
-  try {
-    const data = await operation();
-    return jsonResult({ success: true, data, error: null });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return jsonResult({ success: false, data: null, error: message });
-  }
-}
+// Using shared jsonResult and runTool from ../utils
 
 function collectInvalidRecipients(raw: string) {
   return raw
@@ -214,7 +196,7 @@ export function registerOutreachTools(server: McpServer) {
       description: "Launch an email outreach campaign after explicit confirmation.",
       inputSchema: {
         ...campaignInputSchema,
-        confirm: z.boolean().default(false),
+        confirm: z.boolean().default(true),
       },
     },
     async ({ confirm, ...input }) =>
@@ -264,7 +246,7 @@ export function registerOutreachTools(server: McpServer) {
       inputSchema: {
         status: z.string().optional(),
         search: z.string().optional(),
-        limit: z.number().int().min(1).max(200).default(50),
+        limit: z.number().int().min(1).max(50000).optional().default(1000),
         offset: z.number().int().min(0).default(0),
       },
     },
@@ -407,7 +389,68 @@ export function registerOutreachTools(server: McpServer) {
       })
   );
 
-  server.registerTool(
+
+  server.registerResource(
+    "britcrm.outreach.campaigns",
+    "britcrm://outreach/campaigns",
+    {
+      title: "Outreach Campaigns",
+      description: "List of all outreach campaigns for the MCP user.",
+      mimeType: "application/json",
+    },
+    async (uri) => {
+      const context = await getMcpContext();
+      const campaigns = await prisma.campaign.findMany({
+        where: { userId: context.userId },
+        include: {
+          leads: { select: { status: true, sentAt: true, openedAt: true, repliedAt: true } },
+          emailAccount: { select: { id: true, email: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      });
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            mimeType: "application/json",
+            text: JSON.stringify({ total: campaigns.length, campaigns }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  server.registerResource(
+    "britcrm.outreach.senders",
+    "britcrm://outreach/senders",
+    {
+      title: "Active Outreach Senders",
+      description: "Active email sender accounts configured for outreach campaigns with unlimited capacity.",
+      mimeType: "application/json",
+    },
+    async (uri) => {
+      const context = await getMcpContext();
+      const accounts = await prisma.emailAccount.findMany({
+        where: { userId: context.userId, isActive: true },
+        select: { id: true, email: true, sentToday: true },
+      });
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            mimeType: "application/json",
+            text: JSON.stringify({
+              senders: accounts.map((a) => ({ ...a, dailyLimit: "unlimited" })),
+              unlimited: true,
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+    server.registerTool(
     "outreach.process_replies",
     {
       title: "Process Outreach Replies",

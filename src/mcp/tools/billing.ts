@@ -24,27 +24,9 @@ import type {
 } from "@/lib/britledger/types";
 import { generateInvoiceNumber, generateQuotationNumber } from "@/lib/britledger/utils";
 import { getMcpContext } from "../context";
+import { jsonResult, runTool } from "../utils";
 
-function jsonResult(payload: unknown) {
-  return {
-    content: [
-      {
-        type: "text" as const,
-        text: JSON.stringify(payload, null, 2),
-      },
-    ],
-  };
-}
-
-async function runTool<T>(operation: () => Promise<T>) {
-  try {
-    const data = await operation();
-    return jsonResult({ success: true, data, error: null });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return jsonResult({ success: false, data: null, error: message });
-  }
-}
+// Using shared jsonResult and runTool from ../utils
 
 const currencySchema = z.string().trim().min(3).max(3).default("GBP");
 const invoiceStatusSchema = z

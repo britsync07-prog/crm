@@ -11,6 +11,7 @@ import {
 } from "@/lib/form-meeting";
 import { ensureCustomerFromLead, upsertLeadFromFormSubmission } from "@/lib/crm-lifecycle";
 import { getMcpContext } from "../context";
+import { jsonResult, runTool } from "../utils";
 
 const fieldTypeSchema = z.enum(["TEXT", "TEXTAREA", "DROPDOWN", "RADIO", "CHECKBOX", "EMAIL", "PHONE"]);
 const fieldSchema = z.object({
@@ -20,26 +21,7 @@ const fieldSchema = z.object({
   options: z.array(z.string()).default([]),
 });
 
-function jsonResult(payload: unknown) {
-  return {
-    content: [
-      {
-        type: "text" as const,
-        text: JSON.stringify(payload, null, 2),
-      },
-    ],
-  };
-}
-
-async function runTool<T>(operation: () => Promise<T>) {
-  try {
-    const data = await operation();
-    return jsonResult({ success: true, data, error: null });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return jsonResult({ success: false, data: null, error: message });
-  }
-}
+// Using shared jsonResult and runTool from ../utils
 
 function publicFormUrl(formId: string) {
   return `${getAppBaseUrl()}/f/${formId}`;
@@ -95,7 +77,7 @@ export function registerFormTools(server: McpServer) {
       description: "List forms owned by the MCP user.",
       inputSchema: {
         search: z.string().optional(),
-        limit: z.number().int().min(1).max(200).default(50),
+        limit: z.number().int().min(1).max(50000).optional().default(1000),
         offset: z.number().int().min(0).default(0),
       },
     },

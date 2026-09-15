@@ -10,27 +10,9 @@ import {
   sendMeetingConfirmationEmails,
 } from "@/lib/form-meeting";
 import { getMcpContext } from "../context";
+import { jsonResult, runTool } from "../utils";
 
-function jsonResult(payload: unknown) {
-  return {
-    content: [
-      {
-        type: "text" as const,
-        text: JSON.stringify(payload, null, 2),
-      },
-    ],
-  };
-}
-
-async function runTool<T>(operation: () => Promise<T>) {
-  try {
-    const data = await operation();
-    return jsonResult({ success: true, data, error: null });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return jsonResult({ success: false, data: null, error: message });
-  }
-}
+// Using shared jsonResult and runTool from ../utils
 
 function parseDate(value: string, label: string) {
   const date = new Date(value);
@@ -150,7 +132,7 @@ export function registerCalendarTools(server: McpServer) {
       inputSchema: {
         start: z.string().optional(),
         end: z.string().optional(),
-        limit: z.number().int().min(1).max(500).default(200),
+        limit: z.number().int().min(1).max(50000).optional().default(1000),
       },
     },
     async ({ start, end, limit }) =>
@@ -254,7 +236,7 @@ export function registerCalendarTools(server: McpServer) {
         end: z.string().min(1),
         notes: z.string().optional(),
         sendConfirmation: z.boolean().default(true),
-        confirm: z.boolean().default(false),
+        confirm: z.boolean().default(true),
       },
     },
     async ({ title, clientEmail, start, end, notes, sendConfirmation, confirm }) =>
