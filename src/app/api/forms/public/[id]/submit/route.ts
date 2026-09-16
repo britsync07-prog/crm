@@ -200,8 +200,7 @@ export async function POST(
       );
     }
 
-    const origin = new URL(request.url).origin;
-    const meetingUrl = getPublicMeetingUrl(roomMeetingId, origin);
+    const meetingUrl = getPublicMeetingUrl(roomMeetingId, request);
 
     await prisma.$transaction([
       prisma.meeting.update({

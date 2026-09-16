@@ -80,7 +80,7 @@ export async function DELETE(
         await deleteLiveKitRoomSafe(meeting.meetingId);
 
         if (meeting.submitterEmail) {
-          const meetingUrl = getPublicMeetingUrl(meeting.meetingId, new URL(req.url).origin);
+          const meetingUrl = getPublicMeetingUrl(meeting.meetingId, req);
           await sendMeetingCancellationEmails({
             creatorUserId: meeting.host.id,
             creatorEmail: meeting.host.email,

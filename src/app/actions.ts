@@ -224,6 +224,118 @@ export async function updateLeadCategory(formData: FormData) {
   revalidatePath(`/leads/${leadId}`);
 }
 
+export async function updateLead(formData: FormData) {
+  const session = await getSession();
+  if (!session) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const leadId = (formData.get("leadId") as string)?.trim();
+  if (!leadId) {
+    return { success: false, error: "Lead ID is required" };
+  }
+
+  const existing = await prisma.lead.findUnique({
+    where: { id: leadId },
+    select: { id: true, userId: true, email: true },
+  });
+  if (!existing || existing.userId !== session.id) {
+    return { success: false, error: "Lead not found or unauthorized" };
+  }
+
+  const name = (formData.get("name") as string)?.trim();
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
+  if (!name) {
+    return { success: false, error: "Name is required" };
+  }
+  if (!email) {
+    return { success: false, error: "Email is required" };
+  }
+
+  // Check email uniqueness if email changed
+  if (email !== existing.email.toLowerCase()) {
+    const conflict = await prisma.lead.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (conflict && conflict.id !== leadId) {
+      return { success: false, error: "A lead with this email address already exists" };
+    }
+  }
+
+  const phone = (formData.get("phone") as string)?.trim() || null;
+  const company = (formData.get("company") as string)?.trim() || null;
+  const source = (formData.get("source") as string)?.trim() || null;
+  const licenseType = (formData.get("licenseType") as string)?.trim() || null;
+  const areaOfOperation = (formData.get("areaOfOperation") as string)?.trim() || null;
+  const dealFocus = (formData.get("dealFocus") as string)?.trim() || null;
+  const budgetRange = (formData.get("budgetRange") as string)?.trim() || null;
+  const website = (formData.get("website") as string)?.trim() || null;
+  const address = (formData.get("address") as string)?.trim() || null;
+  const linkedin = (formData.get("linkedin") as string)?.trim() || null;
+  const status = (formData.get("status") as string)?.trim();
+
+  let categoryId = (formData.get("categoryId") as string)?.trim() || null;
+  const newCategoryName = (formData.get("newCategoryName") as string)?.trim();
+
+  if (newCategoryName && !categoryId) {
+    const existingCat = await prisma.category.findUnique({
+      where: {
+        userId_name: {
+          userId: session.id,
+          name: newCategoryName,
+        },
+      },
+    });
+    if (existingCat) {
+      categoryId = existingCat.id;
+    } else {
+      const createdCat = await prisma.category.create({
+        data: {
+          name: newCategoryName,
+          userId: session.id,
+        },
+      });
+      categoryId = createdCat.id;
+    }
+  } else if (categoryId) {
+    const cat = await prisma.category.findFirst({
+      where: { id: categoryId, userId: session.id },
+    });
+    if (!cat) {
+      categoryId = null;
+    }
+  }
+
+  const isValidStatus = status && Object.values(LEAD_STAGES).includes(status as LeadStage);
+
+  const updatedLead = await prisma.lead.update({
+    where: { id: leadId },
+    data: {
+      name,
+      email,
+      phone,
+      company,
+      source,
+      licenseType,
+      areaOfOperation,
+      dealFocus,
+      budgetRange,
+      website,
+      address,
+      linkedin,
+      categoryId: categoryId || null,
+      ...(isValidStatus ? { status } : {}),
+    },
+    include: { category: true },
+  });
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+
+  return { success: true, lead: updatedLead };
+}
+
 export async function createTask(formData: FormData) {
   const session = await getSession();
   if (!session) throw new Error("Unauthorized");

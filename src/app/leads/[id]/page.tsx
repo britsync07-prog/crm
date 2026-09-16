@@ -8,6 +8,7 @@ import LeadAIActions from "./LeadAIActions";
 import { LEAD_STAGES } from "@/lib/crm-lifecycle";
 import DealStageSelect from "@/components/DealStageSelect";
 import CreateDealModal from "@/components/CreateDealModal";
+import EditLeadModal from "@/components/EditLeadModal";
 
 interface LeadDetailsProps {
   params: Promise<{
@@ -65,21 +66,27 @@ export default async function LeadDetails({ params }: LeadDetailsProps) {
             <p className="text-zinc-500 font-medium mt-1">Lead from {lead.source || "Unknown Channel"}</p>
           </div>
         </div>
-        <form action={convertAction}>
-          <button
-            type="submit"
-            className="rounded-xl bg-[#012169] px-6 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-[#c8102e] transition-all shadow-xl shadow-blue-900/20"
-          >
-            Convert to Customer
-          </button>
-        </form>
+        <div className="flex flex-wrap items-center gap-3">
+          <EditLeadModal lead={lead} categories={categories} variant="header" />
+          <form action={convertAction}>
+            <button
+              type="submit"
+              className="rounded-xl bg-[#012169] px-6 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-[#c8102e] transition-all shadow-xl shadow-blue-900/20 active:scale-95"
+            >
+              Convert to Customer
+            </button>
+          </form>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Left Column (3) - Contact Info */}
         <div className="lg:col-span-3 space-y-6">
           <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-zinc-950">
-            <h2 className="text-sm font-black uppercase tracking-widest text-[#012169] mb-6 italic">Entity Info</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-sm font-black uppercase tracking-widest text-[#012169] italic">Entity Info</h2>
+              <EditLeadModal lead={lead} categories={categories} variant="card" />
+            </div>
             <div className="space-y-4">
               <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">Status</p>
@@ -142,6 +149,10 @@ export default async function LeadDetails({ params }: LeadDetailsProps) {
                 <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{lead.email}</p>
               </div>
               <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">Phone</p>
+                <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{lead.phone || "-"}</p>
+              </div>
+              <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">Source</p>
                 <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{lead.source || "-"}</p>
               </div>
@@ -164,6 +175,40 @@ export default async function LeadDetails({ params }: LeadDetailsProps) {
               <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">Budget</p>
                 <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{lead.budgetRange || "-"}</p>
+              </div>
+              <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">Website</p>
+                {lead.website ? (
+                  <a
+                    href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-bold text-[#012169] dark:text-blue-400 hover:underline truncate block"
+                  >
+                    {lead.website}
+                  </a>
+                ) : (
+                  <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">-</p>
+                )}
+              </div>
+              <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">Address / Location</p>
+                <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{lead.address || "-"}</p>
+              </div>
+              <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">LinkedIn</p>
+                {lead.linkedin ? (
+                  <a
+                    href={lead.linkedin.startsWith("http") ? lead.linkedin : `https://${lead.linkedin}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-bold text-[#012169] dark:text-blue-400 hover:underline truncate block"
+                  >
+                    {lead.linkedin}
+                  </a>
+                ) : (
+                  <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">-</p>
+                )}
               </div>
             </div>
           </div>

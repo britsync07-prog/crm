@@ -121,7 +121,22 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
 
       if (res.ok) {
         const data = await res.json();
-        setSubmittedMeetingUrl(data?.meeting?.meetingUrl || null);
+        let meetingUrl = data?.meeting?.meetingUrl || null;
+        if (meetingUrl && typeof window !== "undefined") {
+          try {
+            const parsed = new URL(meetingUrl);
+            if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
+              if (window.location.hostname !== parsed.hostname || window.location.port !== parsed.port) {
+                meetingUrl = `${window.location.origin}${parsed.pathname}${parsed.search}`;
+              }
+            }
+          } catch {
+            if (meetingUrl.startsWith("/")) {
+              meetingUrl = `${window.location.origin}${meetingUrl}`;
+            }
+          }
+        }
+        setSubmittedMeetingUrl(meetingUrl);
         setSubmitted(true);
         toast.success("Form submitted successfully!");
       } else {

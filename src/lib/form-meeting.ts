@@ -31,10 +31,102 @@ function overlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
   return aStart < bEnd && aEnd > bStart;
 }
 
-export function getPublicMeetingUrl(meetingId: string, requestOrigin?: string): string {
-  const envBase = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "";
-  const localBase = `http://127.0.0.1:${process.env.PORT || "3001"}`;
-  const base = (requestOrigin || envBase || localBase).replace(/\/$/, "");
+export function resolvePublicBaseUrl(reqOrOrigin?: Request | { headers?: any; url?: string } | string): string {
+  const envBase = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || process.env.NEXTAUTH_URL || "";
+  const isLocalEnv = !envBase || /localhost|127\.0\.0\.1/i.test(envBase);
+
+  // 1. If explicit production environment URL is set (e.g. https://crm.example.com), that takes precedence!
+  if (envBase && !isLocalEnv && /^https?:\/\//i.test(envBase)) {
+    return envBase.replace(/\/+$/, "");
+  }
+
+  // 2. If a Request or object with headers was passed, check request headers
+  if (reqOrOrigin && typeof reqOrOrigin === "object") {
+    const getHeader = (name: string): string | null => {
+      try {
+        if ("headers" in reqOrOrigin && reqOrOrigin.headers) {
+          if (typeof reqOrOrigin.headers.get === "function") {
+            return reqOrOrigin.headers.get(name);
+          }
+          if (typeof reqOrOrigin.headers === "object") {
+            return reqOrOrigin.headers[name] || reqOrOrigin.headers[name.toLowerCase()] || null;
+          }
+        }
+      } catch {}
+      return null;
+    };
+
+    // Check Origin header (sent by browsers on POST requests)
+    const origin = getHeader("origin");
+    if (origin && /^https?:\/\//i.test(origin) && !/localhost|127\.0\.0\.1/i.test(origin)) {
+      return origin.replace(/\/+$/, "");
+    }
+
+    // Check X-Forwarded-Host and X-Forwarded-Proto
+    const forwardedHost = getHeader("x-forwarded-host")?.split(",")[0]?.trim();
+    if (forwardedHost && !/localhost|127\.0\.0\.1/i.test(forwardedHost)) {
+      const proto = getHeader("x-forwarded-proto")?.split(",")[0]?.trim() || "https";
+      return `${proto}://${forwardedHost}`.replace(/\/+$/, "");
+    }
+
+    // Check Referer header
+    const referer = getHeader("referer");
+    if (referer && /^https?:\/\//i.test(referer) && !/localhost|127\.0\.0\.1/i.test(referer)) {
+      try {
+        return new URL(referer).origin.replace(/\/+$/, "");
+      } catch {}
+    }
+
+    // Check Host header
+    const host = getHeader("host")?.split(",")[0]?.trim();
+    if (host && !/localhost|127\.0\.0\.1/i.test(host)) {
+      const proto = getHeader("x-forwarded-proto")?.split(",")[0]?.trim() || "https";
+      return `${proto}://${host}`.replace(/\/+$/, "");
+    }
+
+    // If in dev environment and headers contain localhost:
+    if (origin && /^https?:\/\//i.test(origin)) {
+      return origin.replace(/\/+$/, "");
+    }
+    if (referer && /^https?:\/\//i.test(referer)) {
+      try {
+        return new URL(referer).origin.replace(/\/+$/, "");
+      } catch {}
+    }
+    if (forwardedHost) {
+      const proto = getHeader("x-forwarded-proto")?.split(",")[0]?.trim() || "http";
+      return `${proto}://${forwardedHost}`.replace(/\/+$/, "");
+    }
+    if (host) {
+      const proto = getHeader("x-forwarded-proto")?.split(",")[0]?.trim() || "http";
+      return `${proto}://${host}`.replace(/\/+$/, "");
+    }
+  }
+
+  // 3. If reqOrOrigin was passed as a string:
+  if (typeof reqOrOrigin === "string" && /^https?:\/\//i.test(reqOrOrigin)) {
+    if (!/localhost|127\.0\.0\.1/i.test(reqOrOrigin)) {
+      return reqOrOrigin.replace(/\/+$/, "");
+    }
+  }
+
+  // 4. If envBase was defined (even if localhost):
+  if (envBase && /^https?:\/\//i.test(envBase)) {
+    return envBase.replace(/\/+$/, "");
+  }
+
+  // 5. If reqOrOrigin was a localhost string, return it:
+  if (typeof reqOrOrigin === "string" && /^https?:\/\//i.test(reqOrOrigin)) {
+    return reqOrOrigin.replace(/\/+$/, "");
+  }
+
+  // 6. Default fallback:
+  const port = process.env.PORT || "3001";
+  return `http://localhost:${port}`;
+}
+
+export function getPublicMeetingUrl(meetingId: string, requestOrigin?: Request | { headers?: any; url?: string } | string): string {
+  const base = resolvePublicBaseUrl(requestOrigin);
   return `${base}/meet/${meetingId}`;
 }
 
