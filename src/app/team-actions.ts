@@ -98,9 +98,21 @@ export async function importLeadsFromCSV(formData: FormData) {
         continue;
       }
 
+      const cleanEmail = email.toLowerCase().trim();
+
       try {
+        const existing = await prisma.lead.findUnique({
+          where: { email: cleanEmail },
+          select: { id: true, userId: true },
+        });
+
+        if (existing && existing.userId !== session.id) {
+          skippedCount++;
+          continue;
+        }
+
         const lead = await prisma.lead.upsert({
-          where: { email: email.toLowerCase().trim() },
+          where: { email: cleanEmail },
           update: { 
             name: name || "Unknown Name", 
             company, 
@@ -114,7 +126,7 @@ export async function importLeadsFromCSV(formData: FormData) {
           create: { 
             userId: session.id,
             name: name || "Unknown Name", 
-            email: email.toLowerCase().trim(), 
+            email: cleanEmail, 
             company, 
             industry, 
             website,

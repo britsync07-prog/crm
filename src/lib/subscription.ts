@@ -20,6 +20,8 @@ export const getUserSubscription = cache(async function getUserSubscription(user
     select: {
       id: true,
       role: true,
+      status: true,
+      bannedAt: true,
       organizationId: true,
       ownedOrganization: {
         select: {
@@ -48,18 +50,48 @@ export const getUserSubscription = cache(async function getUserSubscription(user
     },
   });
 
+  if (!user) {
+    return {
+      isExpired: true,
+      isTrial: false,
+      isActive: false,
+      isAdmin: false,
+      plan: "none",
+      subscriptionStatus: "expired",
+      subscriptionEndDate: null,
+      daysRemaining: 0,
+      organizationId: null,
+      organizationName: null,
+    };
+  }
+
+  if (user.status === "BANNED" || user.status === "SUSPENDED" || Boolean(user.bannedAt)) {
+    return {
+      isExpired: true,
+      isTrial: false,
+      isActive: false,
+      isAdmin: false,
+      plan: "none",
+      subscriptionStatus: "banned",
+      subscriptionEndDate: null,
+      daysRemaining: 0,
+      organizationId: null,
+      organizationName: null,
+    };
+  }
+
   // Admin always has full access
-  if (!user || user.role === "ADMIN") {
+  if (user.role === "ADMIN") {
     return {
       isExpired: false,
       isTrial: false,
       isActive: true,
-      isAdmin: user?.role === "ADMIN",
+      isAdmin: true,
       plan: "enterprise",
       subscriptionStatus: "active",
       subscriptionEndDate: null,
       daysRemaining: 9999,
-      organizationId: user?.organizationId ?? null,
+      organizationId: user.organizationId ?? null,
       organizationName: "Admin System",
     };
   }

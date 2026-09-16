@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
     Mail, Inbox, Send, Trash2, Archive, Search, Filter, Bot,
     ArrowLeft, Loader2, Reply, CheckCircle2, ChevronDown,
@@ -107,16 +107,7 @@ export default function InboxClient({
 
     const activeAccount = emailAccounts.find(a => a.id === activeAccountId);
 
-    // Auto-poll every 30s when in list view
-    useEffect(() => {
-        if (selectedEmail) return;
-        const interval = setInterval(() => {
-            fetchFolder(activeFolder, activeAccountId, true);
-        }, 30000);
-        return () => clearInterval(interval);
-    }, [selectedEmail, activeFolder, activeAccountId]);
-
-    const fetchFolder = async (folder: string, accountId: string = activeAccountId, silent: boolean = false) => {
+    const fetchFolder = useCallback(async (folder: string, accountId: string = activeAccountId, silent: boolean = false) => {
         setActiveFolder(folder);
         setSelectedEmail(null);
         setSelectedEmailIds(new Set());
@@ -138,7 +129,16 @@ export default function InboxClient({
         } finally {
             if (!silent) setLoading(false);
         }
-    };
+    }, [activeAccountId]);
+
+    // Auto-poll every 30s when in list view
+    useEffect(() => {
+        if (selectedEmail) return;
+        const interval = setInterval(() => {
+            fetchFolder(activeFolder, activeAccountId, true);
+        }, 30000);
+        return () => clearInterval(interval);
+    }, [selectedEmail, activeFolder, activeAccountId, fetchFolder]);
 
     const switchAccount = (accountId: string) => {
         setActiveAccountId(accountId);

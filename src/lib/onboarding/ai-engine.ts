@@ -7,13 +7,9 @@ import {
   CommercialDetails,
   AIActionType,
 } from "./types";
-import { findMatchingTemplate, ensureServiceTemplates } from "./service-templates";
+import { ensureServiceTemplates } from "./service-templates";
 import { ensureDocumentTemplates, interpolateVariables } from "./document-templates";
 import { logOnboardingAudit } from "./audit";
-
-async function callLLM(_prompt: string, fallback: string): Promise<string> {
-  return fallback;
-}
 
 /**
  * 1. AI Initial Analysis: Classifies CRM data into Known, Missing, Verification, Optional

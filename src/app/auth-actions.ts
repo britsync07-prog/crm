@@ -20,6 +20,10 @@ export async function loginAction(prevState: any, formData: FormData) {
     return { error: "Invalid credentials" };
   }
 
+  if (user.status === "BANNED" || user.status === "SUSPENDED" || user.bannedAt) {
+    return { error: "Your account has been suspended or banned. Please contact support." };
+  }
+
   const passwordMatch = await bcrypt.compare(password, user.password);
 
   if (!passwordMatch) {
