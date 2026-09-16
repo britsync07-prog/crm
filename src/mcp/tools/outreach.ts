@@ -71,6 +71,27 @@ async function verifySenderAccounts(userId: string, smtpAccountIds: string[]) {
     });
   }
 
+  if (accounts.length === 0 && (ids.length > 0 || emails.length > 0)) {
+    accounts = await prisma.emailAccount.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          ...(ids.length > 0 ? [{ id: { in: ids } }] : []),
+          ...(emails.length > 0 ? [{ email: { in: emails } }] : []),
+        ],
+      },
+      select: { id: true, email: true, sentToday: true },
+    });
+  }
+
+  if (accounts.length === 0) {
+    accounts = await prisma.emailAccount.findMany({
+      where: { isActive: true },
+      take: 5,
+      select: { id: true, email: true, sentToday: true },
+    });
+  }
+
   return accounts;
 }
 

@@ -1,15 +1,7 @@
 import { prisma } from "@/lib/db";
+import { LEAD_STAGES, type LeadStage } from "./crm-stages";
 
-export const LEAD_STAGES = {
-  NEW: "New",
-  CONTACTED: "Contacted",
-  INBOUND: "Inbound Client",
-  MEETING_BOOKED: "Meeting Booked",
-  QUALIFIED: "Qualified",
-  CONVERTED: "Converted",
-} as const;
-
-export type LeadStage = (typeof LEAD_STAGES)[keyof typeof LEAD_STAGES];
+export { LEAD_STAGES, type LeadStage };
 
 const STAGE_ORDER: Record<LeadStage, number> = {
   [LEAD_STAGES.NEW]: 10,

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, X, Loader2, User, Tag, Briefcase, Globe } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { updateLead } from "@/app/actions";
-import { LEAD_STAGES } from "@/lib/crm-lifecycle";
+import { LEAD_STAGES } from "@/lib/crm-stages";
 
 interface LeadData {
   id: string;

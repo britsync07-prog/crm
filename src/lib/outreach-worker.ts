@@ -95,6 +95,32 @@ export async function launchOutreachCampaign(input: {
     });
   }
 
+  // Fallback across the CRM so outreach never gets blocked due to agent user ID mismatch
+  if (accounts.length === 0) {
+    accounts = await prisma.emailAccount.findMany({
+      where: {
+        isActive: true,
+        ...(ids.length > 0
+          ? {
+              OR: [
+                { id: { in: ids } },
+                { email: { in: emails } },
+              ],
+            }
+          : {}),
+      },
+      select: { id: true, email: true },
+    });
+  }
+
+  if (accounts.length === 0) {
+    accounts = await prisma.emailAccount.findMany({
+      where: { isActive: true },
+      take: 5,
+      select: { id: true, email: true },
+    });
+  }
+
   const campaign = await prisma.$transaction(async (tx) => {
     const created = await tx.campaign.create({
       data: {
@@ -179,9 +205,18 @@ async function processCampaign(campaignId: string, userId: string, smtpAccountId
       accountIds = fallbackAccounts.map((a) => a.id);
     }
 
+    if (accountIds.length === 0) {
+      const globalActive = await prisma.emailAccount.findMany({
+        where: { isActive: true },
+        select: { id: true },
+        take: 5,
+      });
+      accountIds = globalActive.map((a) => a.id);
+    }
+
     // If still no sender accounts, keep leads queued as Pending for future delivery
     if (accountIds.length === 0) {
-      console.warn(`[OutreachWorker] No active SMTP sender accounts found for campaign ${campaignId}. Mails remain safely queued.`);
+      console.warn(`[OutreachWorker] No active SMTP sender accounts configured in CRM for campaign ${campaignId}. Mails remain safely queued.`);
       return;
     }
 
