@@ -20,6 +20,20 @@ function isConnectionOpen(client: ImapFlow) {
   return (client as any).usable || (client as any).authenticated || (client as any).state > 0;
 }
 
+async function safeCloseImapClient(client: ImapFlow) {
+  try {
+    if (isConnectionOpen(client)) {
+      await client.logout();
+    } else {
+      client.close();
+    }
+  } catch {
+    try {
+      client.close();
+    } catch {}
+  }
+}
+
 function isDirectTls(encryption: string | null | undefined, port: number | null | undefined) {
   const mode = (encryption || '').toUpperCase();
   return port === 993 || mode === 'SSL' || mode === 'SSL/TLS';
@@ -37,7 +51,7 @@ function createImapClient(account: ImapAccount) {
 
   const secure = isDirectTls(account.encryption, account.imapPort);
 
-  return new ImapFlow({
+  const client = new ImapFlow({
     host: account.imapHost,
     port: account.imapPort,
     secure,
@@ -47,8 +61,19 @@ function createImapClient(account: ImapAccount) {
       pass: account.password,
       loginMethod: 'LOGIN'
     },
-    logger: false
+    logger: false,
+    socketTimeout: 15000,
   });
+
+  // IMPORTANT: ImapFlow is an EventEmitter. If an unhandled 'error' event is emitted
+  // (e.g. TLSSocket timeout, connection reset, network drop), Node.js terminates or logs
+  // an 'uncaughtException' if there are 0 error listeners registered.
+  client.on('error', () => {
+    // Suppress unhandled socket timeouts and connection drops.
+    // The active operation's promise will reject and be caught by the surrounding try/catch blocks.
+  });
+
+  return client;
 }
 
 function escapeImapString(value: string) {
@@ -263,11 +288,7 @@ export async function verifyImapConnection(account: ImapAccount) {
   } catch (error) {
     throw new Error(formatImapError(error));
   } finally {
-    try {
-      if (isConnectionOpen(client)) await client.logout();
-    } catch {
-      // Ignore logout errors after failed connection attempts.
-    }
+    await safeCloseImapClient(client);
   }
 }
 
@@ -390,11 +411,7 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
     console.error("IMAP Fetch Error:", error);
     throw new Error(formatImapError(error));
   } finally {
-    try {
-      if (isConnectionOpen(client)) await client.logout();
-    } catch {
-      // Ignore logout errors
-    }
+    await safeCloseImapClient(client);
   }
 
   return emails.reverse();
@@ -445,9 +462,7 @@ export async function fetchEmailBody(account: any, mailboxPath: string, uid: str
     console.error("IMAP Fetch Body Error:", error);
     throw new Error(formatImapError(error));
   } finally {
-    try {
-      if (isConnectionOpen(client)) await client.logout();
-    } catch { }
+    await safeCloseImapClient(client);
   }
   return null;
 }
@@ -486,27 +501,44 @@ export async function performEmailAction(account: any, mailboxPath: string, uid:
     console.error(`IMAP Action Error (${action}):`, error);
     throw new Error(formatImapError(error));
   } finally {
-    try {
-      if (isConnectionOpen(client)) await client.logout();
-    } catch { }
+    await safeCloseImapClient(client);
   }
 }
 
 export async function appendEmailToSentFolder(account: any, rawMessage: Buffer | string) {
+  if (!account.imapHost || !account.imapPort) return false;
+
   const client = createImapClient(account);
 
+  const timeoutMs = 8000;
+  let timeoutId: NodeJS.Timeout | undefined;
+
+  const timeoutPromise = new Promise<boolean>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      try { client.close(); } catch {}
+      reject(new Error("IMAP append timed out after 8s"));
+    }, timeoutMs);
+  });
+
+  const appendTask = async (): Promise<boolean> => {
+    try {
+      await client.connect();
+      const sentMailbox = await resolveMailboxPath(client, 'SENT');
+      await client.append(sentMailbox, rawMessage, ['\\Seen']);
+      return true;
+    } finally {
+      await safeCloseImapClient(client);
+    }
+  };
+
   try {
-    await client.connect();
-    const sentMailbox = await resolveMailboxPath(client, 'SENT');
-    await client.append(sentMailbox, rawMessage, ['\\Seen']);
-    return true;
-  } catch (error) {
-    console.error("Failed to append sent email to IMAP:", error);
+    return await Promise.race([appendTask(), timeoutPromise]);
+  } catch (error: any) {
+    console.warn("[IMAP Sent Append] Could not append sent email to IMAP:", error?.message || error);
     return false;
   } finally {
-    try {
-      if (isConnectionOpen(client)) await client.logout();
-    } catch { }
+    if (timeoutId) clearTimeout(timeoutId);
+    try { client.close(); } catch {}
   }
 }
 
@@ -572,7 +604,7 @@ export async function performBatchEmailAction(
     console.error(`IMAP Batch Action Error (${action}):`, error);
     throw new Error(formatImapError(error));
   } finally {
-    try { if (isConnectionOpen(client)) await client.logout(); } catch { }
+    await safeCloseImapClient(client);
   }
 
   return { success, failed };
@@ -615,9 +647,7 @@ export async function fetchRecentInboxReplyCandidates(
       logImapIssue("IMAP Reply Sync Error", account, error);
     }
   } finally {
-    try {
-      if (isConnectionOpen(client)) await client.logout();
-    } catch { }
+    await safeCloseImapClient(client);
   }
 
   return candidates;
