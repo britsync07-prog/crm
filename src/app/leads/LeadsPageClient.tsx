@@ -23,11 +23,13 @@ import { cn } from "@/lib/utils";
 export default function LeadsPageClient({ 
   initialLeads, 
   categories, 
-  activeCategoryId 
+  activeCategoryId, 
+  activeStatus 
 }: { 
   initialLeads: any[], 
   categories: any[], 
-  activeCategoryId?: string 
+  activeCategoryId?: string, 
+  activeStatus?: string 
 }) {
   const getStatusClass = (status: string) => {
     if (status === "Qualified" || status === "Converted") {
@@ -141,7 +143,7 @@ export default function LeadsPageClient({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8 sm:py-12 space-y-10 sm:space-y-14 animate-in fade-in duration-700 pb-32">
-      <LeadPageHeader categories={categories} activeCategoryId={activeCategoryId} />
+      <LeadPageHeader categories={categories} activeCategoryId={activeCategoryId} activeStatus={activeStatus} />
 
       {/* Bulk Actions Bar - Fixed to Bottom on Mobile for Reachability */}
       {selectedIds.length > 0 && (
@@ -272,9 +274,19 @@ export default function LeadsPageClient({
           </tbody>
         </table>
         {initialLeads.length === 0 && (
-          <div className="text-center py-40 opacity-30 select-none">
-            <Target className="w-20 h-20 mx-auto mb-10 text-zinc-300 animate-pulse" />
-            <p className="text-xs font-black uppercase tracking-[0.4em] text-zinc-400">Scan Pipeline: 0 Targets Found</p>
+          <div className="text-center py-32 select-none">
+            <Target className="w-16 h-16 mx-auto mb-6 text-zinc-300 dark:text-zinc-700 animate-pulse" />
+            <p className="text-xs font-black uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">
+              {activeCategoryId || activeStatus ? "No targets matching current filter criteria" : "Scan Pipeline: 0 Targets Found"}
+            </p>
+            {(activeCategoryId || activeStatus) && (
+              <button
+                onClick={() => router.push("/leads")}
+                className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-[#012169] text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-900 transition-all shadow-lg active:scale-95"
+              >
+                Reset All Filters
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -341,6 +353,22 @@ export default function LeadsPageClient({
               </div>
            </div>
          ))}
+        {initialLeads.length === 0 && (
+          <div className="col-span-full text-center py-20 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-[2.5rem] p-8 shadow-xl">
+            <Target className="w-14 h-14 mx-auto mb-4 text-zinc-300 dark:text-zinc-700 animate-pulse" />
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+              {activeCategoryId || activeStatus ? "No targets matching current filters" : "Scan Pipeline: 0 Targets Found"}
+            </p>
+            {(activeCategoryId || activeStatus) && (
+              <button
+                onClick={() => router.push("/leads")}
+                className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 bg-[#012169] text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-900 transition-all active:scale-95"
+              >
+                Reset Filters
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

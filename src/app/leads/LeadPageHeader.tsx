@@ -9,7 +9,24 @@ import CreateCategoryModal from "@/components/CreateCategoryModal";
 import { deleteCategoryAction } from "@/app/finder/actions";
 import { toast } from "react-hot-toast";
 
-export default function LeadPageHeader({ categories, activeCategoryId }: { categories: any[], activeCategoryId?: string }) {
+const LEAD_STAGES = [
+  "New",
+  "Contacted",
+  "Inbound Client",
+  "Meeting Booked",
+  "Qualified",
+  "Converted",
+];
+
+export default function LeadPageHeader({ 
+  categories, 
+  activeCategoryId,
+  activeStatus
+}: { 
+  categories: any[], 
+  activeCategoryId?: string,
+  activeStatus?: string
+}) {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isDeletingCat, setIsDeletingCat] = useState(false);
@@ -23,6 +40,20 @@ export default function LeadPageHeader({ categories, activeCategoryId }: { categ
       params.delete("categoryId");
     }
     router.push(`/leads?${params.toString()}`);
+  };
+
+  const handleStatusChange = (status: string) => {
+    const params = new URLSearchParams(window.location.search);
+    if (status) {
+      params.set("status", status);
+    } else {
+      params.delete("status");
+    }
+    router.push(`/leads?${params.toString()}`);
+  };
+
+  const handleResetFilters = () => {
+    router.push("/leads");
   };
 
   const handleDeleteCategory = async () => {
@@ -57,10 +88,11 @@ export default function LeadPageHeader({ categories, activeCategoryId }: { categ
             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-1">Front-Line Acquisition Engine</p>
           </div>
 
-          {/* Premium Filter Dropdown */}
-          <div className="flex items-center gap-3 w-full lg:w-auto">
-            <div className="flex items-center gap-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 rounded-2xl sm:rounded-[2rem] px-6 py-4 flex-1 lg:flex-none lg:min-w-[280px] shadow-xl shadow-zinc-500/5 focus-within:border-blue-600 transition-all group">
-              <Filter className="w-4 h-4 text-zinc-300 group-focus-within:text-[#012169] transition-colors" />
+          {/* Premium Filter Dropdowns: Sector + Stage */}
+          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+            {/* Sector / Category Filter */}
+            <div className="flex items-center gap-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 rounded-2xl sm:rounded-[2rem] px-6 py-4 flex-1 lg:flex-none lg:min-w-[240px] shadow-xl shadow-zinc-500/5 focus-within:border-blue-600 transition-all group">
+              <Layers className="w-4 h-4 text-zinc-300 group-focus-within:text-[#012169] transition-colors" />
               <select
                 value={activeCategoryId || ""}
                 onChange={(e) => handleCategoryChange(e.target.value)}
@@ -72,12 +104,38 @@ export default function LeadPageHeader({ categories, activeCategoryId }: { categ
                 ))}
               </select>
             </div>
-            
+
+            {/* Stage / Status Filter */}
+            <div className="flex items-center gap-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 rounded-2xl sm:rounded-[2rem] px-6 py-4 flex-1 lg:flex-none lg:min-w-[220px] shadow-xl shadow-zinc-500/5 focus-within:border-blue-600 transition-all group">
+              <Filter className="w-4 h-4 text-zinc-300 group-focus-within:text-[#012169] transition-colors" />
+              <select
+                value={activeStatus || ""}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="bg-transparent border-none outline-none text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-300 cursor-pointer w-full group-focus-within:translate-x-1 transition-transform"
+              >
+                <option value="">ALL STAGES</option>
+                {LEAD_STAGES.map((stage) => (
+                  <option key={stage} value={stage}>{stage.toUpperCase()}</option>
+                ))}
+              </select>
+            </div>
+
+            {(activeCategoryId || activeStatus) && (
+              <button
+                onClick={handleResetFilters}
+                className="px-5 py-4 bg-zinc-100 dark:bg-zinc-800/80 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-[1.5rem] text-[9px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-sm active:scale-90"
+                title="Reset all filters"
+              >
+                Reset
+              </button>
+            )}
+
             {activeCategoryId && (
               <button 
                 onClick={handleDeleteCategory}
                 disabled={isDeletingCat}
                 className="p-5 bg-red-50 dark:bg-red-950/20 text-red-600 rounded-[1.5rem] hover:bg-red-500 hover:text-white transition-all disabled:opacity-50 shadow-lg shadow-red-500/10 active:scale-90"
+                title="Delete this category"
               >
                 <Trash2 className="w-5 h-5" />
               </button>
