@@ -265,13 +265,15 @@ export function registerOutreachTools(server: McpServer) {
       inputSchema: {
         status: z.string().optional(),
         search: z.string().optional(),
-        limit: z.number().int().min(1).max(50000).optional().default(1000),
-        offset: z.number().int().min(0).default(0),
+        limit: z.coerce.number().int().min(1).max(50000).optional().default(1000),
+        offset: z.coerce.number().int().min(0).default(0),
       },
     },
     async ({ status, search, limit, offset }) =>
       runTool(async () => {
         const context = await getMcpContext();
+        const safeLimit = Number(limit) || 1000;
+        const safeOffset = Number(offset) || 0;
         const where: Prisma.CampaignWhereInput = { userId: context.userId };
         if (status) where.status = status;
         if (search) {
@@ -285,8 +287,8 @@ export function registerOutreachTools(server: McpServer) {
             emailAccount: { select: { id: true, email: true } },
           },
           orderBy: { createdAt: "desc" },
-          skip: offset,
-          take: limit,
+          skip: safeOffset,
+          take: safeLimit,
         });
 
         return campaigns.map((campaign) => {

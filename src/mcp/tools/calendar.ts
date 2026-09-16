@@ -132,12 +132,13 @@ export function registerCalendarTools(server: McpServer) {
       inputSchema: {
         start: z.string().optional(),
         end: z.string().optional(),
-        limit: z.number().int().min(1).max(50000).optional().default(1000),
+        limit: z.coerce.number().int().min(1).max(50000).optional().default(1000),
       },
     },
     async ({ start, end, limit }) =>
       runTool(async () => {
         const context = await getMcpContext();
+        const safeLimit = Number(limit) || 1000;
         const rangeStart = start ? parseDate(start, "start") : null;
         const rangeEnd = end ? parseDate(end, "end") : null;
         if ((rangeStart && !rangeEnd) || (!rangeStart && rangeEnd)) throw new Error("Both start and end are required for range filtering.");
@@ -148,7 +149,7 @@ export function registerCalendarTools(server: McpServer) {
             ...(rangeStart && rangeEnd ? { start: { lt: rangeEnd }, end: { gt: rangeStart } } : {}),
           },
           orderBy: { start: "asc" },
-          take: limit,
+          take: safeLimit,
         });
       })
   );

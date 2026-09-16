@@ -77,13 +77,15 @@ export function registerFormTools(server: McpServer) {
       description: "List forms owned by the MCP user.",
       inputSchema: {
         search: z.string().optional(),
-        limit: z.number().int().min(1).max(50000).optional().default(1000),
-        offset: z.number().int().min(0).default(0),
+        limit: z.coerce.number().int().min(1).max(50000).optional().default(1000),
+        offset: z.coerce.number().int().min(0).default(0),
       },
     },
     async ({ search, limit, offset }) =>
       runTool(async () => {
         const context = await getMcpContext();
+        const safeLimit = Number(limit) || 1000;
+        const safeOffset = Number(offset) || 0;
         const where = {
           ownerId: context.userId,
           ...(search
@@ -102,8 +104,8 @@ export function registerFormTools(server: McpServer) {
             where,
             include: { _count: { select: { submissions: true } } },
             orderBy: { createdAt: "desc" },
-            skip: offset,
-            take: limit,
+            skip: safeOffset,
+            take: safeLimit,
           }),
         ]);
 
