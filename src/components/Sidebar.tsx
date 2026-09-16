@@ -20,6 +20,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isStandalonePublicRoute } from "@/lib/route-utils";
 
 const menuItems = [
   { name: "Unified Inbox", href: "/inbox", icon: Mail },
@@ -100,24 +101,8 @@ export default function Sidebar({ subscription }: { subscription?: any }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Define marketing/public route prefixes
-  const isMarketingRoute =
-    pathname === "/landing" ||
-    pathname === "/login" ||
-    pathname === "/signup" ||
-    pathname === "/pricing" ||
-    pathname === "/contact" ||
-    pathname === "/terms" ||
-    pathname === "/privacy" ||
-    pathname.startsWith("/f/") ||
-    pathname.startsWith("/meet/") ||
-    pathname.startsWith("/mcp/docs") ||
-    pathname.startsWith("/features/") ||
-    pathname.startsWith("/solutions/") ||
-    pathname.startsWith("/vision/") ||
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/onboarding/portal/") ||
-    pathname.startsWith("/onboarding/sign/");
+  // Define marketing/public route check using central route utility
+  const isMarketingRoute = isStandalonePublicRoute(pathname);
 
   // Hide Sidebar on marketing or when subscription has expired for non-admins
   if (isMarketingRoute || (subscription?.isExpired && !subscription?.isAdmin)) {

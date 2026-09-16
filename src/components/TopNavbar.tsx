@@ -6,6 +6,7 @@ import { Bell, Search, User, Clock } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import UpgradeModal from "@/components/billing/UpgradeModal";
+import { isStandalonePublicRoute } from "@/lib/route-utils";
 
 export default function TopNavbar({
   session,
@@ -17,24 +18,8 @@ export default function TopNavbar({
   const pathname = usePathname();
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
-  // Define marketing/public route prefixes
-  const isMarketingRoute =
-    pathname === "/landing" ||
-    pathname === "/login" ||
-    pathname === "/signup" ||
-    pathname === "/pricing" ||
-    pathname === "/contact" ||
-    pathname === "/terms" ||
-    pathname === "/privacy" ||
-    pathname.startsWith("/f/") ||
-    pathname.startsWith("/meet/") ||
-    pathname.startsWith("/mcp/docs") ||
-    pathname.startsWith("/features/") ||
-    pathname.startsWith("/solutions/") ||
-    pathname.startsWith("/vision/") ||
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/onboarding/portal/") ||
-    pathname.startsWith("/onboarding/sign/");
+  // Define marketing/public route check using central route utility
+  const isMarketingRoute = isStandalonePublicRoute(pathname);
 
   // Hide TopNavbar on marketing or when subscription has expired for non-admins
   if (isMarketingRoute || (subscription?.isExpired && !subscription?.isAdmin)) {

@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import TrialExpiredPaywall from "@/components/billing/TrialExpiredPaywall";
 import type { SubscriptionStatusInfo } from "@/lib/subscription";
+import { isStandalonePublicRoute } from "@/lib/route-utils";
 
 export default function TrialGate({
   children,
@@ -19,23 +20,7 @@ export default function TrialGate({
   }
 
   // Define public and marketing routes where paywall should not block browsing
-  const isPublicRoute =
-    pathname === "/landing" ||
-    pathname === "/pricing" ||
-    pathname === "/login" ||
-    pathname === "/signup" ||
-    pathname === "/contact" ||
-    pathname === "/terms" ||
-    pathname === "/privacy" ||
-    pathname.startsWith("/features/") ||
-    pathname.startsWith("/solutions/") ||
-    pathname.startsWith("/vision/") ||
-    pathname.startsWith("/mcp/docs") ||
-    pathname.startsWith("/f/") ||
-    pathname.startsWith("/meet/") ||
-    pathname.startsWith("/invite/") ||
-    pathname.startsWith("/onboarding/portal/") ||
-    pathname.startsWith("/onboarding/sign/");
+  const isPublicRoute = isStandalonePublicRoute(pathname);
 
   // If subscription is expired and user attempts to access any internal CRM tool
   if (subscription.isExpired && !isPublicRoute) {

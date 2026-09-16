@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
-import Sidebar from "@/components/Sidebar";
-import TopNavbar from "@/components/TopNavbar";
 import NavigationProgressBar from "@/components/NavigationProgressBar";
-import TrialGate from "@/components/auth/TrialGate";
+import CrmAppShell from "@/components/layout/CrmAppShell";
 import { getSession } from "@/lib/auth";
 import { getUserSubscription } from "@/lib/subscription";
 import { absoluteUrl, brand, organizationJsonLd, softwareApplicationJsonLd } from "@/lib/seo";
@@ -80,17 +78,9 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd()) }}
         />
         <Toaster position="top-right" />
-        <TrialGate subscription={subscription}>
-          <div className="flex min-h-screen">
-            <Sidebar subscription={subscription} />
-            <div className="flex-1 flex flex-col min-h-screen w-full">
-              <TopNavbar session={session} subscription={subscription} />
-              <main className="flex-1">
-                {children}
-              </main>
-            </div>
-          </div>
-        </TrialGate>
+        <CrmAppShell session={session} subscription={subscription}>
+          {children}
+        </CrmAppShell>
       </body>
     </html>
   );

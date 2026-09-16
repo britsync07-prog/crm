@@ -112,6 +112,9 @@ export default function CalendlyBookingPage() {
           const data = await res.json();
           setHost(data.host);
           setEventType(data.eventType);
+          if (typeof document !== "undefined" && data.eventType?.title && data.host?.name) {
+            document.title = `${data.eventType.title} | ${data.host.name}`;
+          }
           if (data.host?.timeZone) {
             // Keep user local timezone if available, or fall back to host's
             setTimeZone(prev => prev || data.host.timeZone);

@@ -44,6 +44,9 @@ export default function PublicHostPage() {
           const data = await res.json();
           setHost(data.host);
           setEventTypes(data.eventTypes || []);
+          if (typeof document !== "undefined" && data.host?.name) {
+            document.title = `${data.host.name} - Scheduling`;
+          }
         } else {
           setError("Host not found or this link is inactive");
         }

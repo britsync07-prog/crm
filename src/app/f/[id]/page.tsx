@@ -48,7 +48,11 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
       try {
         const res = await fetch(`/api/forms/public/${id}`);
         if (res.ok) {
-          setForm(await res.json());
+          const data = await res.json();
+          setForm(data);
+          if (typeof document !== "undefined" && data?.title) {
+            document.title = `${data.title} | Form`;
+          }
         } else {
           setError("Form not found or has been closed.");
         }
