@@ -35,6 +35,7 @@ model User {
   deals               Deal[]
   emailAccounts       EmailAccount[]
   employeeProfile     Employee?
+  eventTypes          EventType[]
   forms               Form[]              @relation("UserForms")
   leads               Lead[]
   createdMeetings     Meeting[]           @relation("CreatedMeetings")
@@ -669,9 +670,35 @@ model CalendarSettings {
   availableEnd      String   @default("17:00")
   timeZone          String   @default("UTC")
   reminderAccountId String?
+  weeklySchedule    String?
+  bufferMinutes     Int      @default(0)
+  noticeHours       Int      @default(2)
+  bookingWindowDays Int      @default(60)
+  bookingSlug       String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EventType {
+  id               String   @id @default(cuid())
+  userId           String
+  title            String
+  slug             String
+  description      String?
+  duration         Int      @default(30)
+  color            String   @default("#006bff")
+  locationType     String   @default("VIDEO")
+  locationDetails  String?
+  isActive         Boolean  @default(true)
+  bufferBefore     Int      @default(0)
+  bufferAfter      Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, slug])
+  @@index([userId])
 }
 
 model CalendarEvent {
