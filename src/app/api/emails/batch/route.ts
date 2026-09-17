@@ -37,7 +37,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No connected IMAP account found." }, { status: 404 });
     }
 
+    console.log(`[CRM API POST /api/emails/batch] action=${action} mailbox=${mailbox || 'INBOX'} accountId=${accountId} count=${uids.length} uids=[${uids.join(', ')}]`);
     const result = await performBatchEmailAction(activeImapAccount, mailbox || "INBOX", uids, action);
+    console.log(`[CRM API POST /api/emails/batch RESULT]`, result);
 
     return NextResponse.json(result);
   } catch (error: any) {

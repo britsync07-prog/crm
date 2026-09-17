@@ -71,11 +71,14 @@ export async function PATCH(
             return NextResponse.json({ error: "No connected IMAP account found." }, { status: 404 });
         }
 
+        console.log(`[CRM API PATCH /api/emails/:uid] uid=${uid} action=${action} mailbox=${mailbox || 'INBOX'} accountId=${accountId}`);
         const success = await performEmailAction(activeImapAccount, mailbox || "INBOX", uid, action);
         if (!success) {
+            console.error(`[CRM API PATCH /api/emails/:uid FAILED] uid=${uid} action=${action}`);
             return NextResponse.json({ error: "Failed to perform action" }, { status: 500 });
         }
 
+        console.log(`[CRM API PATCH /api/emails/:uid SUCCESS] uid=${uid} action=${action}`);
         return NextResponse.json({ success: true });
     } catch (error: any) {
         console.error("PATCH /api/emails/[uid] error:", error);

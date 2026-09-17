@@ -44,6 +44,15 @@ function isStartTlsRequired(encryption: string | null | undefined, port: number 
   return !isDirectTls(encryption, port) && (mode === 'TLS' || mode === 'STARTTLS');
 }
 
+function formatImapFlowLog(obj: any): string {
+  if (typeof obj === 'string') return obj;
+  if (!obj) return '';
+  if (obj.src === 'c') return `>> CLIENT: ${obj.msg || ''}`;
+  if (obj.src === 's') return `<< SERVER: ${obj.msg || ''}`;
+  if (obj.msg) return `${obj.msg} ${obj.comment || ''}`.trim();
+  return JSON.stringify(obj);
+}
+
 function createImapClient(account: ImapAccount) {
   if (!account.imapHost || !account.imapPort) {
     throw new Error('IMAP host and port are required.');
@@ -61,16 +70,29 @@ function createImapClient(account: ImapAccount) {
       pass: account.password,
       loginMethod: 'LOGIN'
     },
-    logger: false,
+    logger: {
+      debug: (obj: any) => {
+        const line = formatImapFlowLog(obj);
+        if (line) console.log(`[CRM IMAPFLOW DEBUG] ${line}`);
+      },
+      info: (obj: any) => {
+        const line = formatImapFlowLog(obj);
+        if (line) console.log(`[CRM IMAPFLOW INFO] ${line}`);
+      },
+      warn: (obj: any) => {
+        const line = formatImapFlowLog(obj);
+        if (line) console.warn(`[CRM IMAPFLOW WARN] ${line}`);
+      },
+      error: (obj: any) => {
+        const line = formatImapFlowLog(obj);
+        if (line) console.error(`[CRM IMAPFLOW ERROR] ${line}`);
+      },
+    },
     socketTimeout: 15000,
   });
 
-  // IMPORTANT: ImapFlow is an EventEmitter. If an unhandled 'error' event is emitted
-  // (e.g. TLSSocket timeout, connection reset, network drop), Node.js terminates or logs
-  // an 'uncaughtException' if there are 0 error listeners registered.
-  client.on('error', () => {
-    // Suppress unhandled socket timeouts and connection drops.
-    // The active operation's promise will reject and be caught by the surrounding try/catch blocks.
+  client.on('error', (err) => {
+    console.error('[CRM IMAPFLOW SOCKET ERROR]', err?.message || err);
   });
 
   return client;
@@ -379,10 +401,12 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
         // Standard folder fetch - get last 50 messages
         const fetchLimit = 50;
         const seq = totalMessages > fetchLimit ? `${totalMessages - (fetchLimit - 1)}:*` : '1:*';
-        for await (const message of client.fetch(seq, { source: true, envelope: true })) {
+        for await (const message of client.fetch(seq, { source: true, envelope: true, uid: true })) {
           fetchedMessages.push(message);
         }
       }
+
+      console.log(`[CRM IMAP FETCH RESULT] folder="${logicalMailboxPath}" (actual="${actualMailboxPath}") totalMessages=${totalMessages} fetched=${fetchedMessages.length} uids=[${fetchedMessages.map((m) => m.uid).join(', ')}]`);
 
       if (fetchedMessages.length === 0 && totalMessages > 0) {
         return await rawFetchRecentEmails(account, logicalMailboxPath);
@@ -468,37 +492,77 @@ export async function fetchEmailBody(account: any, mailboxPath: string, uid: str
 }
 
 export async function performEmailAction(account: any, mailboxPath: string, uid: string, action: 'archive' | 'trash' | 'spam' | 'read' | 'unread' | 'star' | 'unstar') {
+  console.log(`[CRM ACTION START] action=${action} mailbox=${mailboxPath} uid=${uid} user=${account.email || account.username}`);
   const client = createImapClient(account);
 
   try {
     await client.connect();
     const actualMailboxPath = await resolveMailboxPath(client, mailboxPath);
+    console.log(`[CRM ACTION RESOLVED] sourceMailbox="${actualMailboxPath}"`);
     const lock = await client.getMailboxLock(actualMailboxPath);
     try {
       if (action === 'read') {
-        await client.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
+        const res = await client.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
+        console.log(`[CRM ACTION RESULT] read uid=${uid}:`, res);
       } else if (action === 'unread') {
-        await client.messageFlagsRemove(uid, ['\\Seen'], { uid: true });
+        const res = await client.messageFlagsRemove(uid, ['\\Seen'], { uid: true });
+        console.log(`[CRM ACTION RESULT] unread uid=${uid}:`, res);
       } else if (action === 'star') {
-        await client.messageFlagsAdd(uid, ['\\Flagged'], { uid: true });
+        const res = await client.messageFlagsAdd(uid, ['\\Flagged'], { uid: true });
+        console.log(`[CRM ACTION RESULT] star uid=${uid}:`, res);
       } else if (action === 'unstar') {
-        await client.messageFlagsRemove(uid, ['\\Flagged'], { uid: true });
+        const res = await client.messageFlagsRemove(uid, ['\\Flagged'], { uid: true });
+        console.log(`[CRM ACTION RESULT] unstar uid=${uid}:`, res);
       } else if (action === 'trash') {
         const trashPath = await resolveMailboxPath(client, 'TRASH');
-        await client.messageMove(uid, trashPath, { uid: true });
+        console.log(`[CRM ACTION TRASH] targetTrash="${trashPath}" currentMailbox="${actualMailboxPath}" uid=${uid}`);
+
+        // If message is already inside the Trash folder, delete it permanently
+        if (actualMailboxPath.toLowerCase() === trashPath.toLowerCase()) {
+          console.log(`[CRM ACTION TRASH] Message is already in Trash. Permanently deleting message uid=${uid}`);
+          await client.messageDelete(uid, { uid: true });
+        } else {
+          // Attempt MOVE
+          console.log(`[CRM ACTION TRASH] Moving message uid=${uid} to "${trashPath}"`);
+          const moveRes = await client.messageMove(uid, trashPath, { uid: true });
+          console.log(`[CRM ACTION TRASH MOVE RESULT]`, moveRes);
+
+          if (!moveRes) {
+            console.warn(`[CRM ACTION TRASH FALLBACK] messageMove returned false. Trying messageCopy + messageDelete fallback...`);
+            const copyRes = await client.messageCopy(uid, trashPath, { uid: true });
+            console.log(`[CRM ACTION TRASH COPY RESULT]`, copyRes);
+            const deleteRes = await client.messageDelete(uid, { uid: true });
+            console.log(`[CRM ACTION TRASH DELETE RESULT]`, deleteRes);
+            if (!copyRes && !deleteRes) {
+              throw new Error(`Failed to move or delete email (UID: ${uid}) to ${trashPath}`);
+            }
+          }
+        }
       } else if (action === 'archive') {
         const archivePath = await resolveMailboxPath(client, 'ARCHIVE');
-        await client.messageMove(uid, archivePath, { uid: true });
+        console.log(`[CRM ACTION ARCHIVE] target="${archivePath}" uid=${uid}`);
+        const moveRes = await client.messageMove(uid, archivePath, { uid: true });
+        console.log(`[CRM ACTION ARCHIVE MOVE RESULT]`, moveRes);
+        if (!moveRes) {
+          await client.messageCopy(uid, archivePath, { uid: true });
+          await client.messageDelete(uid, { uid: true });
+        }
       } else if (action === 'spam') {
         const spamPath = await resolveMailboxPath(client, 'SPAM');
-        await client.messageMove(uid, spamPath, { uid: true });
+        console.log(`[CRM ACTION SPAM] target="${spamPath}" uid=${uid}`);
+        const moveRes = await client.messageMove(uid, spamPath, { uid: true });
+        console.log(`[CRM ACTION SPAM MOVE RESULT]`, moveRes);
+        if (!moveRes) {
+          await client.messageCopy(uid, spamPath, { uid: true });
+          await client.messageDelete(uid, { uid: true });
+        }
       }
       return true;
     } finally {
       lock.release();
     }
   } catch (error) {
-    console.error(`IMAP Action Error (${action}):`, error);
+    console.error(`[CRM ACTION ERROR] action=${action} uid=${uid}:`, error);
     throw new Error(formatImapError(error));
   } finally {
     await safeCloseImapClient(client);
@@ -574,12 +638,27 @@ export async function performBatchEmailAction(
         success = numericUids.length;
       } else if (action === 'trash') {
         const trashPath = await resolveMailboxPath(client, 'TRASH');
+        console.log(`[CRM BATCH TRASH START] targetTrash="${trashPath}" currentMailbox="${actualMailboxPath}" count=${uids.length}`);
         for (const uid of uids) {
           try {
-            await client.messageMove(uid, trashPath, { uid: true });
+            if (actualMailboxPath.toLowerCase() === trashPath.toLowerCase()) {
+              console.log(`[CRM BATCH TRASH] Message already in Trash. Permanently deleting uid=${uid}`);
+              await client.messageDelete(uid, { uid: true });
+            } else {
+              const moveRes = await client.messageMove(uid, trashPath, { uid: true });
+              if (!moveRes) {
+                console.warn(`[CRM BATCH TRASH FALLBACK] messageMove returned false for uid=${uid}, trying copy+delete`);
+                await client.messageCopy(uid, trashPath, { uid: true });
+                await client.messageDelete(uid, { uid: true });
+              }
+            }
             success++;
-          } catch { failed++; }
+          } catch (err) {
+            console.error(`[CRM BATCH TRASH FAILED] uid=${uid}:`, err);
+            failed++;
+          }
         }
+        console.log(`[CRM BATCH TRASH FINISHED] success=${success} failed=${failed}`);
       } else if (action === 'archive') {
         const archivePath = await resolveMailboxPath(client, 'ARCHIVE');
         for (const uid of uids) {

@@ -185,6 +185,7 @@ export default function InboxClient({
     };
 
     const handleAction = async (emailId: string, action: 'archive' | 'trash' | 'spam' | 'read' | 'unread') => {
+        console.log(`[CRM FRONTEND handleAction] emailId=${emailId} action=${action} folder=${activeFolder}`);
         setActionError(null);
         // Optimistic update
         if (action !== 'read' && action !== 'unread') {
@@ -238,6 +239,7 @@ export default function InboxClient({
     };
 
     const handleBatchAction = async (action: 'archive' | 'trash' | 'spam' | 'read' | 'unread') => {
+        console.log(`[CRM FRONTEND handleBatchAction] action=${action} folder=${activeFolder} count=${selectedEmailIds.size} ids=[${Array.from(selectedEmailIds).join(', ')}]`);
         if (selectedEmailIds.size === 0) return;
 
         const idsToProcess = Array.from(selectedEmailIds);
