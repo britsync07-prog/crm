@@ -445,7 +445,7 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
         if (searchResult && searchResult.length > 0) {
           // Get the last 50 starred messages
           const uids = searchResult.slice(-50);
-          for await (const message of client.fetch(uids, { source: true, envelope: true }, { uid: true })) {
+          for await (const message of client.fetch(uids, { source: true, envelope: true, flags: true }, { uid: true })) {
             fetchedMessages.push(message);
           }
         }
@@ -453,7 +453,7 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
         // Standard folder fetch - get last 50 messages
         const fetchLimit = 50;
         const seq = totalMessages > fetchLimit ? `${totalMessages - (fetchLimit - 1)}:*` : '1:*';
-        for await (const message of client.fetch(seq, { source: true, envelope: true, uid: true })) {
+        for await (const message of client.fetch(seq, { source: true, envelope: true, uid: true, flags: true })) {
           fetchedMessages.push(message);
         }
       }
@@ -523,6 +523,10 @@ export async function fetchEmailBody(account: any, mailboxPath: string, uid: str
         return await rawFetchEmailBody(account, mailboxPath, uid);
       }
       if (message && message.source) {
+        // Auto-mark email as seen on the server when viewing
+        client.messageFlagsAdd(uid, ['\\Seen'], { uid: true }).catch((err) => {
+          console.warn(`[CRM IMAP] Auto-mark \\Seen failed for uid=${uid}:`, err);
+        });
         const parsed = await simpleParser(message.source);
         return {
           id: uid,

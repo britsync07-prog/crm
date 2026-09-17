@@ -68,6 +68,8 @@ export async function GET(
         "Content-Disposition": `${dispositionType}; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
         "Content-Length": buffer.length.toString(),
         "Cache-Control": "private, max-age=86400",
+        "X-Frame-Options": "SAMEORIGIN",
+        "Content-Security-Policy": "frame-ancestors 'self'",
       },
     });
   } catch (error: any) {

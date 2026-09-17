@@ -8,7 +8,8 @@ const csp = `
   font-src 'self';
   connect-src 'self' https: wss:;
   worker-src 'self' blob:;
-  frame-src 'self' https://meet.truecrm.online;
+  frame-src 'self' blob: data: https://meet.truecrm.online;
+  frame-ancestors 'self';
 `.replace(/\s{2,}/g, " ").trim();
 
 const nextConfig: NextConfig = {
@@ -32,7 +33,7 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: [
-          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },

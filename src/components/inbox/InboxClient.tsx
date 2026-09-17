@@ -5,7 +5,7 @@ import {
     Mail, Inbox, Send, Trash2, Archive, Search, Filter, Bot,
     ArrowLeft, Loader2, Reply, CheckCircle2, ChevronDown,
     MoreVertical, FileText, Star, Clock, AlertCircle,
-    Paperclip, Download, Eye, File, Image as ImageIcon, X
+    Paperclip, Download, Eye, File, Image as ImageIcon, X, ExternalLink
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -117,7 +117,10 @@ export default function InboxClient({
         const isPdf = (att.contentType || "").toLowerCase().includes("pdf") || (att.filename || "").toLowerCase().endsWith(".pdf");
         const isImg = (att.contentType || "").toLowerCase().startsWith("image/");
         let url = "";
-        if (att.dataBase64) {
+        if (isPdf) {
+            // For PDFs, use same-origin HTTP route so browser native viewer loads without blob iframe restrictions
+            url = withAccountId(`/api/emails/${selectedEmail?.id}/attachment?index=${idx}&inline=true&mailbox=${encodeURIComponent(activeFolder)}`, activeAccountId);
+        } else if (att.dataBase64) {
             try {
                 const byteCharacters = atob(att.dataBase64);
                 const byteNumbers = new Array(byteCharacters.length);
@@ -125,7 +128,7 @@ export default function InboxClient({
                     byteNumbers[i] = byteCharacters.charCodeAt(i);
                 }
                 const byteArray = new Uint8Array(byteNumbers);
-                const blob = new Blob([byteArray], { type: att.contentType || (isPdf ? "application/pdf" : "application/octet-stream") });
+                const blob = new Blob([byteArray], { type: att.contentType || "application/octet-stream" });
                 url = URL.createObjectURL(blob);
             } catch {
                 url = `data:${att.contentType};base64,${att.dataBase64}`;
@@ -1070,6 +1073,16 @@ export default function InboxClient({
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
+                                    <a
+                                        href={previewAttachment.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                                        title="Open in new tab"
+                                    >
+                                        <ExternalLink className="w-3.5 h-3.5" />
+                                        Open in tab
+                                    </a>
                                     <button
                                         onClick={() => handleDownloadAttachment(previewAttachment.attachment, previewAttachment.index)}
                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer"
@@ -1090,11 +1103,17 @@ export default function InboxClient({
                             {/* Modal Content */}
                             <div className="flex-1 bg-zinc-100 dark:bg-zinc-950 overflow-auto flex items-center justify-center p-2">
                                 {previewAttachment.isPdf ? (
-                                    <iframe
-                                        src={previewAttachment.url}
-                                        title={previewAttachment.filename}
-                                        className="w-full h-full rounded-lg border-0 shadow-inner bg-white"
-                                    />
+                                    <object
+                                        data={previewAttachment.url}
+                                        type="application/pdf"
+                                        className="w-full h-full rounded-lg shadow-inner bg-white"
+                                    >
+                                        <iframe
+                                            src={previewAttachment.url}
+                                            title={previewAttachment.filename}
+                                            className="w-full h-full rounded-lg border-0 bg-white"
+                                        />
+                                    </object>
                                 ) : previewAttachment.isImg ? (
                                     <img
                                         src={previewAttachment.url}
