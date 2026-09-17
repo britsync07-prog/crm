@@ -1,36 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Copy, Check, ExternalLink } from "lucide-react";
 import { toast } from "react-hot-toast";
 import CalendlyEventTypes from "@/components/calendar/CalendlyEventTypes";
 import CalendlyScheduledEvents from "@/components/calendar/CalendlyScheduledEvents";
 import CalendlyAvailability from "@/components/calendar/CalendlyAvailability";
+import { useCalendarSettings } from "@/hooks/useCalendar";
 
 export default function CalendarPage() {
   const [activeTab, setActiveTab] = useState<"event_types" | "scheduled_events" | "availability">("event_types");
-  const [userHandle, setUserHandle] = useState("");
-  const [userName, setUserName] = useState("Host");
-  const [userImage, setUserImage] = useState<string | null>(null);
+  const { data: settingsData } = useCalendarSettings();
+  const userHandle = settingsData?.user?.bookingSlug || settingsData?.user?.id || "";
+  const userName = settingsData?.user?.name || "Host";
+  const userImage = settingsData?.user?.image || null;
   const [isCopied, setIsCopied] = useState(false);
-
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const res = await fetch("/api/calendar/settings");
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.user) {
-            setUserHandle(data.user.bookingSlug || data.user.id);
-            setUserName(data.user.name || "Host");
-            setUserImage(data.user.image || null);
-          }
-        }
-      } catch {}
-    };
-
-    loadUserData();
-  }, []);
 
   const copyPublicLink = () => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";

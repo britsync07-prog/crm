@@ -1,70 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Video, Plus, Clock, Copy, CheckCircle2, Loader2, ArrowRight } from "lucide-react";
-
-interface Meeting {
-  id: string;
-  meetingId: string;
-  title: string;
-  status: string;
-  createdAt: string;
-}
+import { useMeetings, useCreateMeeting } from "@/hooks/useMeetings";
 
 export default function CallsDashboard() {
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
+  const { data: meetings = [], isLoading: loading } = useMeetings();
+  const createMeetingMutation = useCreateMeeting();
   const [newTitle, setNewTitle] = useState("");
   const [startTime, setStartTime] = useState("");
   const [duration, setDuration] = useState("60"); // default 60 mins
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        // Since we dropped the heavy GET /api/meetings endpoint for simplicity,
-        // we'll fetch them from a new simple endpoint, or just inline a server action.
-        // For now, let's create a tiny simple API endpoint for this.
-        const res = await fetch("/api/meetings/list");
-        if (res.ok) setMeetings(await res.json());
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
-
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim() || creating) return;
-    setCreating(true);
+    if (!newTitle.trim() || createMeetingMutation.isPending) return;
 
     try {
       const start = startTime ? new Date(startTime).toISOString() : new Date().toISOString();
       const end = new Date(new Date(start).getTime() + parseInt(duration) * 60000).toISOString();
 
-      const res = await fetch("/api/meetings/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          title: newTitle,
-          startTime: start,
-          endTime: end
-        }),
+      await createMeetingMutation.mutateAsync({
+        title: newTitle,
+        startTime: start,
+        endTime: end,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setNewTitle("");
-        // Reload list
-        const listRes = await fetch("/api/meetings/list");
-        if (listRes.ok) setMeetings(await listRes.json());
-      }
-    } finally {
-      setCreating(false);
+      setNewTitle("");
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -126,10 +90,10 @@ export default function CallsDashboard() {
             <div className="flex items-end">
               <button
                 type="submit"
-                disabled={!newTitle.trim() || creating}
+                disabled={!newTitle.trim() || createMeetingMutation.isPending}
                 className="w-full py-3.5 bg-[#012169] hover:bg-[#c8102e] disabled:opacity-50 text-white font-black uppercase tracking-widest text-xs rounded-xl transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"
               >
-                {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                {createMeetingMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 Create Meeting Room
               </button>
             </div>

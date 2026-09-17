@@ -13,6 +13,45 @@ type ImapAccount = {
   encryption?: string | null;
 };
 
+export interface EmailAttachment {
+  id: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  contentDisposition?: string;
+  contentId?: string;
+  dataBase64?: string;
+}
+
+function formatAttachments(attachments: any[] | undefined): EmailAttachment[] {
+  if (!attachments || !Array.isArray(attachments)) return [];
+  return attachments.map((att, idx) => {
+    const filename = att.filename || `attachment-${idx + 1}${att.contentType?.includes('pdf') ? '.pdf' : ''}`;
+    const id = att.contentId || att.cid || `att-${idx}`;
+    const size = typeof att.size === 'number' && att.size > 0 ? att.size : (att.content?.length || 0);
+    const contentType = att.contentType || 'application/octet-stream';
+    const contentDisposition = att.contentDisposition || 'attachment';
+    let dataBase64: string | undefined;
+    if (att.content && size <= 15 * 1024 * 1024) {
+      if (Buffer.isBuffer(att.content)) {
+        dataBase64 = att.content.toString('base64');
+      } else if (typeof att.content === 'string') {
+        dataBase64 = Buffer.from(att.content).toString('base64');
+      }
+    }
+    return {
+      id,
+      filename,
+      contentType,
+      size,
+      contentDisposition,
+      contentId: att.contentId || att.cid,
+      dataBase64,
+    };
+  });
+}
+
+
 const imapIssueLogState = new Map<string, number>();
 const IMAP_ISSUE_LOG_INTERVAL_MS = 15 * 60 * 1000;
 
@@ -226,6 +265,7 @@ async function rawFetchRecentEmails(account: ImapAccount, logicalMailboxPath: st
       const flags = parseFlags(fetchBuffer);
       if (isStarredFolder && !flags.has('\\Flagged')) continue;
       const parsed = await simpleParser(source);
+      const attCount = parsed.attachments ? parsed.attachments.length : 0;
       emails.push({
         id: String(uid),
         from: parsed.from?.text || "Unknown Sender",
@@ -236,6 +276,8 @@ async function rawFetchRecentEmails(account: ImapAccount, logicalMailboxPath: st
         aiSummary: "Auto-synced via IMAP protocol.",
         isRead: flags.has('\\Seen'),
         isStarred: flags.has('\\Flagged'),
+        hasAttachments: attCount > 0,
+        attachmentCount: attCount,
         mailbox: logicalMailboxPath
       });
     }
@@ -258,7 +300,8 @@ async function rawFetchEmailBody(account: ImapAccount, mailboxPath: string, uid:
       subject: parsed.subject || "No Subject",
       date: parsed.date ? parsed.date.toLocaleString() : "Unknown Date",
       html: parsed.html || parsed.textAsHtml || `<p>${parsed.text || 'No content'}</p>`,
-      text: parsed.text || ""
+      text: parsed.text || "",
+      attachments: formatAttachments(parsed.attachments)
     };
   });
 }
@@ -424,6 +467,7 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
       for (const message of fetchedMessages) {
         if (!message.source) continue;
         const parsed = await simpleParser(message.source);
+        const attCount = parsed.attachments ? parsed.attachments.length : 0;
         emails.push({
           id: message.uid.toString(),
           from: parsed.from?.text || "Unknown Sender",
@@ -434,6 +478,8 @@ export async function fetchRecentEmails(account: any, logicalMailboxPath: string
           aiSummary: "Auto-synced via IMAP protocol.",
           isRead: message.flags ? message.flags.has('\\Seen') : false,
           isStarred: message.flags ? message.flags.has('\\Flagged') : false,
+          hasAttachments: attCount > 0,
+          attachmentCount: attCount,
           mailbox: logicalMailboxPath
         });
       }
@@ -485,7 +531,8 @@ export async function fetchEmailBody(account: any, mailboxPath: string, uid: str
           subject: parsed.subject || "No Subject",
           date: parsed.date ? parsed.date.toLocaleString() : "Unknown Date",
           html: parsed.html || parsed.textAsHtml || `<p>${parsed.text || 'No content'}</p>`,
-          text: parsed.text || ""
+          text: parsed.text || "",
+          attachments: formatAttachments(parsed.attachments)
         };
       }
     } finally {

@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["better-sqlite3", "bcrypt"],
   experimental: {
     optimizePackageImports: ["lucide-react"],
+    staleTimes: {
+      dynamic: 60,
+      static: 300,
+    },
   },
   async headers() {
     return [

@@ -1,41 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { FileText, Plus, Clock, Copy, CheckCircle2, Loader2, ArrowRight, BarChart3, Trash2, Sparkles, Zap } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
-
-interface Form {
-  id: string;
-  title: string;
-  description: string | null;
-  createdAt: string;
-  _count: {
-    submissions: number;
-  };
-}
+import { useForms, useDeleteForm } from "@/hooks/useForms";
 
 export default function FormsDashboard() {
-  const [forms, setForms] = useState<Form[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: forms = [], isLoading: loading } = useForms();
+  const deleteFormMutation = useDeleteForm();
   const [copiedId, setCopiedId] = useState<string | null>(null);
-
-  const fetchForms = async () => {
-    try {
-      const res = await fetch("/api/forms");
-      if (res.ok) setForms(await res.json());
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to load forms");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchForms();
-  }, []);
 
   const copyLink = (id: string) => {
     const url = `${window.location.origin}/f/${id}`;
@@ -48,11 +23,8 @@ export default function FormsDashboard() {
   const deleteForm = async (id: string) => {
     if (!confirm("Are you sure? This will delete all submissions too.")) return;
     try {
-      const res = await fetch(`/api/forms/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setForms(forms.filter(f => f.id !== id));
-        toast.success("Form deleted");
-      }
+      await deleteFormMutation.mutateAsync(id);
+      toast.success("Form deleted");
     } catch (e) {
       toast.error("Delete failed");
     }

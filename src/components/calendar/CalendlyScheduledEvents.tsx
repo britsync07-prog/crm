@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
   Calendar as CalendarIcon, 
   Clock, 
@@ -13,50 +13,19 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
-
-interface Meeting {
-  id: string;
-  meetingId: string;
-  title: string;
-  status: string;
-  startTime: string;
-  endTime: string;
-  submitterEmail: string;
-  submitterName?: string | null;
-  guests?: string[] | null;
-  notes?: string | null;
-  meetingUrl: string;
-}
+import { useQueryClient } from "@tanstack/react-query";
+import { useScheduledMeetings, type ScheduledMeeting as Meeting } from "@/hooks/useCalendar";
 
 export default function CalendlyScheduledEvents() {
+  const queryClient = useQueryClient();
   const [activeSubTab, setActiveSubTab] = useState<"upcoming" | "past" | "canceled">("upcoming");
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: meetings = [], isLoading } = useScheduledMeetings(activeSubTab);
   const [searchQuery, setSearchQuery] = useState("");
   
   // Cancel modal
   const [cancelingMeeting, setCancelingMeeting] = useState<Meeting | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [isCanceling, setIsCanceling] = useState(false);
-
-  const fetchMeetings = async (status: string) => {
-    setIsLoading(true);
-    try {
-      const res = await fetch(`/api/calendar/meetings?status=${status}`);
-      if (res.ok) {
-        const data = await res.json();
-        setMeetings(data);
-      }
-    } catch {
-      toast.error("Failed to load meetings");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchMeetings(activeSubTab);
-  }, [activeSubTab]);
 
   const handleCancelMeeting = async () => {
     if (!cancelingMeeting) return;
@@ -72,12 +41,13 @@ export default function CalendlyScheduledEvents() {
         toast.success("Meeting canceled and invitee notified");
         setCancelingMeeting(null);
         setCancelReason("");
-        fetchMeetings(activeSubTab);
+        queryClient.invalidateQueries({ queryKey: ["calendar", "meetings"] });
       } else {
-        toast.error("Failed to cancel meeting");
+        const err = await res.json();
+        toast.error(err.error || "Failed to cancel meeting");
       }
     } catch {
-      toast.error("Network error");
+      toast.error("Operation failed");
     } finally {
       setIsCanceling(false);
     }

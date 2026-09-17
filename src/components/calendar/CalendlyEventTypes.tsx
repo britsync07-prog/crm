@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
   Plus, 
   Copy, 
@@ -18,20 +18,9 @@ import {
   Search
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-
-interface EventType {
-  id: string;
-  title: string;
-  slug: string;
-  description?: string | null;
-  duration: number;
-  color: string;
-  locationType: string;
-  locationDetails?: string | null;
-  isActive: boolean;
-  bufferBefore: number;
-  bufferAfter: number;
-}
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-client";
+import { useEventTypes, type EventType } from "@/hooks/useCalendar";
 
 interface CalendlyEventTypesProps {
   userHandle: string;
@@ -50,8 +39,8 @@ const COLOR_PRESETS = [
 ];
 
 export default function CalendlyEventTypes({ userHandle, userName }: CalendlyEventTypesProps) {
-  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: eventTypes = [], isLoading } = useEventTypes();
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   
@@ -70,24 +59,6 @@ export default function CalendlyEventTypes({ userHandle, userName }: CalendlyEve
   const [description, setDescription] = useState("");
   const [bufferBefore, setBufferBefore] = useState(0);
   const [bufferAfter, setBufferAfter] = useState(0);
-
-  const fetchEventTypes = async () => {
-    try {
-      const res = await fetch("/api/calendar/event-types");
-      if (res.ok) {
-        const data = await res.json();
-        setEventTypes(data);
-      }
-    } catch {
-      toast.error("Failed to load event types");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchEventTypes();
-  }, []);
 
   const openCreateModal = () => {
     setEditingEvent(null);
@@ -151,7 +122,7 @@ export default function CalendlyEventTypes({ userHandle, userName }: CalendlyEve
         if (res.ok) {
           toast.success("Event type updated");
           setIsCreateModalOpen(false);
-          fetchEventTypes();
+          queryClient.invalidateQueries({ queryKey: queryKeys.calendarEventTypes });
         } else {
           const err = await res.json();
           toast.error(err.error || "Update failed");
@@ -165,7 +136,7 @@ export default function CalendlyEventTypes({ userHandle, userName }: CalendlyEve
         if (res.ok) {
           toast.success("Event type created");
           setIsCreateModalOpen(false);
-          fetchEventTypes();
+          queryClient.invalidateQueries({ queryKey: queryKeys.calendarEventTypes });
         } else {
           const err = await res.json();
           toast.error(err.error || "Creation failed");
@@ -186,7 +157,9 @@ export default function CalendlyEventTypes({ userHandle, userName }: CalendlyEve
         body: JSON.stringify({ isActive: !currentStatus }),
       });
       if (res.ok) {
-        setEventTypes(prev => prev.map(et => et.id === id ? { ...et, isActive: !currentStatus } : et));
+        queryClient.setQueryData<EventType[]>(queryKeys.calendarEventTypes, prev =>
+          prev ? prev.map(et => et.id === id ? { ...et, isActive: !currentStatus } : et) : []
+        );
         toast.success(!currentStatus ? "Event type turned ON" : "Event type turned OFF");
       }
     } catch {
@@ -199,7 +172,9 @@ export default function CalendlyEventTypes({ userHandle, userName }: CalendlyEve
     try {
       const res = await fetch(`/api/calendar/event-types/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setEventTypes(prev => prev.filter(et => et.id !== id));
+        queryClient.setQueryData<EventType[]>(queryKeys.calendarEventTypes, prev =>
+          prev ? prev.filter(et => et.id !== id) : []
+        );
         toast.success("Event type deleted");
       }
     } catch {

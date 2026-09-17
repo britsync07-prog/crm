@@ -1,13 +1,24 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
     Mail, Inbox, Send, Trash2, Archive, Search, Filter, Bot,
     ArrowLeft, Loader2, Reply, CheckCircle2, ChevronDown,
-    MoreVertical, FileText, Star, Clock, AlertCircle
+    MoreVertical, FileText, Star, Clock, AlertCircle,
+    Paperclip, Download, Eye, File, Image as ImageIcon, X
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+export interface EmailAttachment {
+    id: string;
+    filename: string;
+    contentType: string;
+    size: number;
+    contentDisposition?: string;
+    contentId?: string;
+    dataBase64?: string;
+}
 
 interface EmailItem {
     id: string;
@@ -19,6 +30,8 @@ interface EmailItem {
     aiSummary: string;
     isRead: boolean;
     isStarred?: boolean;
+    hasAttachments?: boolean;
+    attachmentCount?: number;
     mailbox: string;
 }
 
@@ -26,6 +39,14 @@ interface FullEmail extends EmailItem {
     to: string;
     html: string;
     text: string;
+    attachments?: EmailAttachment[];
+}
+
+function formatFileSize(bytes: number): string {
+    if (!bytes || bytes <= 0) return "0 B";
+    const units = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
 async function readApiJson(res: Response) {
@@ -60,11 +81,107 @@ export default function InboxClient({
     const [emails, setEmails] = useState<EmailItem[]>(initialEmails);
     const [loading, setLoading] = useState(false);
 
+    // In-memory cache for mail folder lists: key = `${accountId}:${folder}`
+    const folderCacheRef = useRef<Map<string, { emails: EmailItem[]; timestamp: number }>>(new Map());
+    // In-memory cache for individual email bodies: key = `${accountId}:${folder}:${emailId}`
+    const bodyCacheRef = useRef<Map<string, FullEmail>>(new Map());
+
+    // Seed initial inbox cache
+    useEffect(() => {
+        if (initialEmails.length > 0 && activeAccountId) {
+            folderCacheRef.current.set(`${activeAccountId}:INBOX`, {
+                emails: initialEmails,
+                timestamp: Date.now(),
+            });
+        }
+    }, [activeAccountId, initialEmails]);
+
     // Selection state for batch actions
     const [selectedEmailIds, setSelectedEmailIds] = useState<Set<string>>(new Set());
 
     const [selectedEmail, setSelectedEmail] = useState<FullEmail | null>(null);
     const [loadingEmail, setLoadingEmail] = useState(false);
+
+    // Attachment Preview Modal state
+    const [previewAttachment, setPreviewAttachment] = useState<{
+        filename: string;
+        contentType: string;
+        url: string;
+        isPdf: boolean;
+        isImg: boolean;
+        attachment: EmailAttachment;
+        index: number;
+    } | null>(null);
+
+    const handlePreviewAttachment = useCallback((att: EmailAttachment, idx: number) => {
+        const isPdf = (att.contentType || "").toLowerCase().includes("pdf") || (att.filename || "").toLowerCase().endsWith(".pdf");
+        const isImg = (att.contentType || "").toLowerCase().startsWith("image/");
+        let url = "";
+        if (att.dataBase64) {
+            try {
+                const byteCharacters = atob(att.dataBase64);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: att.contentType || (isPdf ? "application/pdf" : "application/octet-stream") });
+                url = URL.createObjectURL(blob);
+            } catch {
+                url = `data:${att.contentType};base64,${att.dataBase64}`;
+            }
+        } else {
+            url = withAccountId(`/api/emails/${selectedEmail?.id}/attachment?index=${idx}&inline=true&mailbox=${encodeURIComponent(activeFolder)}`, activeAccountId);
+        }
+        setPreviewAttachment({
+            filename: att.filename,
+            contentType: att.contentType,
+            url,
+            isPdf,
+            isImg,
+            attachment: att,
+            index: idx
+        });
+    }, [selectedEmail?.id, activeFolder, activeAccountId]);
+
+    const handleClosePreview = useCallback(() => {
+        if (previewAttachment?.url.startsWith("blob:")) {
+            URL.revokeObjectURL(previewAttachment.url);
+        }
+        setPreviewAttachment(null);
+    }, [previewAttachment]);
+
+    const handleDownloadAttachment = useCallback((att: EmailAttachment, idx: number) => {
+        if (att.dataBase64) {
+            try {
+                const byteCharacters = atob(att.dataBase64);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: att.contentType || "application/octet-stream" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = att.filename || "attachment";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                return;
+            } catch (err) {
+                console.error("Client blob download error:", err);
+            }
+        }
+        const url = withAccountId(`/api/emails/${selectedEmail?.id}/attachment?index=${idx}&mailbox=${encodeURIComponent(activeFolder)}`, activeAccountId);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = att.filename || "attachment";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }, [selectedEmail?.id, activeFolder, activeAccountId]);
 
     // Search
     const [searchQuery, setSearchQuery] = useState("");
@@ -107,37 +224,83 @@ export default function InboxClient({
 
     const activeAccount = emailAccounts.find(a => a.id === activeAccountId);
 
-    const fetchFolder = useCallback(async (folder: string, accountId: string = activeAccountId, silent: boolean = false) => {
+    const fetchFolder = useCallback(async (
+        folder: string,
+        accountId: string = activeAccountId,
+        silent: boolean = false,
+        force: boolean = false
+    ) => {
         setActiveFolder(folder);
         setSelectedEmail(null);
         setSelectedEmailIds(new Set());
         setSearchQuery("");
-        if (!silent) setLoading(true);
         setActionError(null);
+
+        const cacheKey = `${accountId}:${folder}`;
+        const cached = folderCacheRef.current.get(cacheKey);
+
+        // Check if we have cached data
+        if (cached && !force) {
+            setEmails(cached.emails);
+            const isStale = Date.now() - cached.timestamp > 60000;
+            if (!isStale) {
+                // Fresh cache: 0ms render, no network request needed!
+                if (!silent) setLoading(false);
+                return;
+            }
+            // Stale cache: displayed instantly, revalidate quietly in background
+            silent = true;
+        }
+
+        if (!silent) setLoading(true);
         try {
             const res = await fetch(withAccountId(`/api/emails?mailbox=${encodeURIComponent(folder)}`, accountId));
             const data = await readApiJson(res);
             if (!res.ok) {
                 setActionError(data.error || "Failed to load emails.");
-                setEmails([]);
+                if (!cached) setEmails([]);
             } else {
-                setEmails(data.emails || []);
+                const freshEmails = data.emails || [];
+                setEmails(freshEmails);
+                folderCacheRef.current.set(cacheKey, { emails: freshEmails, timestamp: Date.now() });
             }
         } catch (e: any) {
             if (!silent) setActionError(e.message || "Network error.");
-            setEmails([]);
+            if (!cached) setEmails([]);
         } finally {
             if (!silent) setLoading(false);
         }
     }, [activeAccountId]);
 
-    // Auto-poll every 30s when in list view
+    // Visibility-aware smart polling (every 60s, paused when tab is inactive)
     useEffect(() => {
         if (selectedEmail) return;
-        const interval = setInterval(() => {
-            fetchFolder(activeFolder, activeAccountId, true);
-        }, 30000);
-        return () => clearInterval(interval);
+
+        const poll = () => {
+            // Never poll if the browser tab is hidden or minimized
+            if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+                return;
+            }
+            fetchFolder(activeFolder, activeAccountId, true, true);
+        };
+
+        const interval = setInterval(poll, 60000);
+
+        const handleVisibilityChange = () => {
+            if (typeof document !== "undefined" && document.visibilityState === "visible") {
+                const cacheKey = `${activeAccountId}:${activeFolder}`;
+                const cached = folderCacheRef.current.get(cacheKey);
+                if (!cached || Date.now() - cached.timestamp > 60000) {
+                    fetchFolder(activeFolder, activeAccountId, true, true);
+                }
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+        };
     }, [selectedEmail, activeFolder, activeAccountId, fetchFolder]);
 
     const switchAccount = (accountId: string) => {
@@ -147,20 +310,43 @@ export default function InboxClient({
     };
 
     const openEmail = async (email: EmailItem) => {
-        setLoadingEmail(true);
-        setSelectedEmail({ ...email, to: "Loading...", html: "", text: "" });
+        const bodyKey = `${activeAccountId}:${activeFolder}:${email.id}`;
         setActionError(null);
 
-        // Optimistically mark as read in the list view
+        // Optimistically mark as read in the list view & folder cache
         if (!email.isRead) {
             setEmails(prev => prev.map(m => m.id === email.id ? { ...m, isRead: true } : m));
+            const folderKey = `${activeAccountId}:${activeFolder}`;
+            const cachedFolder = folderCacheRef.current.get(folderKey);
+            if (cachedFolder) {
+                cachedFolder.emails = cachedFolder.emails.map(m => m.id === email.id ? { ...m, isRead: true } : m);
+            }
         }
+
+        // Check if email body is already cached in memory
+        const cachedBody = bodyCacheRef.current.get(bodyKey);
+        if (cachedBody) {
+            setSelectedEmail({ ...cachedBody, isRead: true });
+            if (!email.isRead) {
+                fetch(`/api/emails/${email.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'read', mailbox: activeFolder, accountId: activeAccountId })
+                }).catch(() => { });
+            }
+            return; // 0ms instant display!
+        }
+
+        setLoadingEmail(true);
+        setSelectedEmail({ ...email, to: "Loading...", html: "", text: "" });
 
         try {
             const res = await fetch(withAccountId(`/api/emails/${email.id}?mailbox=${encodeURIComponent(activeFolder)}`, activeAccountId));
             const data = await readApiJson(res);
             if (res.ok && data.email) {
-                setSelectedEmail({ ...email, ...data.email, isRead: true });
+                const fullEmail: FullEmail = { ...email, ...data.email, isRead: true };
+                setSelectedEmail(fullEmail);
+                bodyCacheRef.current.set(bodyKey, fullEmail);
             } else {
                 setActionError(data.error || "Could not load email body.");
                 setSelectedEmail(null);
@@ -195,6 +381,17 @@ export default function InboxClient({
             setSelectedEmailIds(new Set(selectedEmailIds));
         } else {
             setEmails(prev => prev.map(m => m.id === emailId ? { ...m, isRead: action === 'read' } : m));
+        }
+
+        // Also update in-memory cache
+        const folderKey = `${activeAccountId}:${activeFolder}`;
+        const cachedFolder = folderCacheRef.current.get(folderKey);
+        if (cachedFolder) {
+            if (action !== 'read' && action !== 'unread') {
+                cachedFolder.emails = cachedFolder.emails.filter(m => m.id !== emailId);
+            } else {
+                cachedFolder.emails = cachedFolder.emails.map(m => m.id === emailId ? { ...m, isRead: action === 'read' } : m);
+            }
         }
 
         try {
@@ -558,6 +755,72 @@ export default function InboxClient({
                                         )}
                                     </div>
 
+                                    {/* Attachments Section */}
+                                    {!loadingEmail && selectedEmail.attachments && selectedEmail.attachments.length > 0 && (
+                                        <div className="pl-16 mt-6 pt-6 border-t border-zinc-100 dark:border-zinc-800">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                                                <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                                                    Attachments ({selectedEmail.attachments.length})
+                                                </h3>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                {selectedEmail.attachments.map((att, idx) => {
+                                                    const isPdf = (att.contentType || "").toLowerCase().includes("pdf") || (att.filename || "").toLowerCase().endsWith(".pdf");
+                                                    const isImg = (att.contentType || "").toLowerCase().startsWith("image/");
+                                                    return (
+                                                        <div
+                                                            key={att.id || idx}
+                                                            className="group flex flex-col justify-between p-3 rounded-xl border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50/50 dark:bg-zinc-800/40 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-all shadow-sm"
+                                                        >
+                                                            <div className="flex items-start gap-2.5 min-w-0">
+                                                                <div className="p-2 rounded-lg bg-white dark:bg-zinc-700/60 shadow-xs border border-zinc-200/50 dark:border-zinc-600/50 text-blue-600 dark:text-blue-400 shrink-0">
+                                                                    {isPdf ? (
+                                                                        <FileText className="w-5 h-5 text-red-500" />
+                                                                    ) : isImg ? (
+                                                                        <ImageIcon className="w-5 h-5 text-emerald-500" />
+                                                                    ) : (
+                                                                        <File className="w-5 h-5 text-blue-500" />
+                                                                    )}
+                                                                </div>
+                                                                <div className="min-w-0 flex-1">
+                                                                    <p className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate" title={att.filename}>
+                                                                        {att.filename}
+                                                                    </p>
+                                                                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                                                                        {formatFileSize(att.size)}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-2 mt-3 pt-2 border-t border-zinc-200/40 dark:border-zinc-700/40">
+                                                                {(isPdf || isImg) && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handlePreviewAttachment(att, idx)}
+                                                                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 shadow-2xs transition-colors cursor-pointer"
+                                                                    >
+                                                                        <Eye className="w-3.5 h-3.5 text-zinc-500" />
+                                                                        Preview
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDownloadAttachment(att, idx)}
+                                                                    className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-zinc-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 border border-zinc-200 dark:border-zinc-700 shadow-2xs transition-colors cursor-pointer ${!(isPdf || isImg) ? "flex-1" : ""}`}
+                                                                    title="Download file"
+                                                                >
+                                                                    <Download className="w-3.5 h-3.5" />
+                                                                    Download
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Inline Gmail-style Reply Box */}
                                     {!loadingEmail && (
                                         <div className="pl-16">
@@ -612,7 +875,7 @@ export default function InboxClient({
                                     />
                                     <ChevronDown className="w-3 h-3 text-zinc-500 ml-1" />
                                 </div>
-                                <button className="w-8 h-8 rounded flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500" onClick={() => fetchFolder(activeFolder)}>
+                                <button className="w-8 h-8 rounded flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500" onClick={() => fetchFolder(activeFolder, activeAccountId, false, true)} title="Refresh">
                                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 1 0 2.13-5.88L21 8"></path></svg>
                                 </button>
                                 <div className="relative">
@@ -624,7 +887,7 @@ export default function InboxClient({
                                             <button onClick={() => { setMoreDropdownOpen(false); handleBatchAction('read'); }} className="w-full text-left px-4 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-3 text-zinc-700 dark:text-zinc-300">
                                                 <Mail className="w-4 h-4" /> Mark all as read
                                             </button>
-                                            <button onClick={() => { setMoreDropdownOpen(false); fetchFolder(activeFolder); }} className="w-full text-left px-4 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-3 text-zinc-700 dark:text-zinc-300">
+                                            <button onClick={() => { setMoreDropdownOpen(false); fetchFolder(activeFolder, activeAccountId, false, true); }} className="w-full text-left px-4 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-3 text-zinc-700 dark:text-zinc-300">
                                                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 1 0 2.13-5.88L21 8"></path></svg> Refresh
                                             </button>
                                         </div>
@@ -702,6 +965,11 @@ export default function InboxClient({
                                                     {/* Subject & Snippet */}
                                                     <td className="py-2.5 pr-4 truncate align-middle">
                                                         <span className="">{thread.subject}</span>
+                                                        {thread.hasAttachments && (
+                                                            <span className="inline-flex items-center ml-2 text-zinc-400 dark:text-zinc-500 align-middle" title={`${thread.attachmentCount || 1} attachment(s)`}>
+                                                                <Paperclip className="w-3.5 h-3.5 inline" />
+                                                            </span>
+                                                        )}
                                                         <span className="text-zinc-500 dark:text-zinc-400 font-normal mx-2">-</span>
                                                         <span className="text-zinc-500 dark:text-zinc-400 font-normal">{thread.snippet}</span>
                                                     </td>
@@ -778,6 +1046,67 @@ export default function InboxClient({
                             </button>
                             <div className="flex items-center gap-2">
                                 <button onClick={() => { setIsComposing(false); setSendStatus(null); }} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500"><Trash2 className="w-4 h-4" /></button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Attachment Preview Modal */}
+                {previewAttachment && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 sm:p-6 animate-in fade-in duration-150">
+                        <div className="relative flex flex-col w-full max-w-5xl h-[85vh] bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
+                                <div className="flex items-center gap-3 min-w-0 pr-4">
+                                    {previewAttachment.isPdf ? (
+                                        <FileText className="w-5 h-5 text-red-500 shrink-0" />
+                                    ) : previewAttachment.isImg ? (
+                                        <ImageIcon className="w-5 h-5 text-emerald-500 shrink-0" />
+                                    ) : (
+                                        <File className="w-5 h-5 text-blue-500 shrink-0" />
+                                    )}
+                                    <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                                        {previewAttachment.filename}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                        onClick={() => handleDownloadAttachment(previewAttachment.attachment, previewAttachment.index)}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer"
+                                    >
+                                        <Download className="w-3.5 h-3.5" />
+                                        Download
+                                    </button>
+                                    <button
+                                        onClick={handleClosePreview}
+                                        className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                                        title="Close preview"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Modal Content */}
+                            <div className="flex-1 bg-zinc-100 dark:bg-zinc-950 overflow-auto flex items-center justify-center p-2">
+                                {previewAttachment.isPdf ? (
+                                    <iframe
+                                        src={previewAttachment.url}
+                                        title={previewAttachment.filename}
+                                        className="w-full h-full rounded-lg border-0 shadow-inner bg-white"
+                                    />
+                                ) : previewAttachment.isImg ? (
+                                    <img
+                                        src={previewAttachment.url}
+                                        alt={previewAttachment.filename}
+                                        className="max-w-full max-h-full object-contain rounded shadow"
+                                    />
+                                ) : (
+                                    <div className="text-center p-8">
+                                        <File className="w-12 h-12 text-zinc-400 mx-auto mb-3" />
+                                        <p className="text-sm text-zinc-600 dark:text-zinc-400">Preview not available for this file type.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

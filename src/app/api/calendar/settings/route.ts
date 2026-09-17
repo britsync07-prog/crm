@@ -18,26 +18,33 @@ export async function GET(req: NextRequest) {
 
     const effectiveSlug = settings?.bookingSlug || user?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-") || user?.email.split("@")[0] || user?.id;
 
-    return NextResponse.json({
-      ...(settings || {
-        availableStart: "09:00",
-        availableEnd: "17:00",
-        timeZone: "UTC",
-        reminderAccountId: null,
-        weeklySchedule: null,
-        bufferMinutes: 0,
-        noticeHours: 2,
-        bookingWindowDays: 60,
-        bookingSlug: null,
-      }),
-      user: {
-        id: user?.id,
-        name: user?.name || "Host",
-        email: user?.email,
-        image: user?.image,
-        bookingSlug: effectiveSlug,
+    return NextResponse.json(
+      {
+        ...(settings || {
+          availableStart: "09:00",
+          availableEnd: "17:00",
+          timeZone: "UTC",
+          reminderAccountId: null,
+          weeklySchedule: null,
+          bufferMinutes: 0,
+          noticeHours: 2,
+          bookingWindowDays: 60,
+          bookingSlug: null,
+        }),
+        user: {
+          id: user?.id,
+          name: user?.name || "Host",
+          email: user?.email,
+          image: user?.image,
+          bookingSlug: effectiveSlug,
+        },
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

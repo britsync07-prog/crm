@@ -16,9 +16,16 @@ export async function GET() {
 
   const featuredOffer = activeOffers[0] || null;
 
-  return NextResponse.json({
-    plans,
-    offers: activeOffers,
-    featuredOffer,
-  });
+  return NextResponse.json(
+    {
+      plans,
+      offers: activeOffers,
+      featuredOffer,
+    },
+    {
+      headers: {
+        "Cache-Control": "public, max-age=300, stale-while-revalidate=600",
+      },
+    }
+  );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
 import NavigationProgressBar from "@/components/NavigationProgressBar";
 import CrmAppShell from "@/components/layout/CrmAppShell";
+import QueryProvider from "@/providers/QueryProvider";
 import { getSession } from "@/lib/auth";
 import { getUserSubscription } from "@/lib/subscription";
 import { absoluteUrl, brand, organizationJsonLd, softwareApplicationJsonLd } from "@/lib/seo";
@@ -78,9 +79,11 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd()) }}
         />
         <Toaster position="top-right" />
-        <CrmAppShell session={session} subscription={subscription}>
-          {children}
-        </CrmAppShell>
+        <QueryProvider>
+          <CrmAppShell session={session} subscription={subscription}>
+            {children}
+          </CrmAppShell>
+        </QueryProvider>
       </body>
     </html>
   );

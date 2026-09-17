@@ -20,19 +20,26 @@ export async function GET() {
       }),
     ]);
 
-    return NextResponse.json({
-      categories: categories.map((c) => ({
-        id: c.id,
-        name: c.name,
-        leadCount: c._count.leads,
-      })),
-      statuses: statuses
-        .map((s) => ({
-          status: s.status || "Unknown",
-          count: s._count._all,
-        }))
-        .sort((a, b) => a.status.localeCompare(b.status)),
-    });
+    return NextResponse.json(
+      {
+        categories: categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          leadCount: c._count.leads,
+        })),
+        statuses: statuses
+          .map((s) => ({
+            status: s.status || "Unknown",
+            count: s._count._all,
+          }))
+          .sort((a, b) => a.status.localeCompare(b.status)),
+      },
+      {
+        headers: {
+          "Cache-Control": "private, max-age=120, stale-while-revalidate=300",
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || "Failed to load lead options." }, { status: 500 });
   }

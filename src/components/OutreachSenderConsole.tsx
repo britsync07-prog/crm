@@ -1,9 +1,17 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Mail, Send, BarChart3, Users, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-client";
+import {
+  useEmailAccounts,
+  useOutreachAnalytics,
+  useOutreachCampaigns,
+  useOutreachLeadOptions,
+} from "@/hooks/useOutreach";
 
 type EmailAccount = {
   id: string;
@@ -33,7 +41,7 @@ type AccountAnalytics = {
     deliveryRate: string;
     bounceRate: string;
     openRate: string;
-    replyRate?: string;
+    replyRate: string;
   };
 };
 
@@ -62,14 +70,16 @@ const defaultAnalytics: AccountAnalytics = {
 };
 
 export default function OutreachSenderConsole() {
-  const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
-  const [analytics, setAnalytics] = useState<AccountAnalytics>(defaultAnalytics);
-  const [history, setHistory] = useState<CampaignHistory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [leadCategories, setLeadCategories] = useState<LeadCategoryOption[]>([]);
-  const [leadStatuses, setLeadStatuses] = useState<LeadStatusOption[]>([]);
+  const queryClient = useQueryClient();
+  const { data: emailAccounts = [], isLoading: loadingAccounts } = useEmailAccounts();
+  const { data: analytics = defaultAnalytics, isLoading: loadingAnalytics } = useOutreachAnalytics();
+  const { data: history = [], isLoading: loadingHistory } = useOutreachCampaigns();
+  const { data: leadOptions, isLoading: loadingOptions } = useOutreachLeadOptions();
+  const leadCategories = leadOptions?.categories || [];
+  const leadStatuses = leadOptions?.statuses || [];
+  const loading = loadingAccounts || loadingAnalytics || loadingHistory || loadingOptions;
 
+  const [submitting, setSubmitting] = useState(false);
   const [campaignName, setCampaignName] = useState("");
   const [senderName, setSenderName] = useState("BritCRM Outreach");
   const [subject, setSubject] = useState("");
@@ -79,6 +89,7 @@ export default function OutreachSenderConsole() {
   const [recipientSource, setRecipientSource] = useState<"MANUAL" | "LEADS" | "BOTH">("MANUAL");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("ALL");
   const [selectedLeadStatus, setSelectedLeadStatus] = useState<string>("ALL");
+  const [maxLeadCount, setMaxLeadCount] = useState<number>(100);
 
   const recipientCount = useMemo(() => {
     const items = recipients
@@ -88,41 +99,12 @@ export default function OutreachSenderConsole() {
     return new Set(items).size;
   }, [recipients]);
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [accRes, analyticsRes, historyRes] = await Promise.all([
-        fetch("/api/email-accounts"),
-        fetch("/api/outreach/analytics/account"),
-        fetch("/api/outreach/campaigns"),
-      ]);
-      const leadOptionsRes = await fetch("/api/outreach/leads/options");
-
-      if (!accRes.ok) throw new Error("Failed to load sender accounts.");
-      if (!analyticsRes.ok) throw new Error("Failed to load account analytics.");
-      if (!historyRes.ok) throw new Error("Failed to load campaign history.");
-      if (!leadOptionsRes.ok) throw new Error("Failed to load lead targeting options.");
-
-      const accountsData = await accRes.json();
-      const analyticsData = await analyticsRes.json();
-      const historyData = await historyRes.json();
-      const leadOptionsData = await leadOptionsRes.json();
-
-      setEmailAccounts(Array.isArray(accountsData) ? accountsData : []);
-      setAnalytics(analyticsData || defaultAnalytics);
-      setHistory(Array.isArray(historyData?.history) ? historyData.history : []);
-      setLeadCategories(Array.isArray(leadOptionsData?.categories) ? leadOptionsData.categories : []);
-      setLeadStatuses(Array.isArray(leadOptionsData?.statuses) ? leadOptionsData.statuses : []);
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to load outreach console.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const loadData = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.emailAccounts });
+    queryClient.invalidateQueries({ queryKey: queryKeys.outreachAnalytics });
+    queryClient.invalidateQueries({ queryKey: queryKeys.outreachCampaigns });
+    queryClient.invalidateQueries({ queryKey: queryKeys.outreachLeadOptions });
+  };
 
   const onToggleAccount = (id: string) => {
     setSmtpAccountIds((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]));

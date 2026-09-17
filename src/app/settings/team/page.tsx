@@ -1,54 +1,25 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { Users, UserPlus, Copy, CheckCircle2, XCircle, Loader2, Trash2, Clock, Shield } from "lucide-react";
-
-interface Member {
-  id: string;
-  email: string;
-  role: string;
-  status: string;
-  inviteToken: string;
-  name: string | null;
-  invitedByName: string | null;
-  joinedAt: string | null;
-  lastActive: string | null;
-}
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-client";
+import { useTeamMembers, type Member } from "@/hooks/useTeam";
 
 export default function TeamSettingsPage() {
-  const [members, setMembers] = useState<Member[]>([]);
-  const [seatLimit, setSeatLimit] = useState(1);
-  const [plan, setPlan] = useState("free");
-  const [myRole, setMyRole] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: teamData, isLoading: loading, error: queryError } = useTeamMembers();
+  const members = teamData?.members || [];
+  const seatLimit = teamData?.seatLimit || 1;
+  const plan = teamData?.plan || "free";
+  const myRole = teamData?.myRole || null;
+  const loadError = queryError ? (queryError as Error).message : null;
+
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [inviteResult, setInviteResult] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoadError(null);
-    try {
-      const res = await fetch("/api/organization/members");
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load team members");
-      setMembers(data.members ?? []);
-      setSeatLimit(data.seatLimit ?? 1);
-      setPlan(data.plan ?? "free");
-      setMyRole(data.myRole ?? null);
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Failed to load team members");
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    queueMicrotask(() => {
-      void load();
-    });
-  }, [load]);
 
   const activeCount = members.filter((m) => m.status === "active").length;
   const isAdmin = myRole === "admin";
@@ -68,7 +39,7 @@ export default function TeamSettingsPage() {
       if (data.inviteUrl) {
         setInviteResult(data.inviteUrl);
         setInviteEmail("");
-        load();
+        queryClient.invalidateQueries({ queryKey: queryKeys.teamMembers });
       } else {
         setInviteResult(data.error || "Failed to create invite");
       }
@@ -91,13 +62,12 @@ export default function TeamSettingsPage() {
       const res = await fetch(`/api/organization/members/${id}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to remove member");
-      load();
+      queryClient.invalidateQueries({ queryKey: queryKeys.teamMembers });
     } catch (err) {
       setInviteResult(err instanceof Error ? err.message : "Failed to remove member");
     }
     setRemoving(null);
   }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
