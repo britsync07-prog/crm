@@ -83,6 +83,13 @@ export async function sendRealEmail(config: {
   senderName?: string;
   variables?: Record<string, string>;
   skipSentFolder?: boolean;
+  attachments?: Array<{
+    filename: string;
+    content: Buffer | string;
+    contentType?: string;
+    encoding?: string;
+    cid?: string;
+  }>;
 }) {
   const account = await prisma.emailAccount.findUnique({
     where: { id: config.emailAccountId },
@@ -100,13 +107,17 @@ export async function sendRealEmail(config: {
     });
   }
 
-  const messageData = {
+  const messageData: any = {
     from: `"${config.senderName || account.username}" <${account.email}>`,
     to: config.to,
     subject: config.subject,
     html: finalBody,
     text: finalBody.replace(/<[^>]*>?/gm, ''), // Simple HTML to Text fallback
   };
+
+  if (config.attachments && config.attachments.length > 0) {
+    messageData.attachments = config.attachments;
+  }
 
   const info = await withTimeout(transporter.sendMail(messageData), SMTP_TIMEOUT_MS, "SMTP send");
   transporter.close();

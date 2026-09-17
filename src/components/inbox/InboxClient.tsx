@@ -194,8 +194,58 @@ export default function InboxClient({
     const [composeTo, setComposeTo] = useState("");
     const [composeSubject, setComposeSubject] = useState("");
     const [composeBody, setComposeBody] = useState("");
+    const [composeAttachments, setComposeAttachments] = useState<File[]>([]);
+    const [isDragging, setIsDragging] = useState(false);
+    const composeFileInputRef = useRef<HTMLInputElement>(null);
+    const replyFileInputRef = useRef<HTMLInputElement>(null);
     const [sending, setSending] = useState(false);
     const [sendStatus, setSendStatus] = useState<{ ok: boolean; message: string } | null>(null);
+
+    const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024; // 25 MB standard SMTP threshold
+
+    const handleAttachmentSelect = (files: FileList | null) => {
+        if (!files || files.length === 0) return;
+        const newFiles = Array.from(files);
+
+        const currentTotal = composeAttachments.reduce((sum, f) => sum + f.size, 0);
+        const addedTotal = newFiles.reduce((sum, f) => sum + f.size, 0);
+
+        if (currentTotal + addedTotal > MAX_ATTACHMENT_BYTES) {
+            setActionError("Total attachments exceed 25MB limit.");
+            return;
+        }
+
+        setComposeAttachments(prev => {
+            const existingKeys = new Set(prev.map(f => `${f.name}-${f.size}`));
+            const filtered = newFiles.filter(f => !existingKeys.has(`${f.name}-${f.size}`));
+            return [...prev, ...filtered];
+        });
+    };
+
+    const handleRemoveAttachment = (index: number) => {
+        setComposeAttachments(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleAttachmentSelect(e.dataTransfer.files);
+        }
+    };
 
     // Action feedback
     const [actionError, setActionError] = useState<string | null>(initialError || null);
@@ -473,6 +523,7 @@ export default function InboxClient({
         setComposeTo(selectedEmail.from);
         setComposeSubject(`Re: ${selectedEmail.subject}`);
         setComposeBody(`\n\n---\nOn ${selectedEmail.date}, ${selectedEmail.from} wrote:\n> ${selectedEmail.snippet}`);
+        setComposeAttachments([]);
         setIsComposing(true);
     };
 
@@ -481,6 +532,7 @@ export default function InboxClient({
         setComposeTo("");
         setComposeSubject(`Fwd: ${selectedEmail.subject}`);
         setComposeBody(`\n\n--- Forwarded message ---\nFrom: ${selectedEmail.from}\nDate: ${selectedEmail.date}\nSubject: ${selectedEmail.subject}\n\n${selectedEmail.text || selectedEmail.snippet}`);
+        setComposeAttachments([]);
         setIsComposing(true);
     };
 
@@ -489,16 +541,33 @@ export default function InboxClient({
         setSending(true);
         setSendStatus(null);
         try {
-            const res = await fetch('/api/emails', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    accountId: activeAccountId,
-                    to: composeTo,
-                    subject: composeSubject || "(No Subject)",
-                    body: composeBody
-                })
-            });
+            let res: Response;
+            if (composeAttachments.length > 0) {
+                const formData = new FormData();
+                if (activeAccountId) formData.append('accountId', activeAccountId);
+                formData.append('to', composeTo);
+                formData.append('subject', composeSubject || "(No Subject)");
+                formData.append('body', composeBody);
+                for (const file of composeAttachments) {
+                    formData.append('attachments', file);
+                }
+                res = await fetch('/api/emails', {
+                    method: 'POST',
+                    body: formData
+                });
+            } else {
+                res = await fetch('/api/emails', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        accountId: activeAccountId,
+                        to: composeTo,
+                        subject: composeSubject || "(No Subject)",
+                        body: composeBody
+                    })
+                });
+            }
+
             const data = await readApiJson(res).catch(() => ({}));
             if (res.ok) {
                 setSendStatus({ ok: true, message: "Message sent" });
@@ -507,6 +576,7 @@ export default function InboxClient({
                     setComposeTo("");
                     setComposeSubject("");
                     setComposeBody("");
+                    setComposeAttachments([]);
                     setSendStatus(null);
                 }, 1500);
             } else {
@@ -632,6 +702,7 @@ export default function InboxClient({
                                 setComposeTo("");
                                 setComposeSubject("");
                                 setComposeBody("");
+                                setComposeAttachments([]);
                                 setSendStatus(null);
                                 setIsComposing(true);
                             }}
@@ -828,7 +899,16 @@ export default function InboxClient({
                                     {!loadingEmail && (
                                         <div className="pl-16">
                                             {isComposing && composeSubject.startsWith("Re:") ? (
-                                                <div className="border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden shadow-sm flex flex-col focus-within:shadow-md transition-shadow">
+                                                <div
+                                                    onDragOver={handleDragOver}
+                                                    onDragLeave={handleDragLeave}
+                                                    onDrop={handleDrop}
+                                                    className={`border rounded-xl overflow-hidden shadow-sm flex flex-col focus-within:shadow-md transition-all ${
+                                                        isDragging
+                                                            ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10 dark:bg-blue-900/10'
+                                                            : 'border-zinc-200 dark:border-zinc-700'
+                                                    }`}
+                                                >
                                                     <div className="flex items-center px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/30">
                                                         <span className="text-sm text-zinc-500"><Reply className="w-4 h-4 inline mr-2" /> Reply to <span className="font-semibold">{selectedEmail.from}</span></span>
                                                     </div>
@@ -837,15 +917,85 @@ export default function InboxClient({
                                                         onChange={e => setComposeBody(e.target.value)}
                                                         className="w-full p-4 min-h-[150px] bg-white dark:bg-zinc-900 border-none outline-none resize-none text-sm dark:text-zinc-100"
                                                         autoFocus
+                                                        placeholder="Write your reply..."
                                                     />
+
+                                                    {/* Reply Attachment Chips */}
+                                                    {composeAttachments.length > 0 && (
+                                                        <div className="px-4 py-2.5 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/20 max-h-36 overflow-y-auto">
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {composeAttachments.map((file, idx) => {
+                                                                    const isPdf = file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
+                                                                    const isImg = file.type.startsWith('image/');
+                                                                    return (
+                                                                        <div
+                                                                            key={`${file.name}-${idx}`}
+                                                                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-xs max-w-full"
+                                                                        >
+                                                                            {isPdf ? (
+                                                                                <FileText className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                                                                            ) : isImg ? (
+                                                                                <ImageIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                                                            ) : (
+                                                                                <File className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                                                            )}
+                                                                            <span className="font-medium text-zinc-800 dark:text-zinc-200 truncate max-w-[180px]" title={file.name}>
+                                                                                {file.name}
+                                                                            </span>
+                                                                            <span className="text-zinc-400 dark:text-zinc-500 shrink-0">
+                                                                                ({formatFileSize(file.size)})
+                                                                            </span>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleRemoveAttachment(idx)}
+                                                                                className="text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors p-0.5 rounded cursor-pointer ml-1"
+                                                                                title="Remove attachment"
+                                                                            >
+                                                                                <X className="w-3 h-3" />
+                                                                            </button>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
                                                     <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800">
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={handleSend}
+                                                                disabled={sending || (!composeBody.trim() && composeAttachments.length === 0)}
+                                                                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-full font-medium text-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer">
+                                                                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send"}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => replyFileInputRef.current?.click()}
+                                                                className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                                                                title="Attach files"
+                                                            >
+                                                                <Paperclip className="w-4 h-4" />
+                                                            </button>
+                                                            <input
+                                                                ref={replyFileInputRef}
+                                                                type="file"
+                                                                multiple
+                                                                className="hidden"
+                                                                onChange={e => { handleAttachmentSelect(e.target.files); e.target.value = ''; }}
+                                                            />
+                                                            {composeAttachments.length > 0 && (
+                                                                <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                                                                    {composeAttachments.length} file(s) ({formatFileSize(composeAttachments.reduce((s, f) => s + f.size, 0))})
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <button
-                                                            onClick={handleSend}
-                                                            disabled={sending || !composeBody.trim()}
-                                                            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-full font-medium text-sm flex items-center gap-2 disabled:opacity-50">
-                                                            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send"}
+                                                            onClick={() => { setIsComposing(false); setComposeAttachments([]); }}
+                                                            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 cursor-pointer"
+                                                            title="Discard reply"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
                                                         </button>
-                                                        <button onClick={() => setIsComposing(false)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500"><Trash2 className="w-4 h-4" /></button>
                                                     </div>
                                                 </div>
                                             ) : (
@@ -1000,11 +1150,20 @@ export default function InboxClient({
 
                 {/* Standalone Compose Modal (used when composing a completely new email, not replying) */}
                 {isComposing && !composeSubject.startsWith("Re:") && (
-                    <div className="absolute bottom-0 right-24 w-[500px] h-[500px] bg-white dark:bg-zinc-900 rounded-t-xl shadow-[0_8px_30px_rgb(0,0,0,0.12),0_4px_4px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.6)] flex flex-col z-50 border border-zinc-200 dark:border-zinc-800">
+                    <div
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        className={`absolute bottom-0 right-24 w-[540px] h-[520px] bg-white dark:bg-zinc-900 rounded-t-xl shadow-[0_8px_30px_rgb(0,0,0,0.12),0_4px_4px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.6)] flex flex-col z-50 border transition-all ${
+                            isDragging
+                                ? 'border-blue-500 ring-2 ring-blue-500/30'
+                                : 'border-zinc-200 dark:border-zinc-800'
+                        }`}
+                    >
                         <div className="px-4 py-3 bg-zinc-800 dark:bg-zinc-800 rounded-t-xl flex justify-between items-center text-white">
                             <h3 className="text-sm font-medium tracking-wide">New Message</h3>
                             <div className="flex items-center gap-2">
-                                <button onClick={() => { setIsComposing(false); setSendStatus(null); }} className="hover:bg-zinc-700 p-1 rounded">✕</button>
+                                <button onClick={() => { setIsComposing(false); setComposeAttachments([]); setSendStatus(null); }} className="hover:bg-zinc-700 p-1 rounded cursor-pointer" title="Close">✕</button>
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto flex flex-col">
@@ -1031,24 +1190,101 @@ export default function InboxClient({
                                     className="w-full bg-transparent border-none px-4 py-2 text-sm focus:outline-none focus:ring-0 dark:text-zinc-100"
                                 />
                             </div>
-                            <div className="flex-1 p-4 pb-0">
+                            <div className="flex-1 p-4 pb-2 relative">
                                 <textarea
                                     value={composeBody}
                                     onChange={e => setComposeBody(e.target.value)}
-                                    className="w-full h-full min-h-[250px] bg-transparent border-none outline-none resize-none text-sm dark:text-zinc-100"
+                                    className="w-full h-full min-h-[180px] bg-transparent border-none outline-none resize-none text-sm dark:text-zinc-100"
+                                    placeholder="Compose your message..."
                                     autoFocus
                                 />
+                                {isDragging && (
+                                    <div className="absolute inset-2 rounded-lg border-2 border-dashed border-blue-500 bg-blue-50/80 dark:bg-blue-950/80 flex items-center justify-center pointer-events-none backdrop-blur-xs">
+                                        <div className="text-center">
+                                            <Paperclip className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto mb-1 animate-bounce" />
+                                            <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">Drop files to attach</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+
+                            {/* Standalone Attachment Chips */}
+                            {composeAttachments.length > 0 && (
+                                <div className="px-4 py-2.5 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/20 max-h-36 overflow-y-auto">
+                                    <div className="flex flex-wrap gap-2">
+                                        {composeAttachments.map((file, idx) => {
+                                            const isPdf = file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
+                                            const isImg = file.type.startsWith('image/');
+                                            return (
+                                                <div
+                                                    key={`${file.name}-${idx}`}
+                                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-xs max-w-full"
+                                                >
+                                                    {isPdf ? (
+                                                        <FileText className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                                                    ) : isImg ? (
+                                                        <ImageIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                                    ) : (
+                                                        <File className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                                    )}
+                                                    <span className="font-medium text-zinc-800 dark:text-zinc-200 truncate max-w-[180px]" title={file.name}>
+                                                        {file.name}
+                                                    </span>
+                                                    <span className="text-zinc-400 dark:text-zinc-500 shrink-0">
+                                                        ({formatFileSize(file.size)})
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveAttachment(idx)}
+                                                        className="text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors p-0.5 rounded cursor-pointer ml-1"
+                                                        title="Remove attachment"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div className="px-4 py-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                            <button
-                                onClick={handleSend}
-                                disabled={sending || !composeTo.trim() || !composeBody.trim()}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send"}
-                            </button>
                             <div className="flex items-center gap-2">
-                                <button onClick={() => { setIsComposing(false); setSendStatus(null); }} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500"><Trash2 className="w-4 h-4" /></button>
+                                <button
+                                    onClick={handleSend}
+                                    disabled={sending || !composeTo.trim() || (!composeBody.trim() && composeAttachments.length === 0)}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer">
+                                    {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send"}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => composeFileInputRef.current?.click()}
+                                    className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                                    title="Attach files"
+                                >
+                                    <Paperclip className="w-4 h-4" />
+                                </button>
+                                <input
+                                    ref={composeFileInputRef}
+                                    type="file"
+                                    multiple
+                                    className="hidden"
+                                    onChange={e => { handleAttachmentSelect(e.target.files); e.target.value = ''; }}
+                                />
+                                {composeAttachments.length > 0 && (
+                                    <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                                        {composeAttachments.length} file(s) ({formatFileSize(composeAttachments.reduce((s, f) => s + f.size, 0))})
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => { setIsComposing(false); setComposeAttachments([]); setSendStatus(null); }}
+                                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 cursor-pointer"
+                                    title="Discard draft"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
                             </div>
                         </div>
                     </div>

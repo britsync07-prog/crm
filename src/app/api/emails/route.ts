@@ -71,8 +71,52 @@ export async function POST(req: NextRequest) {
     try {
         const session = await getSession();
         if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        const body = await req.json();
-        const { to, subject, body: emailBody, accountId } = body;
+
+        let to: string = "";
+        let subject: string = "";
+        let emailBody: string = "";
+        let accountId: string | null = null;
+        const attachments: Array<{ filename: string; content: Buffer; contentType?: string }> = [];
+
+        const contentTypeHeader = req.headers.get("content-type") || "";
+        if (contentTypeHeader.includes("multipart/form-data")) {
+            const formData = await req.formData();
+            to = (formData.get("to") as string)?.trim() || "";
+            subject = (formData.get("subject") as string)?.trim() || "";
+            emailBody = (formData.get("body") as string) || "";
+            accountId = (formData.get("accountId") as string)?.trim() || null;
+
+            const files = formData.getAll("attachments") as (File | string)[];
+            for (const item of files) {
+                if (item && typeof item === "object" && "arrayBuffer" in item && (item as File).size > 0) {
+                    const file = item as File;
+                    const arrayBuffer = await file.arrayBuffer();
+                    attachments.push({
+                        filename: file.name || "attachment",
+                        content: Buffer.from(arrayBuffer),
+                        contentType: file.type || "application/octet-stream"
+                    });
+                }
+            }
+        } else {
+            const body = await req.json();
+            to = (body.to || "").trim();
+            subject = (body.subject || "").trim();
+            emailBody = body.body || "";
+            accountId = body.accountId?.trim() || null;
+
+            if (Array.isArray(body.attachments)) {
+                for (const att of body.attachments) {
+                    if (att.content && att.filename) {
+                        attachments.push({
+                            filename: att.filename,
+                            content: Buffer.from(att.content, att.encoding || 'base64'),
+                            contentType: att.contentType || 'application/octet-stream'
+                        });
+                    }
+                }
+            }
+        }
 
         if (!to || !subject || !emailBody) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -88,12 +132,13 @@ export async function POST(req: NextRequest) {
             emailAccountId: activeImapAccount.id,
             to,
             subject,
-            body: emailBody
+            body: emailBody,
+            attachments: attachments.length > 0 ? attachments : undefined
         });
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
-        console.error("POST /api/emails/send error:", error);
+        console.error("POST /api/emails error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
