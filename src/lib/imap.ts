@@ -334,7 +334,8 @@ async function resolveMailboxPath(client: ImapFlow, logicalName: string): Promis
       if (targetFlag) {
         for (const mb of list) {
           if (mb.specialUse === targetFlag || (mb.flags && mb.flags.has(targetFlag))) {
-            return mb.path;
+            const raw = mb.name || mb.path;
+            return raw.split(/[./\\]+/).filter(Boolean).pop() || raw;
           }
         }
       }
@@ -348,15 +349,23 @@ async function resolveMailboxPath(client: ImapFlow, logicalName: string): Promis
       const searchNames = fallbacks[upper] || [logicalName.toLowerCase()];
 
       for (const mb of list) {
-        const pathLower = mb.path.toLowerCase();
+        const raw = mb.name || mb.path;
+        const pathLower = raw.toLowerCase();
         if (searchNames.some(s => pathLower.includes(s))) {
-          return mb.path;
+          return raw.split(/[./\\]+/).filter(Boolean).pop() || raw;
         }
       }
     }
   } catch (e) {
     console.warn("Could not list mailboxes for dynamic resolution:", e);
   }
+
+  // Fallback defaults for standard mailboxes
+  if (upper === 'TRASH') return 'Trash';
+  if (upper === 'SENT') return 'Sent';
+  if (upper === 'SPAM') return 'Junk';
+  if (upper === 'ARCHIVE') return 'Archive';
+  if (upper === 'DRAFTS') return 'Drafts';
 
   return logicalName; // Fallback
 }
@@ -524,18 +533,25 @@ export async function performEmailAction(account: any, mailboxPath: string, uid:
         } else {
           // Attempt MOVE
           console.log(`[CRM ACTION TRASH] Moving message uid=${uid} to "${trashPath}"`);
-          const moveRes = await client.messageMove(uid, trashPath, { uid: true });
-          console.log(`[CRM ACTION TRASH MOVE RESULT]`, moveRes);
+          let moved = false;
+          try {
+            const moveRes = await client.messageMove(uid, trashPath, { uid: true });
+            console.log(`[CRM ACTION TRASH MOVE RESULT]`, moveRes);
+            moved = !!moveRes;
+          } catch (moveErr) {
+            console.warn(`[CRM ACTION TRASH] messageMove threw for uid=${uid}:`, moveErr);
+          }
 
-          if (!moveRes) {
-            console.warn(`[CRM ACTION TRASH FALLBACK] messageMove returned false. Trying messageCopy + messageDelete fallback...`);
-            const copyRes = await client.messageCopy(uid, trashPath, { uid: true });
-            console.log(`[CRM ACTION TRASH COPY RESULT]`, copyRes);
+          if (!moved) {
+            console.warn(`[CRM ACTION TRASH FALLBACK] messageMove did not succeed. Trying messageCopy + messageDelete fallback...`);
+            try {
+              const copyRes = await client.messageCopy(uid, trashPath, { uid: true });
+              console.log(`[CRM ACTION TRASH COPY RESULT]`, copyRes);
+            } catch (copyErr) {
+              console.warn(`[CRM ACTION TRASH] messageCopy threw:`, copyErr);
+            }
             const deleteRes = await client.messageDelete(uid, { uid: true });
             console.log(`[CRM ACTION TRASH DELETE RESULT]`, deleteRes);
-            if (!copyRes && !deleteRes) {
-              throw new Error(`Failed to move or delete email (UID: ${uid}) to ${trashPath}`);
-            }
           }
         }
       } else if (action === 'archive') {
@@ -645,10 +661,20 @@ export async function performBatchEmailAction(
               console.log(`[CRM BATCH TRASH] Message already in Trash. Permanently deleting uid=${uid}`);
               await client.messageDelete(uid, { uid: true });
             } else {
-              const moveRes = await client.messageMove(uid, trashPath, { uid: true });
-              if (!moveRes) {
-                console.warn(`[CRM BATCH TRASH FALLBACK] messageMove returned false for uid=${uid}, trying copy+delete`);
-                await client.messageCopy(uid, trashPath, { uid: true });
+              let moved = false;
+              try {
+                const moveRes = await client.messageMove(uid, trashPath, { uid: true });
+                moved = !!moveRes;
+              } catch (moveErr) {
+                console.warn(`[CRM BATCH TRASH] messageMove threw for uid=${uid}:`, moveErr);
+              }
+              if (!moved) {
+                console.warn(`[CRM BATCH TRASH FALLBACK] messageMove did not succeed for uid=${uid}, trying copy+delete`);
+                try {
+                  await client.messageCopy(uid, trashPath, { uid: true });
+                } catch (copyErr) {
+                  console.warn(`[CRM BATCH TRASH] messageCopy threw for uid=${uid}:`, copyErr);
+                }
                 await client.messageDelete(uid, { uid: true });
               }
             }
