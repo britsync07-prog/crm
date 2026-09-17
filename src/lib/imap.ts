@@ -476,22 +476,22 @@ export async function performEmailAction(account: any, mailboxPath: string, uid:
     const lock = await client.getMailboxLock(actualMailboxPath);
     try {
       if (action === 'read') {
-        await client.messageFlagsAdd(uid, ['\\Seen']);
+        await client.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
       } else if (action === 'unread') {
-        await client.messageFlagsRemove(uid, ['\\Seen']);
+        await client.messageFlagsRemove(uid, ['\\Seen'], { uid: true });
       } else if (action === 'star') {
-        await client.messageFlagsAdd(uid, ['\\Flagged']);
+        await client.messageFlagsAdd(uid, ['\\Flagged'], { uid: true });
       } else if (action === 'unstar') {
-        await client.messageFlagsRemove(uid, ['\\Flagged']);
+        await client.messageFlagsRemove(uid, ['\\Flagged'], { uid: true });
       } else if (action === 'trash') {
         const trashPath = await resolveMailboxPath(client, 'TRASH');
-        await client.messageMove(uid, trashPath);
+        await client.messageMove(uid, trashPath, { uid: true });
       } else if (action === 'archive') {
         const archivePath = await resolveMailboxPath(client, 'ARCHIVE');
-        await client.messageMove(uid, archivePath);
+        await client.messageMove(uid, archivePath, { uid: true });
       } else if (action === 'spam') {
         const spamPath = await resolveMailboxPath(client, 'SPAM');
-        await client.messageMove(uid, spamPath);
+        await client.messageMove(uid, spamPath, { uid: true });
       }
       return true;
     } finally {
@@ -561,22 +561,22 @@ export async function performBatchEmailAction(
     const lock = await client.getMailboxLock(actualMailboxPath);
     try {
       if (action === 'read') {
-        await client.messageFlagsAdd(numericUids, ['\\Seen']);
+        await client.messageFlagsAdd(numericUids, ['\\Seen'], { uid: true });
         success = numericUids.length;
       } else if (action === 'unread') {
-        await client.messageFlagsRemove(numericUids, ['\\Seen']);
+        await client.messageFlagsRemove(numericUids, ['\\Seen'], { uid: true });
         success = numericUids.length;
       } else if (action === 'star') {
-        await client.messageFlagsAdd(numericUids, ['\\Flagged']);
+        await client.messageFlagsAdd(numericUids, ['\\Flagged'], { uid: true });
         success = numericUids.length;
       } else if (action === 'unstar') {
-        await client.messageFlagsRemove(numericUids, ['\\Flagged']);
+        await client.messageFlagsRemove(numericUids, ['\\Flagged'], { uid: true });
         success = numericUids.length;
       } else if (action === 'trash') {
         const trashPath = await resolveMailboxPath(client, 'TRASH');
         for (const uid of uids) {
           try {
-            await client.messageMove(uid, trashPath);
+            await client.messageMove(uid, trashPath, { uid: true });
             success++;
           } catch { failed++; }
         }
@@ -584,7 +584,7 @@ export async function performBatchEmailAction(
         const archivePath = await resolveMailboxPath(client, 'ARCHIVE');
         for (const uid of uids) {
           try {
-            await client.messageMove(uid, archivePath);
+            await client.messageMove(uid, archivePath, { uid: true });
             success++;
           } catch { failed++; }
         }
@@ -592,7 +592,7 @@ export async function performBatchEmailAction(
         const spamPath = await resolveMailboxPath(client, 'SPAM');
         for (const uid of uids) {
           try {
-            await client.messageMove(uid, spamPath);
+            await client.messageMove(uid, spamPath, { uid: true });
             success++;
           } catch { failed++; }
         }
