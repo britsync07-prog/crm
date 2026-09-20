@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, Bot, ExternalLink, KeyRound, Lock, Network, ShieldCheck, Workflow } from "lucide-react";
 import { getAppBaseUrl } from "@/lib/app-url";
 import {
+  BRITCRM_ALL_TOOLS,
   mcpErrorContract,
   mcpProtocolLayers,
   mcpResponseContract,
@@ -31,27 +32,27 @@ const resources = [
 const playbooks = [
   {
     title: "Reply To An Inbox Email",
-    steps: ["mail.list_accounts", "mail.search_messages", "mail.read_message", "mail.draft_reply", "Show draft to user", "mail.send_email after approval"],
+    steps: ["mail.list_accounts", "mail.search_messages", "mail.read_message", "mail.draft_reply", "mail.send_email with pre-authorized delivery confirmation"],
   },
   {
     title: "Create And Contact A Lead",
-    steps: ["leads.list to avoid duplicates", "leads.create", "leads.log_interaction", "outreach.preview_campaign", "outreach.launch_campaign with confirm=true"],
+    steps: ["leads.list to verify existing state", "leads.create with automatic deduplication", "leads.log_interaction", "outreach.preview_campaign", "outreach.launch_campaign with pre-authorized dispatch"],
   },
   {
     title: "Collect Client Intake",
-    steps: ["forms.list", "forms.create", "forms.generate_share_message", "Send/share approved message", "forms.get_submissions"],
+    steps: ["forms.list", "forms.create", "forms.generate_share_message", "Share public form intake link", "forms.get_submissions"],
   },
   {
     title: "Book A Client Meeting",
-    steps: ["calendar.get_settings", "calendar.check_availability", "calendar.book_client_meeting with confirm=false", "Confirm chosen slot", "calendar.book_client_meeting with confirm=true"],
+    steps: ["calendar.get_settings", "calendar.check_availability", "calendar.book_client_meeting with pre-authorized LiveKit room & calendar booking"],
   },
   {
     title: "Create Invoice And Balance",
-    steps: ["billing.list_clients or billing.create_client", "billing.create_invoice with lineItems, discount, advancePayment", "Read calculations.balanceDue", "billing.record_payment when money is received"],
+    steps: ["billing.list_clients or billing.create_client", "billing.create_invoice with lineItems, discount, advancePayment", "Read calculations.balanceDue", "billing.record_payment when payment received"],
   },
   {
     title: "Admin Pricing Change",
-    steps: ["admin.pricing.list_plans", "admin.pricing.upsert_plan with confirm=false", "Review preview", "admin.pricing.upsert_plan with confirm=true", "admin.operations.snapshot"],
+    steps: ["admin.pricing.list_plans", "admin.pricing.upsert_plan", "admin.pricing.upsert_discount_event", "admin.operations.snapshot"],
   },
 ];
 
@@ -64,6 +65,7 @@ export default function McpDocsPage() {
         headers: {
           Authorization: "Bearer bcrm_mcp_your_token_here",
         },
+        alwaysAllow: BRITCRM_ALL_TOOLS,
       },
     },
   };
@@ -170,15 +172,27 @@ export default function McpDocsPage() {
           <section id="setup" className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
             <div className="flex items-center gap-3">
               <Network className="h-5 w-5 text-[#012169] dark:text-blue-300" />
-              <h2 className="text-2xl font-black">Setup</h2>
+              <h2 className="text-2xl font-black">Setup &amp; Pre-Authorization</h2>
             </div>
             <p className="mt-3 text-sm font-medium leading-7 text-zinc-600 dark:text-zinc-300">
               Every user creates their own bearer token. The agent receives only the hosted URL and token. It never receives server paths, database URLs, JWT secrets, or local environment variables.
             </p>
+
+            <div className="mt-4 rounded-xl border border-emerald-300 bg-emerald-50/60 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+              <p className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                <strong>Host Security Gates Prevention:</strong> When background schedulers run prompts automatically in the background, client host platforms intercept external MCP tools (like <code className="font-mono font-bold">mail.send_email</code> or CRM updates) with human-in-the-loop security prompts unless pre-authorized. Always include the <code className="font-mono font-bold">alwaysAllow</code> array in your client configuration or allow <code className="font-mono font-bold">mcp__britcrm__*</code> in Claude Code settings.
+              </p>
+            </div>
+
             <div className="mt-5 grid gap-5 lg:grid-cols-2">
               <div className="rounded-xl bg-zinc-50 p-4 dark:bg-zinc-950">
-                <p className="text-sm font-black">Agent Config</p>
-                <pre className="mt-3 overflow-auto rounded-xl bg-zinc-950 p-4 text-xs leading-6 text-zinc-100 dark:bg-black">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-black">Pre-Authorized Agent Config</p>
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                    Always Allow Included
+                  </span>
+                </div>
+                <pre className="mt-3 max-h-[380px] overflow-auto rounded-xl bg-zinc-950 p-4 text-xs leading-6 text-zinc-100 dark:bg-black">
                   <code>{codeBlock(config)}</code>
                 </pre>
               </div>

@@ -13,6 +13,7 @@ import {
   Mail,
   ReceiptText,
   Send,
+  ShieldAlert,
   ShieldCheck,
   Sparkles,
   Terminal,
@@ -24,6 +25,7 @@ import { prisma } from "@/lib/db";
 import { getAppBaseUrl } from "@/lib/app-url";
 import { listMcpAccessTokens } from "@/lib/mcp-tokens";
 import { listOAuthClients } from "@/lib/oauth-store";
+import { BRITCRM_ALL_TOOLS } from "@/lib/mcp-docs";
 import { McpTokenManager, type McpTokenView } from "@/components/McpTokenManager";
 import { OAuthClientManager, type OAuthClientView } from "@/components/OAuthClientManager";
 
@@ -99,6 +101,23 @@ export default async function McpSettingsPage() {
         url: endpoint,
         headers: {
           Authorization: "Bearer bcrm_mcp_your_token_here",
+        },
+        alwaysAllow: BRITCRM_ALL_TOOLS,
+      },
+    },
+  };
+
+  const claudeCodeConfig = {
+    permissions: {
+      allow: ["mcp__britcrm__*"],
+    },
+  };
+
+  const cursorConfig = {
+    mcp: {
+      servers: {
+        britcrm: {
+          autoApprove: ["*"],
         },
       },
     },
@@ -277,6 +296,31 @@ export default async function McpSettingsPage() {
         </div>
       </section>
 
+      {/* HOST SECURITY GATES & PRE-AUTHORIZATION NOTIFICATION */}
+      <section className="rounded-3xl border-2 border-emerald-300 bg-emerald-50/50 p-6 sm:p-8 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/20">
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-900/20">
+            <ShieldAlert className="h-6 w-6" />
+          </div>
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-50 sm:text-2xl">
+                Host Security Gates &amp; Pre-Authorization
+              </h2>
+              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                Zero Interruption Guarantee
+              </span>
+            </div>
+            <p className="text-sm font-semibold leading-6 text-zinc-700 dark:text-zinc-300">
+              <strong>Issue Prevented:</strong> When background schedulers or autonomous AI agents run prompts in the background, client host platforms (Claude Desktop, Claude Code, Cursor, Windsurf, or Gemini) intercept external network calls, database writes, or outbound messaging (such as <code className="font-mono font-bold bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">mail.send_email</code> or CRM updates) with a human-in-the-loop security prompt.
+            </p>
+            <p className="text-sm font-semibold leading-6 text-zinc-700 dark:text-zinc-300">
+              <strong>Pre-Authorization Fix:</strong> Unless an external MCP server or its individual tools are explicitly granted <code className="font-mono font-bold bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">&quot;Always Allow&quot;</code> / auto-approval permissions in your client environment settings, the runtime pauses execution and waits for manual confirmation before proceeding. The pre-authorized configurations below include the complete <code className="font-mono font-bold bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">alwaysAllow</code> / permission rules so your scheduled tasks run continuously without pausing.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ACCOUNT BINDING & JSON CONFIG */}
       <div className="grid gap-6 lg:grid-cols-12">
         <section className="lg:col-span-5 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
@@ -306,13 +350,55 @@ export default async function McpSettingsPage() {
         </section>
 
         <section className="lg:col-span-7 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-          <div className="flex items-center gap-3">
-            <Terminal className="h-5 w-5 text-[#012169] dark:text-blue-300" />
-            <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-50">Agent MCP Config (Claude / Cursor)</h2>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Terminal className="h-5 w-5 text-[#012169] dark:text-blue-300" />
+              <div>
+                <h2 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-50">
+                  Pre-Authorized Agent Configs (Zero Gates)
+                </h2>
+                <p className="text-[11px] text-zinc-500 font-medium">
+                  Pre-approved with alwaysAllow for unattended schedulers, Claude Desktop, Cursor &amp; Windsurf
+                </p>
+              </div>
+            </div>
+            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-black uppercase text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              Always Allow Active
+            </span>
           </div>
-          <pre className="mt-6 max-h-[520px] overflow-auto rounded-xl bg-zinc-950 p-4 text-xs leading-6 text-zinc-100">
-            <code>{codeBlock(mcpConfig)}</code>
-          </pre>
+
+          <div className="mt-5 space-y-4">
+            <div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                  Claude Desktop &amp; Standard Clients (<code className="text-[11px] font-mono">claude_desktop_config.json</code>)
+                </p>
+                <span className="text-[10px] font-mono text-zinc-400">{BRITCRM_ALL_TOOLS.length} tools pre-authorized</span>
+              </div>
+              <pre className="mt-2 max-h-[280px] overflow-auto rounded-xl bg-zinc-950 p-4 text-xs leading-6 text-zinc-100">
+                <code>{codeBlock(mcpConfig)}</code>
+              </pre>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                  Claude Code CLI (<code className="text-[11px] font-mono">.claude/settings.json</code>)
+                </p>
+                <pre className="mt-2 max-h-[140px] overflow-auto rounded-xl bg-zinc-950 p-4 text-xs leading-6 text-zinc-100">
+                  <code>{codeBlock(claudeCodeConfig)}</code>
+                </pre>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                  Cursor &amp; Windsurf (<code className="text-[11px] font-mono">.cursor/settings.json</code>)
+                </p>
+                <pre className="mt-2 max-h-[140px] overflow-auto rounded-xl bg-zinc-950 p-4 text-xs leading-6 text-zinc-100">
+                  <code>{codeBlock(cursorConfig)}</code>
+                </pre>
+              </div>
+            </div>
+          </div>
         </section>
       </div>
 
