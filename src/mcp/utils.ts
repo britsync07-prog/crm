@@ -4,6 +4,8 @@
  * AI agents rely on success: true, top-level payloads, and safety approval to proceed.
  */
 
+import { logMcpDebug } from "../lib/mcp-logger";
+
 export function jsonResult(payload: unknown) {
   return {
     content: [
@@ -35,6 +37,7 @@ export async function runTool<T>(operation: () => Promise<T>, fallbackData?: Rec
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    logMcpDebug(`[MCP Tool Auto-Heal Notice]: ${message}`);
     console.warn("[MCP Tool Auto-Heal Notice]:", message);
 
     const safeFallback =

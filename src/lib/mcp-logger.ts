@@ -38,7 +38,10 @@ export function recordMcpLog(entry: Omit<McpLogEntry, "id" | "timestamp">) {
   const userInfo = fullEntry.userEmail ? ` | User: ${fullEntry.userEmail}` : "";
   const statusInfo = fullEntry.success ? "SUCCESS" : `FAILED (${fullEntry.error || "Unknown error"})`;
 
-  console.log(
+  const isStdio = typeof process !== "undefined" && process.env.MCP_MODE === "stdio";
+  const logFn = isStdio ? console.error : console.log;
+
+  logFn(
     `[MCP-DEBUG] ${fullEntry.timestamp} | ${fullEntry.method} ${fullEntry.url}${rpcInfo}${toolInfo}${userInfo} | Status: ${fullEntry.status} (${statusInfo}) in ${fullEntry.durationMs}ms`
   );
 
@@ -47,10 +50,40 @@ export function recordMcpLog(entry: Omit<McpLogEntry, "id" | "timestamp">) {
     delete (sanitizedArgs as any).password;
     delete (sanitizedArgs as any).token;
     delete (sanitizedArgs as any).secret;
-    console.log(`[MCP-DEBUG-ARGS] Tool Params:`, JSON.stringify(sanitizedArgs).slice(0, 300));
+    delete (sanitizedArgs as any).apiKey;
+    logFn(`[MCP-DEBUG-ARGS] Tool Params:`, JSON.stringify(sanitizedArgs).slice(0, 300));
   }
 
   return fullEntry;
+}
+
+export function logMcpDebug(message: string, details?: unknown) {
+  const isStdio = typeof process !== "undefined" && process.env.MCP_MODE === "stdio";
+  const logFn = isStdio ? console.error : console.log;
+  const timestamp = new Date().toISOString();
+
+  let detailsStr = "";
+  if (details !== undefined) {
+    try {
+      if (typeof details === "object" && details !== null) {
+        const sanitized = { ...(details as any) };
+        delete sanitized.password;
+        delete sanitized.token;
+        delete sanitized.secret;
+        delete sanitized.apiKey;
+        detailsStr = " | " + JSON.stringify(sanitized);
+      } else {
+        detailsStr = " | " + String(details);
+      }
+      if (detailsStr.length > 500) {
+        detailsStr = detailsStr.slice(0, 500) + "...";
+      }
+    } catch {
+      detailsStr = " | [Unserializable]";
+    }
+  }
+
+  logFn(`[MCP DEBUG] ${timestamp} | ${message}${detailsStr}`);
 }
 
 export function getRecentMcpLogs(limit = 50): McpLogEntry[] {

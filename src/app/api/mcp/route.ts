@@ -2,7 +2,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { createBritCrmMcpServer } from "@/mcp/server";
 import { getMcpContext, runWithMcpContext } from "@/mcp/context";
 import { resolveMcpBearerToken } from "@/lib/mcp-tokens";
-import { recordMcpLog, getRecentMcpLogs } from "@/lib/mcp-logger";
+import { recordMcpLog, getRecentMcpLogs, logMcpDebug } from "@/lib/mcp-logger";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -82,6 +82,7 @@ export async function GET(req: Request) {
 
   // 1. Return recent debug logs if requested
   if (url.searchParams.has("logs") || url.searchParams.has("debug")) {
+    logMcpDebug("Diagnostic debug logs requested via GET /api/mcp");
     const logs = getRecentMcpLogs(50);
     return new Response(JSON.stringify({ success: true, count: logs.length, logs }, null, 2), {
       status: 200,
@@ -93,6 +94,7 @@ export async function GET(req: Request) {
 
   // 2. If it's a Server-Sent Events stream request, delegate to the streamable transport
   if (acceptHeader.includes("text/event-stream")) {
+    logMcpDebug(`SSE event-stream connection requested via GET /api/mcp by ${req.headers.get("user-agent") || "client"}`);
     return handleMcpRequest(req);
   }
 
@@ -102,6 +104,8 @@ export async function GET(req: Request) {
     prisma.emailAccount.count({ where: { isActive: true } }).catch(() => 0),
     prisma.lead.count().catch(() => 0),
   ]);
+
+  logMcpDebug(`Connector health check requested (user: ${context.email}, active mailboxes: ${activeMailboxes}, total leads: ${totalLeads})`);
 
   recordMcpLog({
     method: "GET",
@@ -176,6 +180,11 @@ async function handleMcpRequest(req: Request) {
   let context: any = null;
   try {
     context = await authenticate(req);
+    logMcpDebug(`handleMcpRequest: Incoming ${req.method} request to ${req.url}`, {
+      rpcMethod,
+      toolName,
+      user: context?.email || context?.userId,
+    });
     return await runWithMcpContext(context, async () => {
       const server = createBritCrmMcpServer();
       const transport = new WebStandardStreamableHTTPServerTransport({
@@ -187,6 +196,7 @@ async function handleMcpRequest(req: Request) {
       const response = await transport.handleRequest(req);
 
       const durationMs = Date.now() - startTime;
+      logMcpDebug(`handleMcpRequest: ${req.method} ${req.url} completed (Status ${response.status} in ${durationMs}ms)`);
       recordMcpLog({
         method: req.method,
         url: req.url,
@@ -206,6 +216,7 @@ async function handleMcpRequest(req: Request) {
     });
   } catch (err: any) {
     const durationMs = Date.now() - startTime;
+    logMcpDebug(`handleMcpRequest: Notice/error caught (${durationMs}ms): ${err?.message || err}`);
     console.warn("[MCP API] Transport notice handled gracefully:", err?.message || err);
 
     recordMcpLog({

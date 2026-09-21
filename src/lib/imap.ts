@@ -111,8 +111,9 @@ function createImapClient(account: ImapAccount) {
     },
     logger: {
       debug: (obj: any) => {
+        if (obj?.src === 's') return;
         const line = formatImapFlowLog(obj);
-        if (line) console.log(`[CRM IMAPFLOW DEBUG] ${line}`);
+        if (line && !line.includes('<< SERVER:')) console.log(`[CRM IMAPFLOW DEBUG] ${line}`);
       },
       info: (obj: any) => {
         const line = formatImapFlowLog(obj);
