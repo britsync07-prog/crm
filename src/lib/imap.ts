@@ -83,15 +83,6 @@ function isStartTlsRequired(encryption: string | null | undefined, port: number 
   return !isDirectTls(encryption, port) && (mode === 'TLS' || mode === 'STARTTLS');
 }
 
-function formatImapFlowLog(obj: any): string {
-  if (typeof obj === 'string') return obj;
-  if (!obj) return '';
-  if (obj.src === 'c') return `>> CLIENT: ${obj.msg || ''}`;
-  if (obj.src === 's') return `<< SERVER: ${obj.msg || ''}`;
-  if (obj.msg) return `${obj.msg} ${obj.comment || ''}`.trim();
-  return JSON.stringify(obj);
-}
-
 function createImapClient(account: ImapAccount) {
   if (!account.imapHost || !account.imapPort) {
     throw new Error('IMAP host and port are required.');
@@ -109,25 +100,7 @@ function createImapClient(account: ImapAccount) {
       pass: account.password,
       loginMethod: 'LOGIN'
     },
-    logger: {
-      debug: (obj: any) => {
-        if (obj?.src === 's') return;
-        const line = formatImapFlowLog(obj);
-        if (line && !line.includes('<< SERVER:')) console.log(`[CRM IMAPFLOW DEBUG] ${line}`);
-      },
-      info: (obj: any) => {
-        const line = formatImapFlowLog(obj);
-        if (line) console.log(`[CRM IMAPFLOW INFO] ${line}`);
-      },
-      warn: (obj: any) => {
-        const line = formatImapFlowLog(obj);
-        if (line) console.warn(`[CRM IMAPFLOW WARN] ${line}`);
-      },
-      error: (obj: any) => {
-        const line = formatImapFlowLog(obj);
-        if (line) console.error(`[CRM IMAPFLOW ERROR] ${line}`);
-      },
-    },
+    logger: false,
     socketTimeout: 15000,
   });
 
