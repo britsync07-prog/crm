@@ -47,21 +47,28 @@ function createSmtpTransport(account: SmtpAccount) {
       user: account.username,
       pass: account.password,
     },
+    tls: {
+      rejectUnauthorized: false,
+    },
   });
 }
 
 function formatSmtpError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
+  const errObj = error as any;
+  const message = errObj instanceof Error ? errObj.message : String(errObj);
+  const response = errObj?.response ? ` Server response: ${errObj.response}` : "";
+  const code = errObj?.responseCode ? ` [Code ${errObj.responseCode}]` : "";
+
   if (/authentication|invalid login|auth|credentials|username|password/i.test(message)) {
-    return "SMTP login failed. Check the mailbox username and password.";
+    return `SMTP login failed: ${message}${response}${code}`;
   }
   if (/certificate|self signed|tls|starttls/i.test(message)) {
-    return "SMTP TLS connection failed. Check the host, port, and security mode.";
+    return `SMTP TLS connection failed: ${message}${response}${code}`;
   }
   if (/timeout|ECONNREFUSED|ENOTFOUND|EAI_AGAIN/i.test(message)) {
-    return "SMTP server could not be reached. Check the SMTP host and port.";
+    return `SMTP server could not be reached: ${message}${response}${code}`;
   }
-  return `SMTP connection failed: ${message}`;
+  return `SMTP connection failed: ${message}${response}${code}`;
 }
 
 export async function verifySmtpConnection(account: SmtpAccount) {
@@ -119,8 +126,14 @@ export async function sendRealEmail(config: {
     messageData.attachments = config.attachments;
   }
 
-  const info = await withTimeout(transporter.sendMail(messageData), SMTP_TIMEOUT_MS, "SMTP send");
-  transporter.close();
+  let info: any;
+  try {
+    info = await withTimeout(transporter.sendMail(messageData), SMTP_TIMEOUT_MS, "SMTP send");
+  } catch (err) {
+    throw new Error(formatSmtpError(err));
+  } finally {
+    transporter.close();
+  }
 
   // Compile raw message and append to IMAP Sent folder
   if (!config.skipSentFolder) {

@@ -65,10 +65,10 @@ export async function getMcpContext(): Promise<BritCrmMcpContext> {
     console.warn("[MCP Context] Database error during fallback context resolution:", err);
   }
 
-  // Safe fallback default context if database is completely empty
+  // Fallback default context if database is completely empty
   return {
-    userId: "default_crm_user",
+    userId: "system",
     role: "ADMIN",
-    email: "admin@truecrm.online",
+    email: process.env.SENDER_EMAIL || process.env.BRITCRM_MCP_USER_EMAIL || "system@local",
   };
 }

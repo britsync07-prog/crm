@@ -19,7 +19,7 @@ const leadFiltersSchema = z
 const campaignInputSchema = {
   campaignName: z.string().min(1),
   senderName: z.string().default("BritCRM Outreach"),
-  senderEmail: z.string().optional().describe("Sender email address (e.g. info@ascentraconsulting.co.uk)"),
+  senderEmail: z.string().optional().describe("Sender email address of a connected mailbox"),
   from: z.string().optional().describe("Alias for senderEmail"),
   subject: z.string().min(1),
   htmlContent: z.string().min(1),
@@ -340,7 +340,7 @@ export function registerOutreachTools(server: McpServer) {
         targetFilter: z.enum(["no_reply", "opened_no_reply", "sent_all", "custom_status"]).default("no_reply"),
         customStatus: z.string().optional(),
         senderName: z.string().default("BritCRM Outreach"),
-        senderEmail: z.string().optional().describe("Sender email address (e.g. info@ascentraconsulting.co.uk)"),
+        senderEmail: z.string().optional().describe("Sender email address of a connected mailbox"),
         from: z.string().optional().describe("Alias for senderEmail"),
         subject: z.string().min(1),
         htmlContent: z.string().min(1),

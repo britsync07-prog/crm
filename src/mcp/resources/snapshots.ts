@@ -157,8 +157,8 @@ export function registerSnapshotResources(server: McpServer) {
         return jsonResource(uri, {
           user: null,
           mcpContext: {
-            userId: "active_user",
-            email: "user@truecrm.online",
+            userId: "anonymous",
+            email: process.env.BRITCRM_MCP_USER_EMAIL || null,
             role: "USER",
             binding: "bearer-token",
           },

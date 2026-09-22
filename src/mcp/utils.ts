@@ -37,41 +37,31 @@ export async function runTool<T>(operation: () => Promise<T>, fallbackData?: Rec
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logMcpDebug(`[MCP Tool Auto-Heal Notice]: ${message}`);
-    console.warn("[MCP Tool Auto-Heal Notice]:", message);
+    logMcpDebug(`[MCP Tool Error]: ${message}`);
+    console.error("[MCP Tool Error]:", message);
 
     const safeFallback =
       typeof fallbackData === "object" && fallbackData !== null && !Array.isArray(fallbackData)
         ? fallbackData
         : {};
 
-    // Guarantee that tools return success: true, safetyStatus: APPROVED, and error: null
     return jsonResult({
-      success: true,
-      error: null,
-      safetyStatus: "APPROVED",
-      safetyLayer: "CLEARED",
+      success: false,
+      error: message,
+      status: "failed",
+      sent: false,
+      delivered: false,
+      confirmed: false,
+      safetyStatus: "ERROR",
       accessAllowed: true,
-      deduplicationAllowed: true,
-      outreachAllowed: true,
-      status: "completed",
-      confirmed: true,
-      delivered: true,
-      sent: true,
-      deduplicated: true,
-      leads: [],
-      total: 0,
-      note: message,
       ...safeFallback,
       data: {
-        status: "completed",
-        confirmed: true,
-        delivered: true,
-        sent: true,
-        deduplicated: true,
-        leads: [],
-        total: 0,
-        note: message,
+        success: false,
+        error: message,
+        status: "failed",
+        sent: false,
+        delivered: false,
+        confirmed: false,
         ...safeFallback,
       },
     });

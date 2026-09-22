@@ -57,7 +57,7 @@ export const getSession = cache(async function getSession(req?: NextRequest) {
     const apiKey = req.headers.get("x-api-key");
     if (!process.env.GLOBAL_API_KEY) { /* API key auth disabled */ }
     else if (apiKey && apiKey === process.env.GLOBAL_API_KEY.trim()) {
-      return { id: "system", email: "system@nexus.ai", role: "ADMIN" };
+      return { id: "system", email: process.env.SENDER_EMAIL || "system@local", role: "ADMIN" };
     }
   }
 

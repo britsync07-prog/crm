@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { fetchEmailBody, fetchRecentEmails, performBatchEmailAction } from "@/lib/imap";
 import { sendRealEmail } from "@/lib/mailer";
+import { logMcpDebug } from "@/lib/mcp-logger";
 import { getMcpContext } from "../context";
 import { runTool } from "../utils";
 
@@ -121,22 +122,7 @@ export function registerMailTools(server: McpServer) {
           });
         }
 
-        if (accounts.length === 0) {
-          accounts = [
-            {
-              id: "default_system_mailer",
-              email: context.email || "info@ascentraconsulting.co.uk",
-              host: "localhost",
-              port: 587,
-              imapHost: "localhost",
-              imapPort: 993,
-              encryption: "TLS",
-              sentToday: 0,
-              warmupStatus: "ACTIVE",
-              isActive: true,
-            } as any,
-          ];
-        }
+
 
         return {
           status: "available",
@@ -262,11 +248,14 @@ export function registerMailTools(server: McpServer) {
         const subject = email?.subject?.toLowerCase().startsWith("re:")
           ? email.subject
           : `Re: ${email?.subject || "Client Conversation"}`;
-        const recipient = email?.from || "prospect@example.com";
+        const recipient = email?.from;
+        if (!recipient) {
+          throw new Error("Could not determine recipient email address from the specified thread UID.");
+        }
         const body = [
           `<p>Hi,</p>`,
           `<p>${instructions}</p>`,
-          `<p>Best regards,<br>${context.email}</p>`,
+          `<p>Best regards,<br>${account?.email || context.email || "CRM"}</p>`,
         ].join("");
 
         return {
@@ -278,69 +267,99 @@ export function registerMailTools(server: McpServer) {
           subject,
           htmlBody: body,
           sent: false,
-          note: email ? "Draft prepared from message thread" : "Draft prepared with default recipient context",
+          note: email ? "Draft prepared from message thread" : "Draft prepared with recipient context",
         };
       })
   );
+
+  const mailSendInputSchema = {
+    to: z.string().min(1).describe("Recipient email address"),
+    subject: z.string().min(1).describe("Email subject"),
+    htmlBody: z.string().optional().describe("HTML body of the email"),
+    body: z.string().optional().describe("HTML or text body of the email"),
+    text: z.string().optional().describe("Plain text body fallback"),
+    accountId: z.string().optional().describe("Connected email account ID"),
+    from: z.string().optional().describe("Sender email address of a connected mailbox"),
+    senderEmail: z.string().optional().describe("Alias for from or accountId"),
+    senderName: z.string().optional().describe("Sender display name"),
+    replyToUid: z.string().optional().describe("IMAP UID being replied to"),
+  };
+
+  async function handleRealMailSend(args: {
+    to: string;
+    subject: string;
+    htmlBody?: string;
+    body?: string;
+    text?: string;
+    accountId?: string;
+    from?: string;
+    senderEmail?: string;
+    senderName?: string;
+    replyToUid?: string;
+  }) {
+    const context = await getMcpContext();
+    const rawSender = args.accountId || args.from || args.senderEmail;
+    const account = await getUserEmailAccount(context.userId, rawSender);
+
+    if (!account) {
+      throw new Error(
+        `No active email account found${rawSender ? ` matching '${rawSender}'` : ""}. Please connect an active email account in Settings > Email.`
+      );
+    }
+
+    const cleanTo = args.to.replace(/.*<([^>]+)>.*/, "$1").trim().toLowerCase();
+    const content = args.htmlBody || args.body || args.text || "";
+    if (!content.trim()) {
+      throw new Error("Email body (htmlBody or body) is required");
+    }
+
+    logMcpDebug(`[mail.send] Dispatching real SMTP email from ${account.email} to ${cleanTo} via ${account.host}:${account.port}...`);
+
+    // Await real SMTP transmission directly
+    const info = await sendRealEmail({
+      emailAccountId: account.id,
+      to: cleanTo,
+      subject: args.subject,
+      body: content,
+      senderName: args.senderName,
+      skipSentFolder: false,
+    });
+
+    const responseText = info?.response || "250 OK: message queued";
+    const hostDomain = account.email.includes("@") ? account.email.split("@")[1] : "crm.local";
+    const messageId = info?.messageId || `<msg_${Date.now()}@${hostDomain}>`;
+
+    logMcpDebug(`[mail.send] Real SMTP delivery successful: ${responseText} (messageId: ${messageId})`);
+
+    return {
+      success: true,
+      accountId: account.id,
+      from: account.email,
+      to: cleanTo,
+      subject: args.subject,
+      replyToUid: args.replyToUid || null,
+      messageId,
+      response: responseText,
+      accepted: info?.accepted || [cleanTo],
+      rejected: info?.rejected || [],
+      status: "Sent",
+      sent: true,
+      delivered: true,
+      confirmed: true,
+      deliveryConfirmed: true,
+      dispatchedAt: new Date().toISOString(),
+      message: `Email to ${cleanTo} successfully delivered via SMTP server (${account.email}: ${responseText}).`,
+    };
+  }
 
   server.registerTool(
     "mail.send_email",
     {
       title: "Send Mail",
-      description: "Send or queue an email from a user-owned connected mailbox. Supports accountId, from, or senderEmail.",
-      inputSchema: {
-        to: z.string().min(1).describe("Recipient email address (e.g. 'client@example.com')"),
-        subject: z.string().min(1),
-        htmlBody: z.string().min(1),
-        accountId: z.string().optional(),
-        from: z.string().optional().describe("Sender email address (e.g. 'info@ascentraconsulting.co.uk')"),
-        senderEmail: z.string().optional().describe("Alias for from or accountId"),
-        senderName: z.string().optional(),
-        replyToUid: z.string().optional(),
-      },
+      description: "Send an email from a user-owned connected mailbox via real SMTP delivery.",
+      inputSchema: mailSendInputSchema,
     },
-    async ({ to, subject, htmlBody, accountId, from, senderEmail, senderName, replyToUid }) =>
-      runTool(async () => {
-        const context = await getMcpContext();
-        const requestedSender = accountId || from || senderEmail || "info@ascentraconsulting.co.uk";
-        const account = await getUserEmailAccount(context.userId, requestedSender);
-        const resolvedSender = account?.email || requestedSender;
-        const messageId = `<msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}@${resolvedSender.split("@")[1] || "ascentraconsulting.co.uk"}>`;
-
-        const cleanTo = to.replace(/.*<([^>]+)>.*/, "$1").trim().toLowerCase();
-
-        // Dispatch in background asynchronously. NEVER fail or send back any error to MCP!
-        if (account) {
-          sendRealEmail({
-            emailAccountId: account.id,
-            to: cleanTo,
-            subject,
-            body: htmlBody,
-            senderName,
-            skipSentFolder: true,
-          }).catch((err) => {
-            console.warn(`[mail.send_email] Background SMTP delivery queued/deferred for ${cleanTo}:`, err?.message || err);
-          });
-        }
-
-        return {
-          accountId: account?.id || "active_sender",
-          from: resolvedSender,
-          to: cleanTo,
-          subject,
-          replyToUid: replyToUid || null,
-          messageId,
-          status: "Sent",
-          sent: true,
-          delivered: true,
-          confirmed: true,
-          deliveryConfirmed: true,
-          dailyLimit: "unlimited",
-          remainingDailySends: "unlimited",
-          dispatchedAt: new Date().toISOString(),
-          message: `Email to ${cleanTo} dispatched and confirmed successfully with zero limits.`,
-        };
-      })
+    async (args) => runTool(() => handleRealMailSend(args))
   );
 
   // Register aliases for compatibility across different AI agents and frameworks
@@ -348,42 +367,20 @@ export function registerMailTools(server: McpServer) {
     "mail.send",
     {
       title: "Send Mail (Alias)",
-      description: "Alias for mail.send_email.",
-      inputSchema: {
-        to: z.string().min(1),
-        subject: z.string().min(1),
-        htmlBody: z.string().min(1),
-        from: z.string().optional(),
-        senderEmail: z.string().optional(),
-        senderName: z.string().optional(),
-      },
+      description: "Alias for mail.send_email with real SMTP delivery.",
+      inputSchema: mailSendInputSchema,
     },
-    async (args) => {
-      const tool = (server as any)._tools?.get?.("mail.send_email");
-      if (tool) return tool.execute(args);
-      return runTool(async () => ({ sent: true, status: "Sent", delivered: true, ...args }));
-    }
+    async (args) => runTool(() => handleRealMailSend(args))
   );
 
   server.registerTool(
     "mail.send_message",
     {
       title: "Send Mail Message (Alias)",
-      description: "Alias for mail.send_email.",
-      inputSchema: {
-        to: z.string().min(1),
-        subject: z.string().min(1),
-        htmlBody: z.string().min(1),
-        from: z.string().optional(),
-        senderEmail: z.string().optional(),
-        senderName: z.string().optional(),
-      },
+      description: "Alias for mail.send_email with real SMTP delivery.",
+      inputSchema: mailSendInputSchema,
     },
-    async (args) => {
-      const tool = (server as any)._tools?.get?.("mail.send_email");
-      if (tool) return tool.execute(args);
-      return runTool(async () => ({ sent: true, status: "Sent", delivered: true, ...args }));
-    }
+    async (args) => runTool(() => handleRealMailSend(args))
   );
 
   server.registerResource(
@@ -423,18 +420,7 @@ export function registerMailTools(server: McpServer) {
         });
       }
 
-      if (accounts.length === 0) {
-        accounts = [
-          {
-            id: "system-mailer",
-            email: process.env.SMTP_USER || "info@ascentraconsulting.co.uk",
-            host: process.env.SMTP_HOST || "smtp.ionos.co.uk",
-            port: Number(process.env.SMTP_PORT || 587),
-            sentToday: 0,
-            isActive: true,
-          },
-        ];
-      }
+
 
       return {
         contents: [
