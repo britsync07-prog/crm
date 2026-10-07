@@ -10,6 +10,14 @@ import { generateUnsubscribeSignature } from "@/lib/unsubscribe";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 import { ensurePricingTables, getPricingOffers, getPricingPlans } from "@/lib/pricing";
+import {
+  getAdminReferralOverview,
+  getAllReferralLinks,
+  getReferralLinkDetails,
+  createReferralLink,
+  updateReferralLink,
+  deleteReferralLink,
+} from "@/lib/referral";
 
 type SystemEmailProfileRow = {
   id: string;
@@ -898,4 +906,132 @@ export async function togglePricingOfferAction(offerId: string, isActive: boolea
   revalidatePath("/landing");
   return { success: true, error: null };
 }
+
+/* =========================================================================
+   REFERRAL SYSTEM ACTIONS (ADMIN ONLY)
+   ========================================================================= */
+
+export async function getAdminReferralsAction(filters?: {
+  search?: string;
+  status?: string;
+  sortBy?: "visits" | "signups" | "purchases" | "revenue" | "newest" | "agency";
+}) {
+  await requireAdmin();
+  const [overview, links] = await Promise.all([
+    getAdminReferralOverview(),
+    getAllReferralLinks(filters),
+  ]);
+  return { overview, links };
+}
+
+export async function getReferralLinkDetailsAction(id: string) {
+  await requireAdmin();
+  if (!id) return { link: null, clients: [], recentVisits: [] };
+  return await getReferralLinkDetails(id);
+}
+
+export async function createReferralLinkAction(prevState: any, formData: FormData) {
+  const session = await requireAdmin();
+  const code = (formData.get("code") as string) || "";
+  const agencyName = (formData.get("agencyName") as string) || "";
+  const targetUrl = (formData.get("targetUrl") as string) || "/";
+  const notes = (formData.get("notes") as string) || "";
+
+  const result = await createReferralLink({
+    code,
+    agencyName,
+    targetUrl,
+    notes,
+    createdBy: session.id,
+  });
+
+  if (!result.success) {
+    return { success: false, error: result.error || "Failed to create referral link" };
+  }
+
+  await prisma.activityLog.create({
+    data: {
+      userId: session.id,
+      action: "ADMIN_CREATE_REFERRAL_LINK",
+      details: `Created referral link for ${agencyName} with code ${code}`,
+    },
+  });
+
+  revalidatePath("/admin/referrals");
+  return { success: true, error: null };
+}
+
+export async function updateReferralLinkAction(prevState: any, formData: FormData) {
+  const session = await requireAdmin();
+  const id = (formData.get("id") as string) || "";
+  const code = (formData.get("code") as string) || "";
+  const agencyName = (formData.get("agencyName") as string) || "";
+  const targetUrl = (formData.get("targetUrl") as string) || "/";
+  const notes = (formData.get("notes") as string) || "";
+  const isActive = formData.get("isActive") === "on" || formData.get("isActive") === "true";
+
+  if (!id) {
+    return { success: false, error: "Referral Link ID is required" };
+  }
+
+  const result = await updateReferralLink(id, {
+    code,
+    agencyName,
+    targetUrl,
+    notes,
+    isActive,
+  });
+
+  if (!result.success) {
+    return { success: false, error: result.error || "Failed to update referral link" };
+  }
+
+  await prisma.activityLog.create({
+    data: {
+      userId: session.id,
+      action: "ADMIN_UPDATE_REFERRAL_LINK",
+      details: `Updated referral link ${code} for ${agencyName}`,
+    },
+  });
+
+  revalidatePath("/admin/referrals");
+  return { success: true, error: null };
+}
+
+export async function toggleReferralLinkStatusAction(id: string, currentStatus: boolean) {
+  const session = await requireAdmin();
+  if (!id) return { success: false, error: "ID is required" };
+
+  const result = await updateReferralLink(id, { isActive: !currentStatus });
+  if (result.success) {
+    await prisma.activityLog.create({
+      data: {
+        userId: session.id,
+        action: "ADMIN_TOGGLE_REFERRAL_LINK",
+        details: `Toggled referral link ${id} active status to ${!currentStatus}`,
+      },
+    });
+    revalidatePath("/admin/referrals");
+  }
+  return result;
+}
+
+export async function deleteReferralLinkAction(id: string) {
+  const session = await requireAdmin();
+  if (!id) return { success: false, error: "ID is required" };
+
+  const result = await deleteReferralLink(id);
+  if (result.success) {
+    await prisma.activityLog.create({
+      data: {
+        userId: session.id,
+        action: "ADMIN_DELETE_REFERRAL_LINK",
+        details: `Deleted referral link ${id}`,
+      },
+    });
+    revalidatePath("/admin/referrals");
+  }
+  return result;
+}
+
 

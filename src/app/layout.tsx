@@ -6,6 +6,7 @@ import QueryProvider from "@/providers/QueryProvider";
 import { getSession } from "@/lib/auth";
 import { getUserSubscription } from "@/lib/subscription";
 import { absoluteUrl, brand, organizationJsonLd, softwareApplicationJsonLd } from "@/lib/seo";
+import ReferralTracker from "@/components/ReferralTracker";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -68,6 +69,7 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning className="scroll-smooth">
       <body className="antialiased brit-theme min-h-screen">
         <NavigationProgressBar />
+        <ReferralTracker />
         <script
           type="application/ld+json"
           suppressHydrationWarning

@@ -12,6 +12,7 @@ function SignupForm() {
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get("invite") ?? "";
   const callbackUrl = searchParams.get("callbackUrl") ?? "";
+  const refCode = searchParams.get("ref") ?? "";
   const [state, formAction] = useActionState(signupAction as any, initialState);
 
   return (
@@ -38,6 +39,7 @@ function SignupForm() {
 
           {inviteToken && <input type="hidden" name="inviteToken" value={inviteToken} />}
           {callbackUrl && <input type="hidden" name="callbackUrl" value={callbackUrl} />}
+          {refCode && <input type="hidden" name="ref" value={refCode} />}
 
           <div className="space-y-4">
             <div className="space-y-2">

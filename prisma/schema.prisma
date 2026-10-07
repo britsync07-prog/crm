@@ -53,6 +53,9 @@ model User {
   invitedMembers      OrganizationMember[] @relation("InvitedBy")
   mcpAccessTokens     McpAccessToken[]
   ownedOnboardings    OnboardingInstance[] @relation("OnboardingOwner")
+  referralLinkId      String?
+  referralLink        ReferralLink?       @relation("ReferredUsers", fields: [referralLinkId], references: [id])
+  referralConversions ReferralConversion[]
 }
 
 model McpAccessToken {
@@ -1017,4 +1020,68 @@ model AIPermissionSetting {
   description           String?
   updatedAt             DateTime        @updatedAt
 }
+
+model ReferralLink {
+  id                String               @id @default(cuid())
+  code              String               @unique
+  agencyName        String
+  targetUrl         String               @default("/")
+  notes             String?
+  isActive          Boolean              @default(true)
+  visitsCount       Int                  @default(0)
+  uniqueVisitsCount Int                  @default(0)
+  signupsCount      Int                  @default(0)
+  purchasesCount    Int                  @default(0)
+  totalRevenue      Float                @default(0.0)
+  createdBy         String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  visits            ReferralVisit[]
+  conversions       ReferralConversion[]
+  users             User[]               @relation("ReferredUsers")
+
+  @@index([code])
+}
+
+model ReferralVisit {
+  id             String        @id @default(cuid())
+  referralLinkId String
+  visitorId      String
+  ip             String?
+  userAgent      String?
+  referer        String?
+  landingPath    String?
+  createdAt      DateTime      @default(now())
+
+  referralLink   ReferralLink  @relation(fields: [referralLinkId], references: [id], onDelete: Cascade)
+
+  @@index([referralLinkId])
+  @@index([visitorId])
+  @@index([createdAt])
+}
+
+model ReferralConversion {
+  id              String        @id @default(cuid())
+  referralLinkId  String
+  type            String        // "SIGNUP" | "PURCHASE"
+  userId          String?
+  userEmail       String?
+  organizationId  String?
+  plan            String?
+  amount          Float         @default(0.0)
+  currency        String        @default("USD")
+  stripeSessionId String?
+  metadataJson    String?
+  createdAt       DateTime      @default(now())
+
+  referralLink    ReferralLink  @relation(fields: [referralLinkId], references: [id], onDelete: Cascade)
+  user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([referralLinkId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
 

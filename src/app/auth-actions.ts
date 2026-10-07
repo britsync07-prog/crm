@@ -4,8 +4,10 @@ import { prisma } from "@/lib/db";
 import { login, logout } from "@/lib/auth";
 import bcrypt from "bcrypt";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { sendSystemEmail } from "@/lib/system-mailer";
 import { welcomeEmailTemplate } from "@/lib/email-templates/welcome";
+import { recordSignupConversion } from "@/lib/referral";
 
 export async function loginAction(prevState: any, formData: FormData) {
   const email = (formData.get("email") as string)?.toLowerCase()?.trim();
@@ -50,6 +52,8 @@ export async function signupAction(prevState: any, formData: FormData) {
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
   const inviteToken = formData.get("inviteToken") as string;
+  const cookieStore = await cookies();
+  const refCode = ((formData.get("ref") as string) || cookieStore.get("britcrm_ref")?.value || "").trim();
 
   if (password !== confirmPassword) {
     return { error: "Passwords do not match" };
@@ -72,6 +76,18 @@ export async function signupAction(prevState: any, formData: FormData) {
       password: hashedPassword,
     },
   });
+
+  if (refCode) {
+    try {
+      await recordSignupConversion({
+        referralCodeOrId: refCode,
+        userId: user.id,
+        userEmail: user.email,
+      });
+    } catch (refErr) {
+      console.error("[Referral Signup] Failed to record referral conversion:", refErr);
+    }
+  }
 
   if (inviteToken) {
     const invite = await prisma.organizationMember.findUnique({

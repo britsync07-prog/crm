@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
+import { recordPurchaseConversion } from "@/lib/referral";
 
 const PLAN_SEATS: Record<string, number> = {
   personal: 2,
@@ -30,12 +31,18 @@ export async function POST(req: Request) {
   try {
     switch (event.type) {
       case "checkout.session.completed": {
-        const checkoutSession = event.data.object;
+        const checkoutSession = event.data.object as any;
         const orgId = checkoutSession.client_reference_id;
         const subscriptionId = checkoutSession.subscription;
         const customerId = checkoutSession.customer;
         const plan = (checkoutSession.metadata?.plan as string) || "business";
         const seats = PLAN_SEATS[plan] || 5;
+        const referralLinkId = checkoutSession.metadata?.referralLinkId || null;
+        const userId = checkoutSession.metadata?.userId || null;
+        const amountTotal = checkoutSession.amount_total
+          ? checkoutSession.amount_total / 100
+          : (plan === "personal" ? 79 : 149);
+        const currency = checkoutSession.currency || "usd";
 
         if (orgId && subscriptionId && customerId) {
           await prisma.organization.update({
@@ -48,6 +55,21 @@ export async function POST(req: Request) {
               seatLimit: seats,
             },
           });
+        }
+
+        try {
+          await recordPurchaseConversion({
+            referralLinkId,
+            userId,
+            organizationId: orgId,
+            plan,
+            amount: amountTotal,
+            currency,
+            stripeSessionId: checkoutSession.id,
+            metadata: { source: "stripe_webhook", subscriptionId },
+          });
+        } catch (refErr) {
+          console.error("[Referral Webhook Error]:", refErr);
         }
         break;
       }

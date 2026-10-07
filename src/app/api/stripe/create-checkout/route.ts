@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getCheckoutPlanConfig } from "@/lib/pricing";
 import { getAppBaseUrl } from "@/lib/app-url";
+import { recordPurchaseConversion } from "@/lib/referral";
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -84,6 +85,20 @@ export async function POST(req: Request) {
       },
     });
 
+    try {
+      await recordPurchaseConversion({
+        userId: user.id,
+        userEmail: user.email,
+        organizationId: org.id,
+        plan: (plan as string).toLowerCase(),
+        amount: (config.amount || 7900) / 100,
+        currency: "USD",
+        metadata: { source: "direct_resilient_activation" },
+      });
+    } catch (refErr) {
+      console.error("[Referral Purchase] Direct activation error:", refErr);
+    }
+
     return NextResponse.json({
       url: `${baseUrl}/settings/billing?success=true&activated=true&plan=${plan}`,
       activated: true,
@@ -128,13 +143,21 @@ export async function POST(req: Request) {
       client_reference_id: org.id,
       success_url: `${baseUrl}/settings/billing?success=true`,
       cancel_url: `${baseUrl}/settings/billing?canceled=true`,
+      metadata: {
+        organizationId: org.id,
+        userId: user.id,
+        plan,
+        referralLinkId: (user as any).referralLinkId || "",
+      },
       subscription_data: {
         metadata: {
           organizationId: org.id,
+          userId: user.id,
           plan,
           seats: config.seats,
           offerId: config.activeOffer?.id || "",
           discountPercent: config.activeOffer?.discountPercent || "",
+          referralLinkId: (user as any).referralLinkId || "",
         },
       },
     });
@@ -154,6 +177,20 @@ export async function POST(req: Request) {
           seatLimit: config.seats,
         },
       });
+
+      try {
+        await recordPurchaseConversion({
+          userId: user.id,
+          userEmail: user.email,
+          organizationId: org.id,
+          plan: (plan as string).toLowerCase(),
+          amount: (config.amount || 7900) / 100,
+          currency: "USD",
+          metadata: { source: "fallback_resilient_activation" },
+        });
+      } catch (refErr) {
+        console.error("[Referral Purchase] Fallback activation error:", refErr);
+      }
 
       return NextResponse.json({
         url: `${baseUrl}/settings/billing?success=true&fallback=true&plan=${plan}`,

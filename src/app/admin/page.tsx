@@ -44,10 +44,11 @@ export default async function AdminDashboardPage() {
         ))}
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { title: "Manage Users", href: "/admin/users", text: "Roles, status, passwords, and account access." },
-          { title: "Manage Organizations", href: "/admin/organizations", text: "Plans, seats, subscription state, and owners." },
+          { title: "Organizations", href: "/admin/organizations", text: "Plans, seats, subscription state, and owners." },
+          { title: "Referrals & Agencies", href: "/admin/referrals", text: "Track agency links, visits, signups, and purchases." },
           { title: "Operations Health", href: "/admin/operations", text: "SMTP, Stripe, mailbox, workload, and activity checks." },
         ].map((item) => (
           <Link key={item.href} href={item.href} className="p-5 rounded-[20px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-sm hover:border-[#012169]/40 transition-colors group">
