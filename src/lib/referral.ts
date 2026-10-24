@@ -257,11 +257,20 @@ export async function recordSignupConversion(params: {
 }): Promise<boolean> {
   await ensureReferralTables();
   try {
-    // Look up link by ID or code
+    const raw = (params.referralCodeOrId || "").trim();
+    if (!raw) return false;
+    const sanitized = sanitizeReferralCode(raw);
+
+    // Look up link by ID, raw code, or sanitized code (case-insensitive)
     const rows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "ReferralLink" WHERE "id" = ? OR LOWER("code") = LOWER(?) LIMIT 1`,
-      params.referralCodeOrId,
-      params.referralCodeOrId
+      `SELECT * FROM "ReferralLink" 
+       WHERE "id" = ? 
+          OR LOWER("code") = LOWER(?) 
+          OR LOWER("code") = LOWER(?) 
+       LIMIT 1`,
+      raw,
+      raw,
+      sanitized
     );
 
     if (!rows || rows.length === 0) return false;

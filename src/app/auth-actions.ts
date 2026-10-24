@@ -53,7 +53,9 @@ export async function signupAction(prevState: any, formData: FormData) {
   const confirmPassword = formData.get("confirmPassword") as string;
   const inviteToken = formData.get("inviteToken") as string;
   const cookieStore = await cookies();
-  const refCode = ((formData.get("ref") as string) || cookieStore.get("britcrm_ref")?.value || "").trim();
+  const formRef = (formData.get("ref") as string)?.trim();
+  const cookieRef = cookieStore.get("britcrm_ref")?.value?.trim();
+  const refCode = formRef || cookieRef || "";
 
   if (password !== confirmPassword) {
     return { error: "Passwords do not match" };
