@@ -12,6 +12,7 @@ import { registerFormTools } from "./tools/forms";
 import { registerLeadTools } from "./tools/leads";
 import { registerMailTools } from "./tools/mail";
 import { registerOutreachTools } from "./tools/outreach";
+import { registerReferralTools } from "./tools/referrals";
 
 export function createBritCrmMcpServer() {
   logMcpDebug("Initializing BritCRM Unified MCP Server (v0.1.0)...");
@@ -83,6 +84,7 @@ export function createBritCrmMcpServer() {
   registerCalendarTools(server);
   registerBillingTools(server);
   registerAdminTools(server);
+  registerReferralTools(server);
 
   logMcpDebug(`BritCRM MCP Server ready: ${toolCount} tools and ${resourceCount} resources registered.`);
 
