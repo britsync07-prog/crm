@@ -679,7 +679,7 @@ export default function LandingPage() {
                 The intelligent CRM platform for modern teams who want to manage relationships and close deals faster.
               </p>
               <div className="flex gap-10">
-                {[{ name: "X", href: "https://x.com/britsyncai" }, { name: "In", href: "https://linkedin.com/company/britsyncai" }, { name: "Git", href: "https://github.com/britsyncai" }, { name: "Ds", href: "#" }].map(s => (
+                {[{ name: "In", href: "https://www.linkedin.com/in/musfiqur-rahman-saimon-a5994b3aa" }, { name: "Git", href: "https://github.com/britsync07-prog" }].map(s => (
                   <Link key={s.name} href={s.href} className="text-zinc-600 hover:text-[#012169] transition-colors text-xs font-black uppercase tracking-widest">{s.name}</Link>
                 ))}
               </div>

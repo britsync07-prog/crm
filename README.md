@@ -187,6 +187,13 @@ Observed practices: bcrypt password hashing; jose-signed HS256 session JWTs stor
 
 Hygiene warnings (filenames only): `prisma/dev.db`, `prisma/dev.db-shm`, `prisma/dev.db-wal`, `dev-server.log`, `dev-server-err.log`, `server-log.txt`, `error.txt`, and `lint_results.txt` are tracked in git; `ecosystem.config.cjs` contains placeholder/default key material inline (`your-secure-api-key`-style values and LiveKit dev defaults). Rotate anything sensitive that ever touched the dev database and purge these paths from history.
 
+## Contact
+
+- 📧 Email: [saimon@ascentraconsulting.co.uk](mailto:saimon@ascentraconsulting.co.uk)
+- 💼 LinkedIn: [Musfiqur Rahman Saimon](https://www.linkedin.com/in/musfiqur-rahman-saimon-a5994b3aa)
+- 🐙 GitHub: [@britsync07-prog](https://github.com/britsync07-prog)
+- 🌐 Portfolio: [brit-os.pages.dev](https://brit-os.pages.dev/)
+
 ## License
 
 MIT License � Copyright (c) 2026 Musfiqur Rahman Saimon. See [LICENSE](./LICENSE).
